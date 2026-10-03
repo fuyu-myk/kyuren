@@ -1,0 +1,286 @@
+/* The capabilities get out of the way rather than blinking out. */
+.home {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.home.going {
+  animation: clearing 280ms ease forwards;
+  pointer-events: none;
+}
+
+@keyframes clearing {
+  to {
+    opacity: 0;
+    transform: translateY(-0.5rem) scale(0.985);
+  }
+}
+
+.turns > li {
+  animation: arriving 220ms ease both;
+}
+
+@keyframes arriving {
+  from {
+    opacity: 0;
+    transform: translateY(0.4rem);
+  }
+}
+
+.thinking {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.thinking canvas {
+  flex: 0 0 auto;
+}
+
+/* The word is lit by a band running left to right, so waiting looks like working. */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--overlay1) 0%,
+    var(--overlay1) 35%,
+    var(--text) 50%,
+    var(--overlay1) 65%,
+    var(--overlay1) 100%
+  );
+  background-size: 300% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: shimmer 1.8s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+.called {
+  margin-top: 0.15rem;
+  font-size: 0.74rem;
+}
+
+.called summary {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  color: var(--overlay1);
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  cursor: pointer;
+  list-style: none;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.called summary::-webkit-details-marker {
+  display: none;
+}
+
+.called summary::before {
+  content: "▸ ";
+}
+
+.called[open] summary::before {
+  content: "▾ ";
+}
+
+.called summary:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.called ul {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.35rem 0 0;
+  padding: 0 0 0 0.5rem;
+  list-style: none;
+}
+
+.called li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.called .tool {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--lavender);
+}
+
+.called .target {
+  color: var(--overlay1);
+  overflow-wrap: anywhere;
+}
+
+.called .failed .tool {
+  color: var(--down);
+}
+
+/* An answer laid out as the answer it is. */
+.prose {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.1rem;
+  white-space: normal;
+}
+
+.prose li {
+  margin: 0.15rem 0;
+}
+
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  margin: 0.2rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+}
+
+.prose blockquote {
+  padding-left: 0.75rem;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--muted);
+}
+
+.prose code {
+  padding: 0.1rem 0.3rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.82em;
+  color: var(--lavender);
+  background: color-mix(in srgb, var(--crust) 55%, transparent);
+  border-radius: 0.3rem;
+}
+
+.prose pre {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  overflow-x: auto;
+  background: color-mix(in srgb, var(--crust) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 7%, transparent);
+  border-radius: 0.6rem;
+}
+
+.prose pre code {
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: var(--subtext0);
+  background: none;
+}
+
+.prose .link {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.prose .cite {
+  font-size: 0.78em;
+  text-decoration: none;
+  vertical-align: super;
+  margin-left: 0.1em;
+}
+
+.error.afloat {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%);
+  padding: 0.5rem 0.9rem;
+  background: var(--panel);
+  border: 1px solid color-mix(in srgb, var(--down) 50%, transparent);
+  border-radius: 0.5rem;
+  z-index: 10;
+}
+
+/* The command menu, above the bar, opened by a slash. */
+.suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  margin: 0 0 0.45rem;
+  padding: 0.3rem;
+  list-style: none;
+  display: grid;
+  gap: 0.15rem;
+  background: var(--mantle);
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  border-radius: 0.7rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  z-index: 5;
+}
+
+.suggest li {
+  display: flex;
+  gap: 0.7rem;
+  align-items: baseline;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.suggest li.lit,
+.suggest li:hover {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.suggest .name {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--ink);
+}
+
+.suggest .about {
+  color: var(--subtext0);
+}
+
+/* Under the bar: what answered, how much it read, and a choice of what answers next. */
+.standing {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--overlay1);
+}
+
+.standing .mode {
+  min-width: 9rem;
+  padding: 0.2rem 0.45rem;
+  font: inherit;
+  font-size: 0.72rem;
+  color: var(--muted);
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent);
+  border-radius: 0.5rem;
+}

@@ -1,0 +1,176 @@
+/* The island's layout, arranged on a small picture of it. */
+.island-layout {
+  position: relative;
+}
+
+.island-layout .mini {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  aspect-ratio: 800 / 236;
+  margin: 0.7rem 0 0.5rem;
+  border: 2px solid #000;
+  border-top: 0;
+  border-radius: 0 0 1.1rem 1.1rem;
+  background: radial-gradient(circle at 50% 50%, rgb(17 17 27 / 85%), rgb(7 7 13 / 96%));
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mini-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 23%;
+  height: 16%;
+  transform: translateX(-50%);
+  border-radius: 0 0 0.5rem 0.5rem;
+  background: #000;
+}
+
+.mini-tabs {
+  position: absolute;
+  top: 2.5%;
+  left: 63%;
+  right: 3%;
+  height: 12%;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.mini-glance {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: 24%;
+  bottom: 9%;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  padding: 4px;
+  border: 1px dashed transparent;
+  border-radius: 0.6rem;
+}
+
+.mini-glance.over {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.mini-glance .slot {
+  display: flex;
+  min-width: 0;
+}
+
+.mini-empty {
+  margin: auto;
+  color: var(--overlay1);
+  font-size: 0.72rem;
+}
+
+.island-layout .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--surface0) 70%, transparent);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: grab;
+  touch-action: none;
+  transition: opacity 120ms ease, background 120ms ease;
+}
+
+.island-layout .chip.on {
+  color: var(--ink);
+}
+
+.island-layout .chip:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.island-layout .chip.lifted {
+  opacity: 0.3;
+}
+
+.mini-tabs .chip {
+  width: 22px;
+  height: 20px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+.mini-tabs .chip svg {
+  width: 13px;
+  height: 13px;
+}
+
+.mini-glance .chip.widget {
+  flex: 1;
+  min-width: 0;
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--surface0) 55%, transparent);
+}
+
+.island-layout .marker {
+  align-self: stretch;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+.island-layout .tray {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.1rem;
+  max-width: 520px;
+  padding: 0.35rem 0.5rem;
+  border: 1px dashed color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 0.6rem;
+}
+
+.island-layout .tray.over {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.tray-label,
+.tray-empty {
+  color: var(--overlay1);
+  font-size: 0.7rem;
+}
+
+.island-layout .opens-on {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.island-layout .opens-on select {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--edge);
+  border-radius: 0.45rem;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.76rem;
+}
+
+.island-layout .ghost-chip {
+  position: fixed;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 24%, var(--panel));
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+}

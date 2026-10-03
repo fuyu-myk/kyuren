@@ -1,0 +1,155 @@
+[
+  {
+    "id": "arithmetic",
+    "prompt": "A train leaves at 09:40 and travels 315 km at an average of 90 km/h, then waits 25 minutes, then travels 120 km at 80 km/h. At what time does it arrive? Answer with the time only, as HH:MM.",
+    "proof": {
+      "type": "contains",
+      "any": [
+        "15:05"
+      ],
+      "line": "first"
+    }
+  },
+  {
+    "id": "calendar",
+    "prompt": "Today is Thursday 18 September 2026. An assignment is due in 19 days, and I need three full working days before that to finish it, plus a weekend free of it before I start. On which date must I start at the latest? Answer with the date only, like 1 October 2026.",
+    "proof": {
+      "type": "contains",
+      "any": [
+        "2 October 2026",
+        "October 2, 2026",
+        "2nd October 2026",
+        "2 Oct 2026"
+      ],
+      "line": "first"
+    }
+  },
+  {
+    "id": "schedule",
+    "prompt": "Plan Friday 19 September 2026 for me. Fixed: lecture 09:00 to 10:30, lab 14:00 to 16:00, gym 18:00 to 19:00. Tasks, each needing one unbroken block: 'problem set' 2 hours, 'reading' 1 hour, 'email' 30 minutes. Work only between 08:00 and 20:00, and keep 12:30 to 13:30 free for lunch. Reply with a JSON array only, no prose, each item {\"what\": string, \"start\": \"HH:MM\", \"end\": \"HH:MM\"}, listing the fixed items and the three tasks.",
+    "proof": {
+      "type": "schedule",
+      "fixed": [
+        [
+          "09:00",
+          "10:30"
+        ],
+        [
+          "14:00",
+          "16:00"
+        ],
+        [
+          "18:00",
+          "19:00"
+        ],
+        [
+          "12:30",
+          "13:30"
+        ]
+      ],
+      "tasks": {
+        "problem set": 120,
+        "reading": 60,
+        "email": 30
+      },
+      "window": [
+        "08:00",
+        "20:00"
+      ]
+    }
+  },
+  {
+    "id": "code",
+    "prompt": "Write a JavaScript function `merge(a, b)` that merges two arrays of {start, end} intervals (numbers, start <= end) into one sorted array of non-overlapping intervals, merging any that touch or overlap. Reply with a single ```js code block containing only the function, exported as `export function merge`.",
+    "proof": {
+      "type": "code",
+      "test": "import { merge } from './answer.mjs'; const r = merge([{start:1,end:3},{start:8,end:10}], [{start:2,end:6},{start:10,end:12},{start:15,end:18}]); const s = JSON.stringify(r); if (s !== JSON.stringify([{start:1,end:6},{start:8,end:12},{start:15,end:18}])) { console.error('got ' + s); process.exit(1); } const e = merge([], []); if (JSON.stringify(e) !== '[]') process.exit(1);"
+    }
+  },
+  {
+    "id": "complexity",
+    "prompt": "What is the time complexity of sorting n items with merge sort, and of then checking whether any two adjacent items are equal? Give the overall big-O of the two steps together, as a single expression, and one sentence of reasoning.",
+    "proof": {
+      "type": "contains",
+      "any": [
+        "O(n log n)",
+        "O(n·log n)",
+        "O(n log(n))",
+        "O(n*log n)",
+        "O(n \\log n)"
+      ]
+    }
+  },
+  {
+    "id": "logic",
+    "prompt": "Three people, Ada, Ben and Cy, each own one pet: a cat, a dog or a fish. Ada is allergic to fur. Ben walks his pet every morning. Who owns the fish? Answer with the name only.",
+    "proof": {
+      "type": "contains",
+      "any": [
+        "Ada"
+      ],
+      "none": [
+        "Ben",
+        "Cy"
+      ],
+      "line": "first"
+    }
+  },
+  {
+    "id": "weighing",
+    "prompt": "I can take at most 4 courses next term. Signals (Tue and Thu 9:00) is required for my degree. Ethics (Tue 9:00) is an elective I like. Thermodynamics (Mon 14:00) is required. Linear Algebra (Wed 10:00) is a prerequisite for a course I want next year. Databases (Wed 14:00) is an elective. Which four should I take, and which one must I drop? Name the dropped course explicitly in a sentence beginning 'Drop'.",
+    "proof": {
+      "type": "contains",
+      "any": [
+        "Drop Ethics",
+        "drop Ethics",
+        "Drop: Ethics"
+      ],
+      "none": [
+        "Drop Signals",
+        "Drop Thermodynamics",
+        "Drop Linear Algebra"
+      ]
+    }
+  },
+  {
+    "id": "notes",
+    "prompt": "From these notes, answer in one short sentence: who introduced me to the person who runs the Signals lab?\n\nNote 1: Petra Holst is my thesis supervisor. In week two she introduced me to Dr Delgado, who she said would be worth talking to about adaptive filters.\nNote 2: Dr Delgado runs the Signals lab on the third floor. Office hours are Tuesdays from two to four.\nNote 3: Ana Lindqvist is my lab partner in Thermodynamics. Ana's brother Aaron sings in a band.",
+    "proof": {
+      "type": "contains",
+      "any": [
+        "Petra"
+      ],
+      "none": [
+        "Ana",
+        "Aaron"
+      ]
+    }
+  },
+  {
+    "id": "conversion",
+    "prompt": "A recipe needs 2.5 cups of flour and I only have a scale. Using 120 grams per cup, and then adding 15% more for a larger tin, how many grams do I weigh out? Answer with the number of grams only.",
+    "proof": {
+      "type": "contains",
+      "any": [
+        "345"
+      ],
+      "line": "first"
+    }
+  },
+  {
+    "id": "decide",
+    "prompt": "My rule: I only accept a freelance job if the hourly rate is at least 60 and the total is at least 900. Offer A: 12 hours at 70. Offer B: 20 hours at 55. Offer C: 15 hours at 65. Which offers do I accept? Answer with the letters only, separated by commas, or 'none'.",
+    "proof": {
+      "type": "contains",
+      "any": [
+        "C"
+      ],
+      "none": [
+        "A",
+        "B"
+      ],
+      "line": "first"
+    }
+  }
+]

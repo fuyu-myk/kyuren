@@ -1,0 +1,107 @@
+/* The shelf: what was dropped on the notch, each a tile to drag out again. */
+.view.shelf {
+  gap: 4px;
+  border-radius: 14px;
+  outline: 1.5px dashed transparent;
+  outline-offset: -2px;
+  transition: outline-color 0.15s, background 0.15s;
+}
+
+.view.shelf.carrying {
+  outline-color: rgb(180 190 254 / 55%);
+  background: rgb(180 190 254 / 6%);
+}
+
+.shelf .tiles {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  grid-auto-rows: 108px;
+  gap: 6px;
+  padding: 4px;
+  overflow-y: auto;
+}
+
+.shelf .tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: default;
+}
+
+.shelf .tile:hover {
+  border-color: rgb(205 214 244 / 7%);
+  background: rgb(24 24 37 / 58%);
+}
+
+.shelf .tile img,
+.shelf .tile .blank {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  pointer-events: none;
+}
+
+.shelf .tile .name {
+  display: -webkit-box;
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.shelf .tile .size {
+  color: #7f849c;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.shelf .tile .actions {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.shelf .tile:hover .actions {
+  opacity: 1;
+}
+
+.shelf .tile .actions button {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgb(205 214 244 / 12%);
+  border-radius: 10px;
+  background: rgb(17 17 27 / 85%);
+  color: #bac2de;
+  cursor: default;
+}
+
+.shelf .said {
+  min-height: 15px;
+  margin: 0;
+  color: #7f849c;
+  font-size: 10.5px;
+  text-align: center;
+}
+
+.shelf .said.trouble {
+  color: #f38ba8;
+}

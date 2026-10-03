@@ -1,0 +1,24 @@
+{
+  "name": "kyuren",
+  "private": true,
+  "license": "MIT",
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @kyuren/desktop tauri dev",
+    "build": "pnpm --filter @kyuren/desktop tauri build",
+    "typecheck": "pnpm -r typecheck",
+    "perception": "swift build --package-path sidecars/perception -c release",
+    "apple": "swift build --package-path sidecars/apple -c release",
+    "hook": "cargo build --release --manifest-path sidecars/hook/Cargo.toml",
+    "sidecars": "pnpm perception && pnpm apple && pnpm hook",
+    "bundle": "pnpm sidecars && sh -c '[ -f .env ] && { set -a; . ./.env; set +a; }; exec pnpm --filter @kyuren/desktop tauri build --debug --bundles app'",
+    "run:bundle": "pnpm bundle && open apps/desktop/src-tauri/target/debug/bundle/macos/Kyuren.app",
+    "test": "pnpm -r test",
+    "e2e": "pnpm --filter @kyuren/desktop e2e"
+  }
+}

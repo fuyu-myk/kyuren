@@ -1,0 +1,104 @@
+/* A list that has more to it says so, and opens as a run rather than a jump. */
+.more {
+  margin-top: 0.3rem;
+  margin-left: 0.2rem;
+  font-size: 0.72rem;
+}
+
+.sessions li.fresh,
+.board li.fresh {
+  animation: unfolding 200ms ease both;
+}
+
+@keyframes unfolding {
+  from {
+    opacity: 0;
+    transform: translateY(-0.3rem);
+  }
+}
+
+/* Where every project stands, one line each, newest work first. */
+.board {
+  display: grid;
+  gap: 0.1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.board li {
+  border-radius: 0.6rem;
+  transition: background 120ms ease;
+}
+
+.board li:hover {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.project {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0.2rem 0.75rem;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  font: inherit;
+  text-align: left;
+  color: var(--ink);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.project .what {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.project .name {
+  font-size: 0.86rem;
+}
+
+.project .branch {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.72rem;
+  color: var(--overlay1);
+}
+
+.project .when {
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.project .standing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+  grid-column: 1 / -1;
+  font-size: 0.72rem;
+  font-style: normal;
+}
+
+.project .standing em {
+  font-style: normal;
+}
+
+.project .ahead {
+  color: var(--lavender);
+}
+
+.project .behind {
+  color: var(--blue);
+}
+
+.project .dirty {
+  color: var(--peach, var(--mauve));
+}
+
+.project .alone {
+  color: var(--overlay1);
+}

@@ -1,0 +1,145 @@
+/* A skill waiting to be approved, shown in full: what it would ask for and where it would ask. */
+.forged {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.forged li {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.7rem 0.85rem;
+  background: color-mix(in srgb, var(--panel) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  border-radius: 0.7rem;
+}
+
+.forged li.pending {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.forged li.broken {
+  border-color: color-mix(in srgb, var(--down) 30%, transparent);
+}
+
+.forged .heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.forged .name {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.82rem;
+  color: var(--lavender);
+}
+
+.forged .standing {
+  padding: 0.05rem 0.4rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 0.35rem;
+}
+
+.forged .standing.pending {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.forged .standing.approved {
+  color: var(--up);
+  background: color-mix(in srgb, var(--up) 14%, transparent);
+}
+
+.forged .standing.broken {
+  color: var(--down);
+  background: color-mix(in srgb, var(--down) 14%, transparent);
+}
+
+.forged .when {
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--overlay1);
+}
+
+.forged .about {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.forged .request {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.1rem 0 0;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.74rem;
+}
+
+.forged .method {
+  color: var(--accent);
+}
+
+.forged .url {
+  color: var(--subtext0);
+  overflow-wrap: anywhere;
+}
+
+.forged .takes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.6rem;
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--overlay1);
+}
+
+.forged .takes span {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: baseline;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--muted);
+}
+
+.forged .takes em {
+  font-family: inherit;
+  font-style: normal;
+  color: var(--overlay1);
+}
+
+.forged .broke {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--down);
+}
+
+.forged .actions {
+  display: flex;
+  gap: 0.2rem;
+  justify-content: flex-end;
+  margin-top: 0.15rem;
+}
+
+.forged .allow {
+  color: var(--up);
+}
+
+.forged .allow:hover {
+  color: var(--up);
+  background: color-mix(in srgb, var(--up) 16%, transparent);
+}
+
+.forged .sure {
+  color: var(--down);
+}
+
+.forged .sure:hover {
+  color: var(--down);
+  background: color-mix(in srgb, var(--down) 16%, transparent);
+}

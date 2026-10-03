@@ -1,0 +1,156 @@
+/* A tab arrives from the side the icosahedron leaves by. */
+.view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  animation: arrive 0.26s ease-out 0.06s both;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+
+.view.list {
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgb(24 24 37 / 58%);
+  border: 1px solid rgb(205 214 244 / 7%);
+}
+
+.row .what {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.row .target {
+  overflow: hidden;
+  color: #9399b2;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row button {
+  height: 24px;
+  padding: 0 11px;
+  border: 1px solid rgb(205 214 244 / 12%);
+  border-radius: 12px;
+  background: rgb(17 17 27 / 70%);
+  color: #cdd6f4;
+  font: inherit;
+  font-size: 11px;
+  cursor: default;
+}
+
+.row .allow {
+  border-color: rgb(180 190 254 / 40%);
+  color: #b4befe;
+}
+
+.row .deny {
+  border-color: rgb(243 139 168 / 40%);
+  color: #f38ba8;
+}
+
+/* A question's target is shown whole: an answer is to all of it. */
+.row .target.whole {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+}
+
+.row .why {
+  color: #f9e2af;
+  font-size: 11px;
+}
+
+.view .note {
+  margin: 2px 4px 0;
+  color: #9399b2;
+  font-size: 11px;
+}
+
+.row .left {
+  flex: none;
+  color: #9399b2;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.row .when {
+  width: 38px;
+  color: #9399b2;
+  font-variant-numeric: tabular-nums;
+}
+
+.state {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 4px;
+}
+
+.state.running {
+  background: #b4befe;
+  animation: breathe 1.2s ease-in-out infinite;
+}
+
+.state.done {
+  background: #585b70;
+}
+
+.state.failed {
+  background: #f38ba8;
+}
+
+.state.waiting {
+  background: #fab387;
+  animation: breathe 1.2s ease-in-out infinite;
+}
+
+.coding .title {
+  margin-left: 6px;
+  color: #9399b2;
+  font-weight: 400;
+}
+
+.coding .since {
+  flex: none;
+  color: #9399b2;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A session row opens what the session is doing. */
+.coding .row.opens {
+  cursor: default;
+}
+
+.coding .row.opens:hover {
+  border-color: rgb(180 190 254 / 30%);
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.empty {
+  margin: auto 0;
+  color: #7f849c;
+  text-align: center;
+}

@@ -1,0 +1,227 @@
+.voice .stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Under the icosahedron: what is being heard, as it is heard. */
+.caption {
+  min-height: 17px;
+  margin: auto 0 6px;
+  overflow: hidden;
+  color: #9399b2;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.bubbles {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+  padding: 2px 2px 8px;
+  scrollbar-width: none;
+}
+
+.bubbles::-webkit-scrollbar {
+  display: none;
+}
+
+/* Newest at the foot, as in a messages app: the first message is pushed down until the
+   conversation fills the space. */
+.bubbles > :first-child {
+  margin-top: auto;
+}
+
+.bubble {
+  max-width: 78%;
+  margin: 0;
+  padding: 6px 11px;
+  border-radius: 14px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+  animation: rise 0.22s ease-out both;
+}
+
+.bubble.you {
+  align-self: flex-end;
+  border-bottom-right-radius: 5px;
+  background: rgb(180 190 254 / 20%);
+  color: #cdd6f4;
+}
+
+.bubble.kyuren {
+  align-self: flex-start;
+  border: 1px solid rgb(205 214 244 / 8%);
+  border-bottom-left-radius: 5px;
+  background: rgb(30 30 46 / 78%);
+  color: #bac2de;
+}
+
+.bubble.you.live {
+  color: #9399b2;
+}
+
+/* An answer in a bubble keeps its paragraphs, lists, code and links, at the island's size. */
+.bubble .prose {
+  display: grid;
+  gap: 5px;
+}
+
+.bubble .prose p,
+.bubble .prose ul,
+.bubble .prose ol,
+.bubble .prose blockquote {
+  margin: 0;
+}
+
+.bubble .prose ul,
+.bubble .prose ol {
+  padding-left: 16px;
+  white-space: normal;
+}
+
+.bubble .prose h3,
+.bubble .prose h4,
+.bubble .prose h5,
+.bubble .prose h6 {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #cdd6f4;
+}
+
+.bubble .prose blockquote {
+  padding-left: 8px;
+  border-left: 2px solid rgb(180 190 254 / 35%);
+  color: #9399b2;
+}
+
+.bubble .prose code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgb(17 17 27 / 55%);
+  color: #b4befe;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+}
+
+.bubble .prose pre {
+  margin: 0;
+  padding: 6px 8px;
+  overflow-x: auto;
+  border: 1px solid rgb(205 214 244 / 7%);
+  border-radius: 8px;
+  background: rgb(17 17 27 / 55%);
+}
+
+.bubble .prose pre code {
+  padding: 0;
+  background: none;
+  color: #a6adc8;
+  font-size: 10.5px;
+}
+
+.bubble .prose .link {
+  color: #89b4fa;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+.bubble .prose .cite {
+  margin-left: 0.1em;
+  font-size: 0.78em;
+  text-decoration: none;
+  vertical-align: super;
+}
+
+.bubble.failed {
+  color: #f38ba8;
+}
+
+.bubble.coming {
+  display: flex;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.bubble.coming i {
+  width: 5px;
+  height: 5px;
+  border-radius: 3px;
+  background: #9399b2;
+  animation: breathe 1.1s ease-in-out infinite;
+}
+
+.bubble.coming i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.bubble.coming i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.foot {
+  display: flex;
+}
+
+.composer {
+  flex: 1;
+  height: 30px;
+  padding: 0 13px;
+  border: 1px solid rgb(205 214 244 / 12%);
+  border-radius: 15px;
+  outline: none;
+  background: rgb(17 17 27 / 72%);
+  color: #cdd6f4;
+  font: inherit;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.composer:focus {
+  border-color: rgb(180 190 254 / 45%);
+}
+
+/* Outside the app only. */
+.fake-notch {
+  position: absolute;
+  top: 0;
+  border-radius: 0 0 10px 10px;
+  background: #000;
+  pointer-events: none;
+}
+
+.harness {
+  position: fixed;
+  left: 0;
+  top: 340px;
+  width: 880px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.harness button {
+  padding: 4px 9px;
+  border: 1px solid #45475a;
+  border-radius: 6px;
+  background: #181825;
+  color: #cdd6f4;
+  font: inherit;
+  font-size: 11px;
+}

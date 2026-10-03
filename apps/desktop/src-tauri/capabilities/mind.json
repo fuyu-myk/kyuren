@@ -1,0 +1,20 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "mind",
+  "description": "The mind graph.",
+  "windows": [
+    "mind"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "core:window:allow-hide",
+    "allow-askable-capabilities",
+    "allow-known-capabilities",
+    "allow-mind-graph",
+    "allow-run-capability",
+    "allow-show-mind",
+    "allow-start-vision",
+    "allow-stop-vision"
+  ]
+}

@@ -1,0 +1,15 @@
+[package]
+name = "kyuren-hook"
+version = "0.0.0"
+license = "MIT"
+description = "Hands a coding agent's hook event to Kyuren, and Kyuren's answer back"
+edition = "2021"
+rust-version = "1.95"
+
+[dependencies]
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+panic = "abort"

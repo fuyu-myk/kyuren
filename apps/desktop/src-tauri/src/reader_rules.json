@@ -1,0 +1,162 @@
+[
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?localhost\\.?[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?[^/]*\\.localhost\\.?[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?[^/]*\\.local\\.?[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?[^/]*\\.internal\\.?[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?[^/]*\\.lan\\.?[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?[^/]*\\.home\\.arpa\\.?[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?[^./:@\\[]+\\.?[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?\\["
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?127\\.[0-9]+\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?10\\.[0-9]+\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?0\\.[0-9]+\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?169\\.254\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?192\\.168\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?172\\.1[6-9]\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?172\\.2[0-9]\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?172\\.3[01]\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?100\\.6[4-9]\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?100\\.[7-9][0-9]\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?100\\.1[01][0-9]\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  },
+  {
+    "trigger": {
+      "url-filter": "^[a-z]+://([^/@]*@)?100\\.12[0-7]\\.[0-9]+\\.[0-9]+[:/]"
+    },
+    "action": {
+      "type": "block"
+    }
+  }
+]

@@ -1,0 +1,338 @@
+{
+  "loads": {
+    "local-small": 4,
+    "local-large": 10.7
+  },
+  "runs": [
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "arithmetic",
+      "passed": false,
+      "why": "none of [\"14:35\"] in the answer",
+      "seconds": 2,
+      "inputTokens": 84,
+      "outputTokens": 78,
+      "answer": "**15:05**"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "calendar",
+      "passed": true,
+      "why": "proved",
+      "seconds": 16.4,
+      "inputTokens": 88,
+      "outputTokens": 1399,
+      "answer": "**2 October 2026**\n\n- Due date: 18 Sept + 19 days = **Tuesday 7 October 2026**\n- Three full working days before it: Monday 6 Oct, Friday 3 Oct, Thursday 2 Oct\n- Starting Thursday 2 October leaves the preceding weekend (26–27 Sept) completely free, so that condition is met."
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "schedule",
+      "passed": true,
+      "why": "proved",
+      "seconds": 5.5,
+      "inputTokens": 211,
+      "outputTokens": 539,
+      "answer": "[\n  {\"what\": \"reading\", \"start\": \"08:00\", \"end\": \"09:00\"},\n  {\"what\": \"lecture\", \"start\": \"09:00\", \"end\": \"10:30\"},\n  {\"what\": \"problem set\", \"start\": \"10:30\", \"end\": \"12:30\"},\n  {\"what\": \"email\", \"start\": \"13:30\", \"end\": \"14:00\"},\n  {\"what\": \"lab\", \"start\": \"14:00\", \"end\": \"16:00\"},\n  {\"what\": \"gym\", \"start\": \"18:00\", \"end\": \"19:00\"}\n]"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "code",
+      "passed": true,
+      "why": "proved",
+      "seconds": 4.9,
+      "inputTokens": 105,
+      "outputTokens": 381,
+      "answer": "```js\nexport function merge(a, b) {\n  const all = [];\n  for (const list of [a, b]) {\n    if (!list) continue;\n    for (const iv of list) {\n      if (!iv) continue;\n      const { start, end } = iv;\n      if (typeof start !== 'number' || typeof end !== 'number') continue;\n      if (Number.isNaN(start) || Number.isNaN(end)) continue;\n      all.push(start <= end ? { start, end } : { start: end, end: start });\n    }\n  }\n\n  all.sort((x, y) => (x.start - y.start) || (x.end - y.end));\n\n  const result = [];\n  for (const iv of all) {\n    const last = result[result.length - 1];\n    if (last && iv.start <"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "complexity",
+      "passed": true,
+      "why": "proved",
+      "seconds": 2.8,
+      "inputTokens": 75,
+      "outputTokens": 126,
+      "answer": "**O(n log n)**\n\nMerge sort takes O(n log n) time and the single linear scan comparing each of the n−1 adjacent pairs takes O(n), so the total is O(n log n + n) = O(n log n), since the n log n term dominates."
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "logic",
+      "passed": true,
+      "why": "proved",
+      "seconds": 2,
+      "inputTokens": 79,
+      "outputTokens": 62,
+      "answer": "**Ada**"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "weighing",
+      "passed": false,
+      "why": "none of [\"Drop Ethics\",\"drop Ethics\",\"Drop: Ethics\"] in the answer",
+      "seconds": 16,
+      "inputTokens": 170,
+      "outputTokens": 1169,
+      "answer": "**The four-course plan you asked for isn't possible from this list — two of these five have to go, not one.**\n\nHere's why:\n\n- **Signals** meets Tue 9:00 **and** Thu 9:00.\n- **Ethics** is Tue 9:00 → collides with Signals.\n- **Databases** is Thu 9:00 → collides with Signals.\n\nSignals is required and there's no alternative slot mentioned, so it stays — and it knocks out *both* electives at once. That leaves only three compatible courses:\n\n1. **Signals** (Tue/Thu 9:00) — required\n2. **Thermodynamics** (Mon 14:00) — required\n3. **Linear Algebra** (Wed 10:00) — unlocks next year's course\n\n**Drop Dat"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "notes",
+      "passed": true,
+      "why": "proved",
+      "seconds": 3.2,
+      "inputTokens": 185,
+      "outputTokens": 75,
+      "answer": "Your thesis supervisor, Petra Holst, introduced you to Dr Delgado, who runs the Signals lab."
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "conversion",
+      "passed": true,
+      "why": "proved",
+      "seconds": 1.7,
+      "inputTokens": 78,
+      "outputTokens": 26,
+      "answer": "**345**"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5",
+      "task": "decide",
+      "passed": false,
+      "why": "'A' in the answer",
+      "seconds": 3.6,
+      "inputTokens": 113,
+      "outputTokens": 219,
+      "answer": "**C**\n\n- **A:** rate 70 ✓, but total = 12 × 70 = 840 ✗\n- **B:** total = 20 × 55 = 1100 ✓, but rate 55 ✗\n- **C:** rate 65 ✓, total = 15 × 65 = 975 ✓"
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "arithmetic",
+      "passed": false,
+      "why": "none of [\"14:35\"] in the answer",
+      "seconds": 38.5,
+      "inputTokens": 76,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "calendar",
+      "passed": false,
+      "why": "none of [\"2 October 2026\",\"October 2, 2026\",\"2nd October 2026\",\"2 Oct 2026\"] in the answer",
+      "seconds": 38.3,
+      "inputTokens": 82,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "schedule",
+      "passed": false,
+      "why": "no JSON array in the answer",
+      "seconds": 35.5,
+      "inputTokens": 181,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "code",
+      "passed": false,
+      "why": "the tests failed: file:///tmp/kyuren-escalation-dwFabG/answer.mjs:21\n    const [startA, endA] = intArr[i];\n                   ",
+      "seconds": 22.3,
+      "inputTokens": 75,
+      "outputTokens": 970,
+      "answer": "```js\nexport function merge(a, b) {\n  // If either array is empty, return as-is\n  if (!Array.isArray(a) || !Array.isArray(b)) return [];\n  \n  const intArr = [a, b]\n    .filter(Boolean)\n    .flat();\n    \n  if (intArr.length === 0) return [];\n\n  // Sort by start time first, then by end time ascending\n  intArr.sort((x, y) => {\n    if (x.start !== y.start) return x.start - y.start;\n    return x.end - y.end;\n  });\n\n  let i = 0;\n  const merged = [];\n\n  while (i < intArr.length) {\n    const [startA, endA] = intArr[i];\n    \n    if (merged.length === 0 || \n        merged[merged.length - 1][1] >= startA"
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "complexity",
+      "passed": false,
+      "why": "none of [\"O(n log n)\",\"O(n·log n)\",\"O(n log(n))\",\"O(n*log n)\",\"O(n \\\\log n)\"] in the answer",
+      "seconds": 33.8,
+      "inputTokens": 57,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "logic",
+      "passed": false,
+      "why": "none of [\"Ada\"] in the answer",
+      "seconds": 37.1,
+      "inputTokens": 57,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "weighing",
+      "passed": false,
+      "why": "none of [\"Drop Ethics\",\"drop Ethics\",\"Drop: Ethics\"] in the answer",
+      "seconds": 33.5,
+      "inputTokens": 128,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "notes",
+      "passed": false,
+      "why": "none of [\"Petra\"] in the answer",
+      "seconds": 34.5,
+      "inputTokens": 121,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "conversion",
+      "passed": false,
+      "why": "none of [\"345\"] in the answer",
+      "seconds": 41.3,
+      "inputTokens": 65,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-small",
+      "model": "qwen3.5:2b",
+      "task": "decide",
+      "passed": false,
+      "why": "none of [\"C\"] in the answer",
+      "seconds": 41,
+      "inputTokens": 96,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "arithmetic",
+      "passed": false,
+      "why": "none of [\"14:35\"] in the answer",
+      "seconds": 120,
+      "inputTokens": 76,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "calendar",
+      "passed": false,
+      "why": "none of [\"2 October 2026\",\"October 2, 2026\",\"2nd October 2026\",\"2 Oct 2026\"] in the answer",
+      "seconds": 96.6,
+      "inputTokens": 82,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "schedule",
+      "passed": false,
+      "why": "no JSON array in the answer",
+      "seconds": 91.7,
+      "inputTokens": 181,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "code",
+      "passed": false,
+      "why": "the tests failed: file:///tmp/kyuren-escalation-Gb6zLO/test.mjs:1\nimport { merge } from './answer.mjs'; const r = merge([{star",
+      "seconds": 95.1,
+      "inputTokens": 75,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "complexity",
+      "passed": false,
+      "why": "none of [\"O(n log n)\",\"O(n·log n)\",\"O(n log(n))\",\"O(n*log n)\",\"O(n \\\\log n)\"] in the answer",
+      "seconds": 103.3,
+      "inputTokens": 57,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "logic",
+      "passed": true,
+      "why": "proved",
+      "seconds": 37.8,
+      "inputTokens": 57,
+      "outputTokens": 596,
+      "answer": "Ada"
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "weighing",
+      "passed": false,
+      "why": "none of [\"Drop Ethics\",\"drop Ethics\",\"Drop: Ethics\"] in the answer",
+      "seconds": 94.4,
+      "inputTokens": 128,
+      "outputTokens": 1500,
+      "answer": ""
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "notes",
+      "passed": true,
+      "why": "proved",
+      "seconds": 66.8,
+      "inputTokens": 121,
+      "outputTokens": 910,
+      "answer": "Petra Holst introduced me to Dr. Delgado."
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "conversion",
+      "passed": true,
+      "why": "proved",
+      "seconds": 64.7,
+      "inputTokens": 65,
+      "outputTokens": 1042,
+      "answer": "345"
+    },
+    {
+      "route": "local-large",
+      "model": "qwen3.5:9b",
+      "task": "decide",
+      "passed": true,
+      "why": "proved",
+      "seconds": 39.3,
+      "inputTokens": 96,
+      "outputTokens": 659,
+      "answer": "C"
+    }
+  ]
+}

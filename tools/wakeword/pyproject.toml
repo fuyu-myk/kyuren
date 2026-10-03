@@ -1,0 +1,14 @@
+[project]
+name = "wakeword"
+version = "0.0.0"
+description = "Build-time training of Kyuren's wake word. Nothing here runs inside the application."
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "kokoro>=0.9.4",
+  "soundfile>=0.12",
+  "numpy>=1.26",
+  "onnxruntime>=1.20",
+  "onnx>=1.16",
+  "torch>=2.4",
+  "sounddevice>=0.5",
+]

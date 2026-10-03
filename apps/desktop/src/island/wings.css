@@ -1,0 +1,33 @@
+/* A turn's end told either side of the notch: whose it was, then how it went. */
+.wing {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  color: #cdd6f4;
+  font-size: 11.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.wing.left {
+  justify-content: flex-end;
+}
+
+.wing.shown {
+  opacity: 1;
+  transition: opacity 0.25s;
+}
+
+.wing.right.healthy {
+  color: #a6e3a1;
+}
+
+.wing.right.failed {
+  color: #f38ba8;
+}

@@ -1,0 +1,82 @@
+/* Shortcuts: playbooks run from the notch, as keys, with what the last run came to below. */
+.view.shortcuts {
+  gap: 8px;
+}
+
+.shortcuts .keys {
+  display: flex;
+  max-height: 104px;
+  flex-wrap: wrap;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.shortcuts .key {
+  display: flex;
+  min-width: 120px;
+  max-width: 220px;
+  padding: 7px 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  border: 1px solid rgb(205 214 244 / 10%);
+  border-radius: 12px;
+  background: rgb(24 24 37 / 58%);
+  color: #cdd6f4;
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.shortcuts .key:hover:not(:disabled),
+.shortcuts .key.asking,
+.shortcuts .key.running {
+  border-color: rgb(180 190 254 / 45%);
+}
+
+.shortcuts .key:disabled:not(.running) {
+  opacity: 0.5;
+}
+
+.shortcuts .key strong,
+.shortcuts .key span {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.shortcuts .key strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.shortcuts .key span {
+  color: #9399b2;
+  font-size: 10.5px;
+}
+
+/* The box a shortcut asks in sits where the chat's does, at the foot. */
+.shortcuts .foot {
+  margin-top: auto;
+}
+
+.shortcuts .ran {
+  min-height: 0;
+  flex: 1;
+  padding: 8px 12px;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: rgb(24 24 37 / 58%);
+  font-size: 12px;
+}
+
+.shortcuts .ran.failed {
+  color: #f38ba8;
+}
+
+.shortcuts .said.trouble {
+  margin: 0;
+  color: #f38ba8;
+  font-size: 10.5px;
+}

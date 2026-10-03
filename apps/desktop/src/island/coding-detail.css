@@ -1,0 +1,412 @@
+/* One session: its task, tests and files at the side, its steps or a file's diff beside them. */
+.view.coding-detail {
+  gap: 5px;
+}
+
+.coding-detail .head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.coding-detail .back,
+.coding-detail .reveal {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgb(205 214 244 / 12%);
+  border-radius: 11px;
+  background: rgb(17 17 27 / 70%);
+  color: #bac2de;
+  cursor: default;
+}
+
+.coding-detail .head strong {
+  font-size: 12px;
+}
+
+.coding-detail .meta {
+  overflow: hidden;
+  color: #9399b2;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.coding-detail .task {
+  margin: 0;
+  overflow: hidden;
+  color: #bac2de;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.coding-detail .split {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  gap: 8px;
+}
+
+.coding-detail .side {
+  display: flex;
+  width: 250px;
+  flex: none;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+}
+
+.coding-detail .tests {
+  display: flex;
+  margin: 0;
+  flex-direction: column;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: rgb(24 24 37 / 58%);
+  color: #cdd6f4;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: default;
+}
+
+.coding-detail .tests:hover {
+  border-color: rgb(180 190 254 / 30%);
+}
+
+.coding-detail .tests .result {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Tests passing are the session's health. */
+.coding-detail .state.healthy {
+  background: #a6e3a1;
+}
+
+.coding-detail .tests .ran {
+  overflow: hidden;
+  color: #7f849c;
+  font-size: 10px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.coding-detail .files {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.coding-detail .file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #cdd6f4;
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: default;
+}
+
+.coding-detail .file:hover,
+.coding-detail .file.on {
+  border-color: rgb(180 190 254 / 30%);
+  background: rgb(24 24 37 / 58%);
+}
+
+.coding-detail .file .path {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
+.coding-detail .plus {
+  color: #a6e3a1;
+  font-variant-numeric: tabular-nums;
+}
+
+.coding-detail .minus {
+  color: #f38ba8;
+  font-variant-numeric: tabular-nums;
+}
+
+.coding-detail .none {
+  margin: 4px 8px;
+  color: #7f849c;
+  font-size: 11px;
+}
+
+.coding-detail .main {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  border-radius: 9px;
+  background: rgb(17 17 27 / 55%);
+}
+
+.coding-detail .steps {
+  margin: 0;
+  padding: 6px 10px;
+  list-style: none;
+  font-size: 11px;
+}
+
+.coding-detail .steps li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  cursor: default;
+}
+
+.coding-detail .steps li:hover {
+  background: rgb(205 214 244 / 7%);
+}
+
+.coding-detail .steps .what {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.coding-detail .steps .verb {
+  color: #9399b2;
+}
+
+.coding-detail .diff {
+  margin: 0;
+  padding: 6px 10px;
+  color: #9399b2;
+  font: 10.5px/1.45 ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: pre;
+}
+
+/* Lines put in green and lines taken out red, as every diff shows them. */
+.coding-detail .diff .add {
+  color: #a6e3a1;
+}
+
+.coding-detail .diff .del {
+  color: #f38ba8;
+}
+
+.coding-detail .diff .hunk {
+  color: #89b4fa;
+}
+
+/* A step opened in place of the list: the way back and what it was, then all it did. */
+.coding-detail .step-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  margin: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: rgb(17 17 27 / 92%);
+  font-size: 11px;
+}
+
+.coding-detail .step-head .up {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgb(205 214 244 / 12%);
+  border-radius: 9px;
+  background: transparent;
+  color: #bac2de;
+  cursor: default;
+}
+
+.coding-detail .step-head .title {
+  min-width: 0;
+  overflow: hidden;
+  color: #cdd6f4;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.coding-detail .step-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 10px 8px;
+  font-size: 11px;
+}
+
+.coding-detail .step-detail .about {
+  margin: 0;
+  color: #bac2de;
+}
+
+.coding-detail .note {
+  margin: 4px 10px;
+  color: #7f849c;
+  font-size: 11px;
+}
+
+.coding-detail .step-detail .note {
+  margin: 0;
+}
+
+.coding-detail .ended {
+  margin: 0;
+  color: #f38ba8;
+}
+
+.coding-detail .command,
+.coding-detail .output,
+.coding-detail .content,
+.coding-detail .prompt {
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: 7px;
+  font: 10.5px/1.45 ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.coding-detail .command {
+  background: rgb(24 24 37 / 80%);
+  color: #cdd6f4;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.coding-detail .output,
+.coding-detail .content {
+  color: #a6adc8;
+}
+
+.coding-detail .prompt {
+  color: #a6adc8;
+  white-space: pre-wrap;
+}
+
+.coding-detail .content .number {
+  display: inline-block;
+  width: 34px;
+  margin-right: 10px;
+  color: #585b70;
+  text-align: right;
+  user-select: none;
+}
+
+.coding-detail .earlier {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border: 1px solid rgb(180 190 254 / 30%);
+  border-radius: 7px;
+  background: transparent;
+  color: #b4befe;
+  font: inherit;
+  font-size: 10.5px;
+  cursor: default;
+}
+
+.coding-detail .fields {
+  display: grid;
+  margin: 0;
+  gap: 2px;
+}
+
+.coding-detail .fields div {
+  display: flex;
+  gap: 8px;
+}
+
+.coding-detail .fields dt {
+  flex: none;
+  color: #7f849c;
+}
+
+.coding-detail .fields dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #cdd6f4;
+}
+
+.coding-detail .change-head {
+  display: flex;
+  margin: 0;
+  gap: 6px;
+  color: #cdd6f4;
+}
+
+.coding-detail .change-head .path {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.coding-detail .step-detail .diff {
+  padding: 4px 0 0;
+  overflow-x: auto;
+}
+
+.coding-detail .step-detail .steps {
+  padding: 0;
+}
+
+.coding-detail .reveal {
+  margin-left: auto;
+  flex: none;
+}
+
+/* What the agent said last, at the head of its steps: three lines, and all of it on a click. The
+   cut is on the words inside, since WebKit does not cut a button's own lines. */
+.coding-detail .said {
+  display: block;
+  width: calc(100% - 20px);
+  margin: 6px 10px 2px;
+  padding: 6px 9px;
+  border: 1px solid rgb(205 214 244 / 8%);
+  border-radius: 8px;
+  background: rgb(24 24 37 / 70%);
+  color: #cdd6f4;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: left;
+  cursor: default;
+}
+
+.coding-detail .said .words {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: pre-wrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.coding-detail .said.whole .words {
+  display: block;
+}

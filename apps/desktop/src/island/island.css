@@ -1,0 +1,190 @@
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  color: #cdd6f4;
+  font: 12px/1.45 ui-sans-serif, -apple-system, system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.panel {
+  position: relative;
+  width: 880px;
+  height: 320px;
+}
+
+/* Outside the app: a desktop with a menu bar to see the island against. */
+.panel.preview {
+  background:
+    linear-gradient(rgb(30 30 46 / 55%), rgb(30 30 46 / 55%)) 0 0 / 100% 38px no-repeat,
+    radial-gradient(circle at 30% 70%, #3b2f6b, transparent 55%),
+    radial-gradient(circle at 80% 20%, #1e4a6b, transparent 50%),
+    #1a1730;
+}
+
+.body {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.12s;
+}
+
+.shape,
+.face {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.face,
+.shape.rim {
+  pointer-events: none;
+}
+
+.shape .fill {
+  pointer-events: visiblePainted;
+}
+
+.shape .band {
+  pointer-events: none;
+}
+
+/* The border is the notch's own black, solid and thin, following every curve of the island. */
+.shape .edge {
+  stroke: #000;
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.header {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 880px;
+  pointer-events: none;
+}
+
+.status {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #9399b2;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.status.shown {
+  opacity: 1;
+  transition: opacity 0.25s;
+}
+
+.tabs {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s;
+}
+
+.tabs.shown {
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.25s;
+}
+
+.tab {
+  position: relative;
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #7f849c;
+  cursor: default;
+}
+
+.tab:hover {
+  color: #bac2de;
+}
+
+.tab.on {
+  color: #b4befe;
+  background: rgb(180 190 254 / 11%);
+}
+
+.tab .count {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 13px;
+  height: 13px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: #b4befe;
+  color: #11111b;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 13px;
+  text-align: center;
+}
+
+.tab .dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  border-radius: 3px;
+  background: #b4befe;
+}
+
+.sign {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: #b4befe;
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.sign.shown {
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+
+/* Content leaves quickly, and arrives once the island has grown around it. */
+.content {
+  position: absolute;
+  opacity: 0;
+  transform: scale(0.97);
+  filter: blur(6px);
+  pointer-events: none;
+  transition: opacity 0.16s ease-in, transform 0.16s ease-in, filter 0.16s ease-in;
+}
+
+.content.shown {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  pointer-events: auto;
+  transition: opacity 0.24s ease-out, transform 0.3s cubic-bezier(0.3, 1.2, 0.4, 1), filter 0.24s ease-out;
+}

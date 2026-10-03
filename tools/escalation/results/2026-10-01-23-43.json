@@ -1,0 +1,115 @@
+{
+  "loads": {},
+  "runs": [
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "arithmetic",
+      "passed": true,
+      "why": "proved",
+      "seconds": 1.3,
+      "inputTokens": 86,
+      "outputTokens": 74,
+      "answer": "15:05"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "calendar",
+      "passed": true,
+      "why": "proved",
+      "seconds": 10,
+      "inputTokens": 90,
+      "outputTokens": 996,
+      "answer": "2 October 2026"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "schedule",
+      "passed": true,
+      "why": "proved",
+      "seconds": 8.9,
+      "inputTokens": 213,
+      "outputTokens": 728,
+      "answer": "```json\n[\n  {\"what\": \"lecture\", \"start\": \"09:00\", \"end\": \"10:30\"},\n  {\"what\": \"problem set\", \"start\": \"10:30\", \"end\": \"12:30\"},\n  {\"what\": \"email\", \"start\": \"13:30\", \"end\": \"14:00\"},\n  {\"what\": \"lab\", \"start\": \"14:00\", \"end\": \"16:00\"},\n  {\"what\": \"reading\", \"start\": \"16:00\", \"end\": \"17:00\"},\n  {\"what\": \"gym\", \"start\": \"18:00\", \"end\": \"19:00\"}\n]\n```"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "code",
+      "passed": true,
+      "why": "proved",
+      "seconds": 3.5,
+      "inputTokens": 107,
+      "outputTokens": 216,
+      "answer": "```js\nexport function merge(a, b) {\n  const all = [...(a || []), ...(b || [])]\n    .map(({ start, end }) => ({ start, end }))\n    .sort((x, y) => x.start - y.start || x.end - y.end);\n\n  const result = [];\n  for (const iv of all) {\n    const last = result[result.length - 1];\n    if (last && iv.start <= last.end) {\n      if (iv.end > last.end) last.end = iv.end;\n    } else {\n      result.push(iv);\n    }\n  }\n  return result;\n}\n```"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "complexity",
+      "passed": true,
+      "why": "proved",
+      "seconds": 5.4,
+      "inputTokens": 77,
+      "outputTokens": 93,
+      "answer": "**O(n log n)**\n\nMerge sort takes O(n log n) and the adjacent-equality scan takes O(n), so the sort dominates: O(n log n) + O(n) = O(n log n)."
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "logic",
+      "passed": true,
+      "why": "proved",
+      "seconds": 1.4,
+      "inputTokens": 81,
+      "outputTokens": 47,
+      "answer": "Ada"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "weighing",
+      "passed": true,
+      "why": "proved",
+      "seconds": 4.8,
+      "inputTokens": 172,
+      "outputTokens": 428,
+      "answer": "**Take these four:**\n1. **Signals** (Tue & Thu 9:00): required for your degree\n2. **Thermodynamics** (Mon 14:00): required for your degree\n3. **Linear Algebra** (Wed 10:00): prerequisite for the course you want next year\n4. **Databases** (Wed 14:00): elective, with no time conflicts\n\n**Drop Ethics.** It meets Tuesday at 9:00, the same time as Signals. Since Signals is required and Ethics is only an elective, Ethics is the one that has to go.\n\nWith Ethics gone, your schedule has no overlaps:\n- **Monday:** Thermodynamics 14:00\n- **Tuesday:** Signals 9:00\n- **Wednesday:** Linear Algebra 10:00, Da"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "notes",
+      "passed": true,
+      "why": "proved",
+      "seconds": 2.1,
+      "inputTokens": 187,
+      "outputTokens": 81,
+      "answer": "Your thesis supervisor, Petra Holst, introduced you to Dr Delgado, who runs the Signals lab."
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "conversion",
+      "passed": true,
+      "why": "proved",
+      "seconds": 1.2,
+      "inputTokens": 80,
+      "outputTokens": 20,
+      "answer": "345"
+    },
+    {
+      "route": "cloud",
+      "model": "claude-opus-5-5",
+      "task": "decide",
+      "passed": true,
+      "why": "proved",
+      "seconds": 2.4,
+      "inputTokens": 115,
+      "outputTokens": 55,
+      "answer": "C"
+    }
+  ]
+}

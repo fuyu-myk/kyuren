@@ -1,0 +1,109 @@
+:root {
+  color-scheme: dark;
+  --periwinkle: 223, 227, 255;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  color: rgba(var(--periwinkle), 0.88);
+}
+
+body.preview {
+  background:
+    repeating-conic-gradient(#181825 0% 25%, #11111b 0% 50%) 50% / 28px 28px;
+}
+
+#mind {
+  display: block;
+  cursor: grab;
+}
+
+#mind:active {
+  cursor: grabbing;
+}
+
+#layers {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: 0.4rem;
+}
+
+#layers button {
+  padding: 0.3rem 0.7rem;
+  font: inherit;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  background: rgba(10, 10, 18, 0.5);
+  border: 1px solid;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+#layers button.off {
+  opacity: 0.45;
+}
+
+#leaving {
+  position: fixed;
+  bottom: 1.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: rgba(var(--periwinkle), 0.35);
+  pointer-events: none;
+}
+
+#reading {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: none;
+  max-width: 24rem;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.8rem 1rem;
+  font-size: 0.82rem;
+  background: rgba(10, 10, 18, 0.62);
+  border: 1px solid rgba(var(--periwinkle), 0.16);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+}
+
+#reading.shown {
+  display: flex;
+}
+
+#reading p {
+  margin: 0;
+  max-width: 22rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(var(--periwinkle), 0.7);
+}
+
+#reading span {
+  color: rgba(var(--periwinkle), 0.5);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+#reading button {
+  align-self: flex-start;
+  padding: 0.3rem 0.7rem;
+  font: inherit;
+  font-size: 0.74rem;
+  color: rgba(186, 232, 186, 0.95);
+  background: none;
+  border: 1px solid rgba(186, 232, 186, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+}

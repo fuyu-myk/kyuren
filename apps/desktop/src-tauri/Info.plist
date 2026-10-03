@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kyuren listens when you summon it, so that you can speak to it instead of typing.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Kyuren uses the camera only while the mind graph is in vision mode, to track your hand.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Kyuren reads your calendars to tell you what your day holds.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Kyuren reads your calendars to tell you what your day holds.</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Kyuren asks Mail for your unread messages so it can summarise them, and asks Spotify or Music what is playing so the island can show and control it.</string>
+	<key>LSUIElement</key>
+	<false/>
+</dict>
+</plist>
