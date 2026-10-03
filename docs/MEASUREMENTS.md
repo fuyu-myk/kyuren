@@ -672,7 +672,7 @@ was measured rather than chosen:
 | --- | --- | --- |
 | CHM118, CHM118 discussion | 0.918 | one thing |
 | Delgado, Professor Delgado | 0.885 | one thing |
-| MAT210, CS 61B | 0.867 | one thing |
+| MAT210, MAT 210 | 0.867 | one thing |
 | Petra, Petra Holst | 0.819 | one thing |
 | Petra Holst, P. Holst | 0.813 | one thing |
 | MAT210, BIO215 | 0.658 | two things |
