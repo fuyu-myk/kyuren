@@ -1,8 +1,8 @@
 import { defineConfig } from "@playwright/test";
 
 /// The island's page outside the app, driven through its own preview harness in WebKit, the engine
-/// the app's webview is. A server of its own, on a port of its own, so a dev server left running
-/// is never what is tested.
+/// the app's webview is, and the main window's through a stand-in for Tauri's channel. A server of
+/// its own, on a port of its own, so a dev server left running is never what is tested.
 const PORT = 1430;
 
 export default defineConfig({

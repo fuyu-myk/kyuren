@@ -191,3 +191,17 @@ test("a question shows what would go with it, and says when it is asked because 
   await expect(page.locator(".row.ask .carrying")).toHaveText("sending the appointment on Thursday the note mentions");
   await expect(page.locator(".row.ask .why")).toHaveText("asked because this conversation has read your notes");
 });
+
+test("a question answered in the main window is gone from the island, which folds away once none is left", async ({ page }) => {
+  await opened(page);
+  await emit(page, "permission", { id: "q3", tool: "web_fetch", effect: "outbound", target: "https://example.com/paper" });
+  await emit(page, "permission", { id: "q4", tool: "web_search", effect: "outbound", target: "https://html.duckduckgo.com" });
+  await page.locator(".tabs .tab[title='waiting on you']").click();
+  await expect(page.locator(".row.ask")).toHaveCount(2);
+  await emit(page, "permission:answered", "q3");
+  await expect(page.locator(".row.ask .target")).toHaveText(["https://html.duckduckgo.com"]);
+  await folded(page);
+  await expect(page.locator(".sign.shown")).toHaveText("1");
+  await emit(page, "permission:answered", "q4");
+  await expect(page.locator(".sign.shown")).toHaveCount(0);
+});

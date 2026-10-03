@@ -700,7 +700,8 @@ Carried over from the Kyuren house style and binding here.
   it establishes.
 - The island's behaviour is held by end-to-end tests run in WebKit, the engine its webview is,
   through its own preview harness: `pnpm e2e`. A change to how the island behaves runs them, and
-  one that adds behaviour adds to them.
+  one that adds behaviour adds to them. The main window has no harness; its tests there stand in
+  for Tauri's own channel instead.
 - Many small focused files over few large ones. The reference repository's 2,498-line single-class
   daemon is the specific failure mode being avoided.
 - Conventional commit messages.

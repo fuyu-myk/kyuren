@@ -16,6 +16,10 @@ export function onPermission(handler: (request: PermissionRequest) => void): Pro
   return listen<PermissionRequest>("permission", (event) => handler(event.payload));
 }
 
+export function onAnswered(handler: (id: string) => void): Promise<UnlistenFn> {
+  return listen<string>("permission:answered", (event) => handler(event.payload));
+}
+
 export function onReply(handler: (reply: string) => void): Promise<UnlistenFn> {
   return listen<string>("agent:reply", (event) => handler(event.payload));
 }

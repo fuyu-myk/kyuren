@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { onPermission, onTrouble, resolvePermission, type PermissionRequest } from "@/agent";
+import { onAnswered, onPermission, onTrouble, resolvePermission, type PermissionRequest } from "@/agent";
 import { PANES, type Pane } from "@/panes";
 import { Place } from "@/Place";
 import { System } from "@/System";
@@ -10,11 +10,19 @@ type Where = Pane | "system";
 /// permission over the top of all of it.
 export function App() {
   const [where, setWhere] = useState<Where>("chat");
-  const [asking, setAsking] = useState<PermissionRequest>();
+  const [questions, setQuestions] = useState<PermissionRequest[]>([]);
   const [trouble, setTrouble] = useState<string>();
 
   useEffect(() => {
-    const pending = onPermission(setAsking);
+    const pending = onPermission((request) =>
+      setQuestions((was) => (was.some((one) => one.id === request.id) ? was : [...was, request])),
+    );
+    return () => void pending.then((unlisten) => unlisten());
+  }, []);
+
+  // The island asks every question as well; answered there, it is gone from here.
+  useEffect(() => {
+    const pending = onAnswered((id) => setQuestions((was) => was.filter((one) => one.id !== id)));
     return () => void pending.then((unlisten) => unlisten());
   }, []);
 
@@ -24,6 +32,12 @@ export function App() {
   }, []);
 
   const go = useCallback((place: Where) => setWhere(place), []);
+
+  const answer = (id: string, allow: boolean) => {
+    setQuestions((was) => was.filter((one) => one.id !== id));
+    void resolvePermission(id, allow);
+  };
+  const asking = questions[0];
 
   return (
     <main className="workspace">
@@ -67,24 +81,10 @@ export function App() {
           ) : null}
           {asking.why ? <p className="why">asked because {asking.why}</p> : null}
           <div className="actions">
-            <button
-              type="button"
-              className="refuse"
-              onClick={() => {
-                void resolvePermission(asking.id, false);
-                setAsking(undefined);
-              }}
-            >
+            <button type="button" className="refuse" onClick={() => answer(asking.id, false)}>
               deny
             </button>
-            <button
-              type="button"
-              className="agree"
-              onClick={() => {
-                void resolvePermission(asking.id, true);
-                setAsking(undefined);
-              }}
-            >
+            <button type="button" className="agree" onClick={() => answer(asking.id, true)}>
               allow
             </button>
           </div>
