@@ -15,10 +15,24 @@ export function createAsker(transport: Transport): Asker {
   const waiting = new Map<string, (verdict: "allow" | "deny") => void>();
 
   return {
-    ask: (action: Action, why?: string) =>
+    ask: (action: Action, why?: string, signal?: AbortSignal) =>
       new Promise<"allow" | "deny">((resolve) => {
+        if (signal?.aborted) {
+          resolve("deny");
+          return;
+        }
         const id = randomUUID();
-        waiting.set(id, resolve);
+        // What asked was stopped: the question is no longer waiting, in either window.
+        const withdraw = () => {
+          if (!waiting.delete(id)) return;
+          transport.send({ event: "permission.withdrawn", data: { id } });
+          resolve("deny");
+        };
+        waiting.set(id, (verdict) => {
+          signal?.removeEventListener("abort", withdraw);
+          resolve(verdict);
+        });
+        signal?.addEventListener("abort", withdraw, { once: true });
         transport.send({
           event: "permission.request",
           data: {

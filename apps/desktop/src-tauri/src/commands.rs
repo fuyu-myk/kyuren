@@ -172,6 +172,7 @@ pub fn askable_capabilities() -> Vec<Asked> {
 pub async fn run_capability(
     tool: String,
     pane: Option<String>,
+    id: Option<String>,
     sidecars: State<'_, Sidecars>,
 ) -> Result<Value, String> {
     let asked = ON_THEIR_OWN
@@ -184,7 +185,7 @@ pub async fn run_capability(
         .core
         .request_untimed(
             "agent.run",
-            json!({ "prompt": asked, "difficulty": "moderate", "pane": pane }),
+            json!({ "prompt": asked, "difficulty": "moderate", "pane": pane, "id": id }),
         )
         .await
         .map_err(|failure| failure.to_string())

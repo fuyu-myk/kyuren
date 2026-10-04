@@ -6,11 +6,13 @@ import { insideTauri } from "@/tauri";
 
 /// Asking in writing. A session carries the conversation, and a pane without one starts a session
 /// to hold it. Kept apart from the rest of what sessions do, since a window that only asks should
-/// be granted only asking.
+/// be granted only asking. Given a name, the turn is its own, stopped by that name and by nothing
+/// another window starts.
 export async function ask(
   prompt: string,
   where: { session?: string; pane?: Pane },
   route?: Route,
+  id?: string,
 ): Promise<Answer> {
   if (!insideTauri()) return pretend.ask(prompt, where);
   return await invoke<Answer>("ask", {
@@ -18,5 +20,6 @@ export async function ask(
     session: where.session ?? null,
     pane: where.pane ?? null,
     route: route ?? null,
+    id: id ?? null,
   });
 }

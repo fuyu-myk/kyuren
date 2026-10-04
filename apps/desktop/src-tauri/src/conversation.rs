@@ -113,6 +113,12 @@ pub fn forward(app: &AppHandle, event: &str, data: &Value) {
         "permission.request" => {
             let _ = app.emit("permission", data);
         }
+        // A question whose turn was stopped no longer waits, in either window.
+        "permission.withdrawn" => {
+            if let Some(id) = data.get("id").and_then(Value::as_str) {
+                let _ = app.emit("permission:answered", id);
+            }
+        }
         "voice.failed" | "asr.failed" | "vad.failed" | "refine.failed" | "oauth.failed" => {
             let reason = data.get("reason").and_then(Value::as_str).unwrap_or("unknown");
             let _ = app.emit("kyuren:trouble", format!("{event}: {reason}"));

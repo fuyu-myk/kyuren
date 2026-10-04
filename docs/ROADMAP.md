@@ -116,7 +116,7 @@ the fallback and costs no application size; it has not been tried.
 and for the cloud provider, the routing policy from KYUREN.md section 5 with three routes, a judge
 of how hard a request is, and a route the user may choose for a conversation. The agent loop with
 streaming and tool dispatch, a turn waited on until it ends and stoppable from the main window,
-and a model that has not begun to answer within five minutes taken as stalled. The permission
+and a model that says nothing for five minutes while no tool runs taken as stalled. The permission
 gate with fingerprint-keyed decision memory, allows kept between runs, and an audit log; once a
 conversation has read the user's notes, anything that would leave the machine is asked about. The
 session store.

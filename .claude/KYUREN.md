@@ -89,9 +89,11 @@ Menu bar via Tauri's tray support.
 A turn has no deadline in the broker: a research run reads the web for twenty minutes and a
 question waits on the user for as long as the user takes. It ends when the core answers it, when
 it is stopped, which the core answers as well, or when the core exits, which fails every request
-still open. The main window offers to stop the turn it is waiting on. What is timed is a model
-that has stalled: the core gives a model five minutes to begin each answer, and nothing after its
-first word, since a tool running or a question waiting may rightly take far longer.
+still open. The main window offers to stop the turn it is waiting on, which it starts under a name
+of its own, so that stopping it stops nothing else; a question that turn left open is withdrawn
+from both windows. What is timed is a model that has stalled: one that says nothing for five
+minutes while no tool is running ends its turn. A tool running, or a question waiting on the user,
+is not the model's silence.
 
 ### 4.2 Swift sidecar, `sidecars/perception`
 

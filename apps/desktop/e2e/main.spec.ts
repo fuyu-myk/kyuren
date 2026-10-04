@@ -112,7 +112,9 @@ test("a question being waited on can be stopped, and ends as stopped rather than
   await expect(stop).toBeVisible();
   await stop.click();
   await expect(page.getByRole("button", { name: "send" })).toBeVisible();
-  expect((await calledWith(page, "stop_turn")).map((one) => one.args)).toEqual([{ id: null }]);
+  const [asked] = await calledWith(page, "ask");
+  expect(String(asked?.args.id)).toMatch(/^chat:/);
+  expect((await calledWith(page, "stop_turn")).map((one) => one.args)).toEqual([{ id: asked?.args.id }]);
   await expect(page.getByText("stopped before it finished")).toHaveCount(0);
 });
 

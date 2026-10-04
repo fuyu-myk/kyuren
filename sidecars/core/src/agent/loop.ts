@@ -120,9 +120,9 @@ function adapt<A>(
       const action = subject.describe(args);
       const step = watching?.began(subject.name, action.target, action.effect);
       let asked = false;
-      const asking: Ask = (about, why) => {
+      const asking: Ask = (about, why, stopped) => {
         asked = true;
-        return ask(about, why);
+        return ask(about, why, stopped);
       };
       const outcome = await invoke(subject, args, gate, asking, signal, exposure);
       watching?.ended(step ?? "", outcome.ok, !outcome.ok && outcome.refused, asked);
@@ -192,14 +192,21 @@ export type Run = {
   /// Whether what the turn finds goes on to a model on the cloud, as a run's findings go back to a
   /// turn on the cloud that started it, wherever the run itself is answered.
   cloudAbove?: boolean;
-  /// How long the model may take to begin answering before the turn is given up as stalled.
-  firstWord?: number;
+  /// How long the model may say nothing, while no tool is running, before the turn is given up.
+  silence?: number;
 };
 
-/// A model that has not begun to answer in this long has stalled: a local one loading and reading
-/// a long context takes a minute or two. What comes after its first word is not timed, since a
-/// tool, or a question waiting on the user, may rightly take far longer.
-const FIRST_WORD = 5 * 60_000;
+/// A model that says nothing for this long, while no tool is running, has stalled: a local one
+/// loading and reading a long context takes a minute or two before its first word. A tool running,
+/// or a question waiting on the user, is not the model's silence, and may rightly take far longer.
+const SILENCE = 5 * 60_000;
+
+/// Whether a part of the stream is the model saying something, rather than only beginning to.
+function spoke(chunk: { type: string; text?: unknown; delta?: unknown }): boolean {
+  if (chunk.type === "text-delta" || chunk.type === "reasoning-delta") return typeof chunk.text === "string" && chunk.text !== "";
+  if (chunk.type === "tool-input-delta") return typeof chunk.delta === "string" && chunk.delta !== "";
+  return chunk.type === "tool-call";
+}
 
 function waited(ms: number): string {
   return ms >= 60_000 ? `${Math.round(ms / 60_000)} minutes` : `${ms} ms`;
@@ -246,16 +253,31 @@ export async function run(options: Run): Promise<Transcript> {
   const spoken: string[] = [];
   const exposure: Exposure = { held: options.exposed === true, cloud: decision.route === "cloud" || options.cloudAbove === true };
 
+  // The model's silence ends the turn only while no tool is running, so it is watched with what runs.
+  const silence = options.silence ?? SILENCE;
+  const quiet = new AbortController();
+  let working = 0;
+  let hushed: ReturnType<typeof setTimeout> | undefined;
+  const heard = () => clearTimeout(hushed);
+  const listen = () => {
+    heard();
+    if (working === 0) hushed = setTimeout(() => quiet.abort(), silence);
+  };
+
   // Whoever asked may also be watching; either way the turn keeps its own account of what it did.
   const called: Called[] = [];
   const where = new Map<string, number>();
   const watching: Watching = {
     began: (tool, target, effect) => {
+      working += 1;
+      heard();
       const step = options.watching?.began(tool, target, effect) ?? `step:${called.length}`;
       where.set(step, called.push({ tool, target, effect }) - 1);
       return step;
     },
     ended: (step, ok, refused, asked) => {
+      working -= 1;
+      listen();
       const at = where.get(step);
       if (at !== undefined) {
         called[at]!.ok = ok;
@@ -328,16 +350,6 @@ export async function run(options: Run): Promise<Transcript> {
   let trouble: unknown;
   // Counted as each step ends, so a turn that fails part way can still say what it cost.
   let finished: Spent | undefined;
-  // Each step's first word is waited for so long and no longer, so a model that has stalled before
-  // answering, or before taking the request at all, ends the turn rather than holding it.
-  const firstWord = options.firstWord ?? FIRST_WORD;
-  const quiet = new AbortController();
-  let listening: ReturnType<typeof setTimeout> | undefined;
-  const heard = () => clearTimeout(listening);
-  const listen = () => {
-    heard();
-    listening = setTimeout(() => quiet.abort(), firstWord);
-  };
   const result = streamText({
     model: modelFor(decision.route, difficulty),
     system: options.system,
@@ -345,7 +357,9 @@ export async function run(options: Run): Promise<Transcript> {
     stopWhen: stepCountIs(options.steps ?? MAX_STEPS),
     abortSignal: options.signal ? AbortSignal.any([options.signal, quiet.signal]) : quiet.signal,
     onStepStart: listen,
-    onChunk: heard,
+    onChunk: ({ chunk }) => {
+      if (spoke(chunk)) listen();
+    },
     tools: offered,
     onError: ({ error }) => {
       trouble = error;
@@ -367,6 +381,8 @@ export async function run(options: Run): Promise<Transcript> {
     for await (const chunk of result.textStream) {
       options.onText?.(chunk);
     }
+    // Stopped, or gone quiet, once a step has finished, the stream ends as though it were done.
+    if (options.signal?.aborted || quiet.signal.aborted) throw new Error("cut short");
     if (trouble !== undefined) throw new Error(`the model stopped answering: ${said(trouble)}`);
     // A turn cut off for length is not an answer, and a run that ends on one has done nothing it
     // was asked to do while looking as though it chose to stop.
@@ -379,7 +395,7 @@ export async function run(options: Run): Promise<Transcript> {
     const reason = options.signal?.aborted
       ? "stopped before it finished"
       : quiet.signal.aborted
-        ? `the model did not begin to answer within ${waited(firstWord)}`
+        ? `the model said nothing for ${waited(silence)}`
         : said(failure);
     throw new TurnFailed(reason, { called, route: decision.route, model: nameFor(decision.route), exposed: exposure.held, spent: finished });
   } finally {

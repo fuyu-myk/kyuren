@@ -34,6 +34,18 @@ function saying(text: string): Reply {
 /// Takes the request and says nothing, as a model that has stalled before its first word.
 const silent: Reply = () => undefined;
 
+/// Begins an answer, as a provider does at once, and then says nothing more.
+const begun: Reply = (response) => {
+  response.writeHead(200, { "content-type": "text/event-stream" });
+  response.write(sent({ choices: [{ index: 0, delta: { role: "assistant" }, finish_reason: null }] }));
+};
+
+/// Says a word or two of an answer and then nothing more.
+const trailing: Reply = (response) => {
+  response.writeHead(200, { "content-type": "text/event-stream" });
+  response.write(sent({ choices: [{ index: 0, delta: { role: "assistant", content: "Let me" }, finish_reason: null }] }));
+};
+
 const failing: Reply = (response) => {
   response.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ error: { message: "the scripted model gives up here" } }));
 };
@@ -111,21 +123,21 @@ test("a call the gate allows without a question is not taken for one that was as
   assert.notEqual(done.called[0]?.asked, true);
 });
 
-test("a model that says nothing within its first-word limit fails the turn, and says so", async () => {
+test("a model that says nothing within its limit fails the turn, and says so", async () => {
   replies.push(silent);
   const began = Date.now();
-  const failure = await run({ prompt: "anything", vault, sensitive: true, difficulty: "hard", gate: gate(), ask: async () => "deny", firstWord: 300 })
+  const failure = await run({ prompt: "anything", vault, sensitive: true, difficulty: "hard", gate: gate(), ask: async () => "deny", silence: 300 })
     .then(() => undefined, (cause: unknown) => cause);
   assert.ok(failure instanceof TurnFailed, String(failure));
-  assert.match(failure.message, /did not begin to answer/);
+  assert.match(failure.message, /the model said nothing for 300 ms/);
   assert.ok(Date.now() - began < 5_000, "failed at the limit, not left waiting");
 });
 
-test("a question answered after the first-word limit does not cut the turn off", async () => {
+test("a question answered after the limit does not cut the turn off", async () => {
   const written = join(here, "slow-answer.md");
   replies.push(calling("write_file", { path: written, text: "kept" }), saying("Written."));
   const done = await run({
-    prompt: "write it", vault, sensitive: true, difficulty: "hard", gate: gate(), firstWord: 300,
+    prompt: "write it", vault, sensitive: true, difficulty: "hard", gate: gate(), silence: 300,
     ask: async () => {
       await new Promise((later) => setTimeout(later, 900));
       return "allow";
@@ -183,4 +195,63 @@ author: claude-opus-5-5 on 2026-10-03
   const failure = await running;
   assert.ok(failure instanceof Error, String(failure));
   assert.equal(failure.message, "stopped before it finished");
+});
+
+test("a model that only begins an answer, or stops part way through one, fails the turn as silent", async () => {
+  for (const reply of [begun, trailing]) {
+    replies.length = 0;
+    replies.push(reply);
+    const failure = await run({ prompt: "anything", vault, sensitive: true, difficulty: "hard", gate: gate(), ask: async () => "deny", silence: 300 })
+      .then(() => undefined, (cause: unknown) => cause);
+    assert.ok(failure instanceof TurnFailed, String(failure));
+    assert.match(failure.message, /the model said nothing for 300 ms/);
+  }
+});
+
+test("a model gone silent after a step that called a tool fails the turn, rather than ending it as answered", async () => {
+  replies.push(calling("list_directory", { path: vault }), silent);
+  const failure = await run({ prompt: "look", vault, sensitive: true, difficulty: "hard", gate: gate(), ask: async () => "deny", silence: 300 })
+    .then(() => undefined, (cause: unknown) => cause);
+  assert.ok(failure instanceof TurnFailed, String(failure));
+  assert.match(failure.message, /the model said nothing/);
+  assert.equal(failure.called[0]?.tool, "list_directory");
+});
+
+test("a turn stopped after a step that called a tool fails as stopped, rather than ending as answered", async () => {
+  replies.push(calling("list_directory", { path: vault }), silent);
+  const stopping = new AbortController();
+  const failure = await run({
+    prompt: "look", vault, sensitive: true, difficulty: "hard", gate: gate(), ask: async () => "deny", signal: stopping.signal,
+    watching: {
+      began: (tool) => tool,
+      ended: () => void setTimeout(() => stopping.abort(), 100),
+    },
+  }).then(() => undefined, (cause: unknown) => cause);
+  assert.ok(failure instanceof TurnFailed, String(failure));
+  assert.equal(failure.message, "stopped before it finished");
+});
+
+test("a turn stopped while a question is open ends at once, and the question is withdrawn", async () => {
+  const { createAsker } = await import("#agent/asker.ts");
+  const told: Array<{ event: string; data: { id: string } }> = [];
+  const stopping = new AbortController();
+  const asker = createAsker({
+    send: (message) => {
+      told.push(message as { event: string; data: { id: string } });
+      if ((message as { event?: string }).event === "permission.request") stopping.abort();
+    },
+    listen: () => undefined,
+  });
+  const written = join(here, "asked-then-stopped.md");
+  replies.push(calling("write_file", { path: written, text: "no" }), saying("Written."));
+  const began = Date.now();
+  const failure = await run({ prompt: "write it", vault, sensitive: true, difficulty: "hard", gate: gate(), ask: asker.ask, signal: stopping.signal })
+    .then(() => undefined, (cause: unknown) => cause);
+  assert.ok(failure instanceof TurnFailed, String(failure));
+  assert.equal(failure.message, "stopped before it finished");
+  assert.ok(Date.now() - began < 5_000, "not left waiting on the answer");
+  const asked = told.find((one) => one.event === "permission.request");
+  assert.ok(told.some((one) => one.event === "permission.withdrawn" && one.data.id === asked?.data.id), "the windows are told it is gone");
+  assert.equal(asker.pending(), 0);
+  assert.equal(existsSync(written), false);
 });

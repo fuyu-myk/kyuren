@@ -2,8 +2,8 @@ import { leaves, type Action } from "#permission/action.ts";
 import type { Gate } from "#permission/gate.ts";
 
 /// Puts a question to the user; `why` says what makes it a question now when it would not be one
-/// otherwise.
-export type Ask = (action: Action, why?: string) => Promise<"allow" | "deny">;
+/// otherwise. Stopped before it is answered, the question is withdrawn and taken as a no.
+export type Ask = (action: Action, why?: string, signal?: AbortSignal) => Promise<"allow" | "deny">;
 
 /// Whether a turn has the user's notes in it: set by a call that read them, and from then on what
 /// would leave the machine is asked about every time. On the cloud, what a call reads goes to the
@@ -48,7 +48,7 @@ export async function invoke<A>(
   let resolution = gate.decide(action, fresh || action.first !== undefined);
   if (resolution.verdict === "ask") {
     const why = [toCloud ? NOTES_TO_CLOUD : fresh ? NOTES_READ : undefined, action.first].filter((one) => one !== undefined);
-    const answer = await ask(action, why.length > 0 ? why.join(", and ") : undefined);
+    const answer = await ask(action, why.length > 0 ? why.join(", and ") : undefined, signal);
     // A no to a first use is about that one thing; kept, it would take back what its host was allowed.
     if (fresh || (action.first !== undefined && answer === "deny")) {
       resolution = gate.once(action, answer);

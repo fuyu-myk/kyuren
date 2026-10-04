@@ -84,9 +84,9 @@ export function Place({ pane }: PlaceProps) {
   const [choice, setChoice] = useState<Choice>(kept);
   const [last, setLast] = useState<Stood>();
   const clearing = useRef<number>(0);
-  // The turn being waited on, so it can be stopped: a playbook run by the name it was started
-  // under, a question by none. One that was stopped ends as stopped, not as trouble.
-  const waiting = useRef<{ id?: string; stopped: boolean } | undefined>(undefined);
+  // The turn being waited on, by the name it was started under, so it can be stopped. One that was
+  // stopped ends as stopped, not as trouble.
+  const waiting = useRef<{ id: string; stopped: boolean } | undefined>(undefined);
 
   const load = useCallback(async () => {
     try {
@@ -204,9 +204,10 @@ export function Place({ pane }: PlaceProps) {
     clear();
     setBusy(true);
     setTurns((held) => [...held, { role: "user", text: saying, at: Date.now() }]);
-    waiting.current = { stopped: false };
+    const id = `${pane}:${crypto.randomUUID()}`;
+    waiting.current = { id, stopped: false };
     try {
-      const answer = await ask(saying, open ? { session: open.id } : { pane }, choice === "auto" ? undefined : choice);
+      const answer = await ask(saying, open ? { session: open.id } : { pane }, choice === "auto" ? undefined : choice, id);
       setLast(answer);
       setTurns((held) => [
         ...held,
@@ -246,9 +247,10 @@ export function Place({ pane }: PlaceProps) {
     setTrouble(undefined);
     // Shown as having been asked in the words it is actually asked in.
     setTurns((held) => [...held, { role: "user", text: asked.asking, at: Date.now() }]);
-    waiting.current = { stopped: false };
+    const id = `${pane}:${crypto.randomUUID()}`;
+    waiting.current = { id, stopped: false };
     try {
-      const answer = await runCapability(one.label, one.pane);
+      const answer = await runCapability(one.label, one.pane, id);
       setLast(answer);
       setTurns((held) => [
         ...held,

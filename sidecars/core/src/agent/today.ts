@@ -36,8 +36,8 @@ export function todayTool(
       + "their day, what is due, what is coming up, or a morning brief.",
     describe: () => ({ tool: "today", effect: "read", target: "the day" }),
     notes: true,
-    run: async (args) => {
-      const gathered = await gather(sources, spanAround(new Date(), back, forward), gate, ask);
+    run: async (args, signal) => {
+      const gathered = await gather(sources, spanAround(new Date(), back, forward), gate, (action, why) => ask(action, why, signal));
       const summary = digest(gathered);
 
       // The day is written down as it is read. A brief that only spoke would leave nothing to look

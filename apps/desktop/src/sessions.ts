@@ -119,9 +119,9 @@ export async function capabilities(): Promise<Capability[]> {
 }
 
 /// Runs a capability on its own. Given a pane, what it says is kept there as a session.
-export async function runCapability(tool: string, pane?: Pane): Promise<Answer> {
+export async function runCapability(tool: string, pane?: Pane, id?: string): Promise<Answer> {
   if (!insideTauri()) return pretend.ask(`run ${tool}`, { pane });
-  const answer = await invoke<Answer>("run_capability", { tool, pane: pane ?? null });
+  const answer = await invoke<Answer>("run_capability", { tool, pane: pane ?? null, id: id ?? null });
   return { ...answer, text: answer.spoken ?? answer.text ?? "" };
 }
 
