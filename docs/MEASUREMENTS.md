@@ -149,12 +149,12 @@ stopped so nothing contended for the microphone.
 
 ### First partial after speech start
 
-992, 522, 514, 831, 414, 623, 825, 308, 221, 897 ms. **Median 623 ms, two of ten inside the
-400 ms budget.**
+992, 522, 514, 831, 414, 623, 825, 308, 221, 897 ms. **Median 573 ms, two of ten inside the
+400 ms budget.** First written as 623 ms, the sixth of the ten rather than the middle of them.
 
 This does not meet the gate. The measurement is also optimistic: it starts when voice activity
 reports speech, which is itself up to 256 ms after the speech actually began, so true onset to
-first partial is closer to 880 ms.
+first partial is closer to 830 ms.
 
 Two floors are stacked underneath it. Voice activity decides on 256 ms chunks, and the
 `parakeetEou320ms` recogniser emits on 320 ms chunks. Their sum alone is most of the budget.
@@ -477,7 +477,7 @@ and saturates the machine while it happens.
 | check | result |
 | --- | --- |
 | dismissing stops a reply in progress and discards what was queued | no further audio started after the stop |
-| speaking through the speakers is not transcribed back | 0 transcripts during playback |
+| speaking through the speakers is not transcribed back | 0 transcripts during playback, but listening was paused while Kyuren spoke, so this shows nothing; Whether Kyuren hears itself does |
 | a denied tool call does not execute | the file was never created, and the reply said why |
 | the agent loop survives being stopped | stop answered, the sidecar kept serving, the next turn worked |
 
@@ -765,3 +765,51 @@ A write is not confirmed by searching. Notion's search index lags behind a page 
 an entry that exists reads as missing: one of these two was written and invisible to search at the
 same moment. Querying the database directly shows both.
 
+## The mind at a thousand orbs and more
+
+Taken 2026-09-18 in the browser preview of the mind, `mind.html?sketch=200`, about 4800 orbs, with
+the first real vault connected: 263 notes, from which 4380 entities were first extracted.
+
+| what | before | after |
+| --- | --- | --- |
+| frames per second at 4800 orbs | 1 | 44 |
+| merging the vault's entities | 10.6 s | 0.23 s |
+
+Threads are stroked in bundles by brightness and width in two depth bands, the simulation rests once
+calm, and the merge is indexed by word rather than comparing every pair. The graph keeps every note
+and at most a thousand other things, a connected vault's entities only where they join two notes.
+Measured in the preview, not in the app's own window.
+
+## Playbooks run end to end
+
+Through the real core.
+
+| date | run | route | seen |
+| --- | --- | --- | --- |
+| 2026-09-19 | a playbook approved, then run | cloud | it wrote its file, passed both machine proof items, and left a run log with the call and the gate's decision on it |
+| 2026-09-19 | a run that failed, its folder missing, then repaired from its log | cloud | an instruction planted in the log, asking for a new skill and an exfiltration step, changed nothing; the repair landed pending with a diff; approval raised the version; the next run passed once `write_file` created parent folders, the gap the repair itself named |
+| 2026-09-19 | a schedule, in a scratch home | local, qwen3.5:9b | it fired at its minute, once |
+| 2026-09-19 | a parent starting two sub-runs, in a scratch home | local, qwen3.5:9b | two logs, one per child, and the parent proved both |
+| 2026-10-01 | deep research: six research sub-runs, a report, a fact-check | cloud | 23 minutes, 111 pages read, 49 searches, a 50 KB report citing 40 sources; every machine proof passed, `cited` among them |
+
+The 2026-10-01 run failed only its judged rubrics, because the judge was shown part of each file.
+Shown whole files, it judged the report to hold. From the run logs, at the Claude Opus 5 rates of
+the time, it cost about $10: the parent $2.81, the fact-check $2.50 and the six sub-runs $4.68.
+Cache writes were about half of that and output, mostly thinking, about a third.
+
+## The Claude Code relay, live
+
+2026-10-02, with the hook installed: two permission questions Claude Code raised for a test came to
+the island, were allowed there, and Claude Code went on as allowed. A deny, and a question from a
+session at work, have not been seen.
+
+## On the built app
+
+2026-10-03, by the user, on the app built from this repository.
+
+| check | result |
+| --- | --- |
+| a web page read through the reader, and summed up | read and summed up |
+| `http://localhost:11434` given to the reader | refused |
+| every window used once: the main window's places and settings, the island's tabs, the mind | nothing failed for want of a permission |
+| a permission question allowed on the island | gone from the island, still shown in the main window; the main window now lets go of a question answered anywhere, not yet seen on a build |

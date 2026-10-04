@@ -95,10 +95,11 @@ and no good answer anywhere else.
 - **Capture.** `AVAudioEngine`, capture only and without voice processing. Apple's hardware echo
   cancellation is one call, but it cannot initialise while the default input and output devices
   disagree on a sample rate, and once it is enabled on the input nothing in the process can start
-  playback at all. It is not needed here: the microphone does not pick up these speakers, measured
-  with capture left open through a whole reply for no transcripts at all. Kyuren therefore keeps
-  listening while it speaks and can be interrupted by being spoken over, with a transcript that
-  repeats what was just said discarded in case a louder room ever carries it back.
+  playback at all. It is mostly not needed here: at ordinary volumes the microphone does not pick
+  up these speakers, measured with capture left open through whole replies at volumes 25 and 56,
+  though at 60 part of a reply came back. Kyuren therefore keeps listening while it speaks and can
+  be interrupted by being spoken over, with a transcript that repeats what was just said discarded,
+  since a louder reply does carry back.
 - **Ducking.** Other audio is quietened while Kyuren speaks, through `AudioDeviceDuck`. There is no
   public equivalent on macOS: the session ducking options are iOS only, and the device volume
   property moves Kyuren's own voice along with everything else. The symbol is exported by CoreAudio
