@@ -63,7 +63,7 @@ export class Gate {
       return { verdict: previous.verdict, source: "remembered", fingerprint: key };
     }
 
-    if ((this.standing.get(`${action.tool}|${action.effect}`) ?? 0) > 0) {
+    if ((this.standing.get(`${action.tool}|${action.effect}`) ?? 0) > 0 || (this.standing.get(key) ?? 0) > 0) {
       this.record({ at: new Date().toISOString(), action: bare(action), verdict: "allow", source: "playbook" });
       return { verdict: "allow", source: "playbook", fingerprint: key };
     }
@@ -74,9 +74,9 @@ export class Gate {
   /// A standing allowance for one tool and effect, for as long as a run holds it: an approved
   /// playbook that names a web tool may read the web without a question per address, and every
   /// address it reads is in the run's log. Counted, so two runs at once do not withdraw each
-  /// other's. Never lifts what the policy refuses.
-  allow(tool: string, effect: Action["effect"]): () => void {
-    const key = `${tool}|${effect}`;
+  /// other's. Never lifts what the policy refuses. Given a target, it answers for that one alone.
+  allow(tool: string, effect: Action["effect"], target?: string): () => void {
+    const key = target === undefined ? `${tool}|${effect}` : fingerprint({ tool, effect, target });
     this.standing.set(key, (this.standing.get(key) ?? 0) + 1);
     let withdrawn = false;
     return () => {

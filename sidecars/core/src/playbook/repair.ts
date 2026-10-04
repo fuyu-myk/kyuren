@@ -67,16 +67,24 @@ export async function repairPlaybook(options: Repairing): Promise<Repaired> {
     throw new Error(`that run of ${options.name} could not finish, so nothing in the playbook failed to repair`);
   }
 
-  const transcript = await options.perform({
-    prompt: "Propose the repaired playbook now, then say in two lines what you changed and why.",
-    vault: options.vault,
-    system: repairBriefing(text, run),
-    difficulty: "hard",
-    gate: options.gate,
-    ask: options.ask,
-    signal: options.signal,
-    tools: ["playbook_propose"],
-  });
+  // Asking for a repair is the permission to propose this playbook, for as long as the repair runs;
+  // the text still waits for approval, and a proposal under any other name is asked about.
+  const withdraw = options.gate.allow("playbook_propose", "write", `playbook:${options.name}`);
+  let transcript: Transcript;
+  try {
+    transcript = await options.perform({
+      prompt: "Propose the repaired playbook now, then say in two lines what you changed and why.",
+      vault: options.vault,
+      system: repairBriefing(text, run),
+      difficulty: "hard",
+      gate: options.gate,
+      ask: options.ask,
+      signal: options.signal,
+      tools: ["playbook_propose"],
+    });
+  } finally {
+    withdraw();
+  }
 
   const pending = options.books.readPending(options.name) !== undefined;
   return { name: options.name, pending, diff: pending ? options.books.diff(options.name) : "", said: transcript.text };

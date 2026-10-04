@@ -142,3 +142,24 @@ test("a run that could not finish is not repaired from, since nothing in the pla
     forget("anthropic");
   }
 });
+
+test("a repair proposes the playbook it repairs without a question, and anything else only with one", async () => {
+  const { home, books, log } = await setUp();
+  const gate = new Gate(() => [], () => {});
+  const proposing = (name: string) => ({ tool: "playbook_propose", effect: "write" as const, target: `playbook:${name}` });
+  remember("anthropic", "held");
+  try {
+    const during: string[] = [];
+    await repairPlaybook({
+      books, log, name: "say-hello", vault: home, gate, ask: async () => "allow",
+      perform: async (turn: Turn) => {
+        during.push(turn.gate.decide(proposing("say-hello")).verdict, turn.gate.decide(proposing("something-else")).verdict);
+        return transcript("");
+      },
+    });
+    assert.deepEqual(during, ["allow", "ask"]);
+    assert.equal(gate.decide(proposing("say-hello")).verdict, "ask", "and nothing once the repair is over");
+  } finally {
+    forget("anthropic");
+  }
+});

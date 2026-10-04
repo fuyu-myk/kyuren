@@ -73,26 +73,17 @@ export function playbookHandlers(gate: Gate, ask: Ask, vault: string, watch?: ()
       runs: runs.recent(nameIn(params), 20),
     }),
 
-    "playbook.repair": async (params: Record<string, unknown>) => {
-      // Asking for a repair is the permission to propose one, for as long as the repair runs;
-      // the text still waits for approval. Held for the run rather than remembered, since a
-      // remembered answer now outlives the process and this one should not.
-      const withdraw = gate.allow("playbook_propose", "write");
-      try {
-        return await repairPlaybook({
-          books,
-          log: runs,
-          name: nameIn(params),
-          run: typeof params.run === "string" ? params.run : undefined,
-          vault,
-          gate,
-          ask,
-          perform: run,
-        });
-      } finally {
-        withdraw();
-      }
-    },
+    "playbook.repair": async (params: Record<string, unknown>) =>
+      repairPlaybook({
+        books,
+        log: runs,
+        name: nameIn(params),
+        run: typeof params.run === "string" ? params.run : undefined,
+        vault,
+        gate,
+        ask,
+        perform: run,
+      }),
 
     /// A slash command: the playbook by name and the words after it. Kept as a conversation in
     /// the pane it was typed in, so a page's past is its own and a run can be read back later.

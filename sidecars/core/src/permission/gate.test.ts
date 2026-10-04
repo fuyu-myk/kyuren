@@ -110,6 +110,16 @@ test("a standing allowance lets a run reach out without a question per address, 
   assert.equal(gate.decide({ tool: "x", effect: "destroy", target: "/" }).verdict, "deny", "never lifts a refusal");
 });
 
+test("a standing allowance for one target answers for that target alone", () => {
+  const gate = new Gate(() => [], () => {});
+  const proposing = (name: string) => ({ tool: "playbook_propose", effect: "write" as const, target: `playbook:${name}` });
+  const withdraw = gate.allow("playbook_propose", "write", "playbook:say-hello");
+  assert.equal(gate.decide(proposing("say-hello")).verdict, "allow");
+  assert.equal(gate.decide(proposing("something-else")).verdict, "ask", "another name is asked about");
+  withdraw();
+  assert.equal(gate.decide(proposing("say-hello")).verdict, "ask");
+});
+
 
 function kept(mode: "read" | "ask" | "write" = "write") {
   const path = join(mkdtempSync(join(tmpdir(), "kyuren-gate-")), "answers.json");

@@ -796,9 +796,11 @@ down, never the proof's. Links in the window open in the user's own browser, nev
 **Who writes them.** Playbooks and procedure skills are authored and repaired only by a frontier
 model, through the cloud route or a Claude Code session, never by the local models, which only
 run them. An authored or repaired playbook is inert until approved: it appears as pending with
-its diff and the run that prompted it, and approval is of that text, as with request skills. A
-playbook is an instruction the model will follow with real tools, so a page read during a run
-must never be able to rewrite one.
+its diff and the run that prompted it, and approval is of that text, as with request skills.
+Asking for a repair lets the model propose that playbook alone without a question, for as long as
+the repair runs; the store refuses a proposal that gives it new skills, and one under any other
+name is asked about. A playbook is an instruction the model will follow with real tools, so a page
+read during a run must never be able to rewrite one.
 
 **Why this shape.** Procedures improve without touching weights. A proof makes a run's success a
 fact rather than an impression. A run log makes a failure legible. The approval gate keeps
