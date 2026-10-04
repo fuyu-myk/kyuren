@@ -95,7 +95,7 @@ export function asSpeech(summary: Digest, scope: Scope = "everything"): string {
   }
 
   if (scope === "today") {
-    return said.join(" ");
+    return [...said, ...unchecked(summary)].join(" ");
   }
 
   if (summary.overdue.length > 0) {

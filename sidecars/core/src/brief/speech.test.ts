@@ -187,3 +187,12 @@ test("asked about tomorrow with a calendar out of reach, it does not call the da
   assert.match(answer, /could not check your Mac's calendar/);
   assert.doesNotMatch(answer, /nothing is on your calendar/i);
 });
+
+test("asked only about today with a calendar out of reach, it says what it could not check", () => {
+  const answer = asSpeech(digest(
+    { items: [], read: [], refused: [], unavailable: [], failed: [{ source: "google_calendar", reason: "offline" }] },
+    when,
+  ), "today");
+
+  assert.match(answer, /could not check/);
+});
