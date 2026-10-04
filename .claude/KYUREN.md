@@ -239,7 +239,8 @@ Autonomy inside an allowlist. The gate lives in the TypeScript core, below the m
   link nor a spelling the disk folds together gets past it. A connected vault is read freely, but
   for what is hidden inside it.
 - **Requires confirmation:** writes outside the vault, shell execution, outbound actions that
-  send, post, pay or delete, and any newly forged skill's first invocation.
+  send, post, pay or delete, and a skill's first call after each approval, whatever its host was
+  allowed before, with the question naming the skill. A no there refuses that call alone.
 - **Never automated:** credential entry, financial transactions, permanent deletion, and a write
   into Kyuren's own folder outside its vault. That folder holds what the user allowed, which vaults
   may be written, the skills approved and the rules that read unattended, so one yes to a write

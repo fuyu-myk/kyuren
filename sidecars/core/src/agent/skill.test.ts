@@ -102,3 +102,16 @@ test("once approved, and only then, the skill reaches out", async () => {
 test("a skill is asked about with the values it would send", () => {
   assert.equal(skillTool().describe({ name: "weather_now", values: { city: "Oslo", days: 3 } }).carrying, "city: Oslo, days: 3");
 });
+
+test("a newly approved skill is asked about at its first call, by name, and not again once that call is made", async () => {
+  await forgeTool().run({ ...draft, name: "weather_soon", url: "https://api.example.com/v1/forecast/{city}" }, nothing);
+  const skills = sharedSkills();
+  skills.approve(skills.named("weather_soon")!.id);
+  const tool = skillTool(async () => ["93.184.216.34"]);
+  const asking = { name: "weather_soon", values: { city: "Oslo" } };
+
+  assert.match(tool.describe(asking).first ?? "", /weather_soon has not been used since it was approved/);
+  const used = await tool.run(asking, nothing) as { ok: boolean };
+  assert.equal(used.ok, true);
+  assert.equal(tool.describe(asking).first, undefined);
+});

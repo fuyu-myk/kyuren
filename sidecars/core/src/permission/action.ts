@@ -26,6 +26,9 @@ export type Action = {
   /// What goes with it when that is not in its target: a search's words, a skill's values, a
   /// note's text. Shown with a question, since it is what a yes lets go.
   carrying?: string;
+  /// Set on the first use of something newly approved, saying what: its approval was of what it
+  /// would do, not of it doing it, so it is asked about whatever was answered before.
+  first?: string;
 };
 
 export type Verdict = "allow" | "ask" | "deny";
@@ -146,8 +149,8 @@ export function inVault(target: string | undefined, places: Place[]): boolean {
 
 /// An action as it is written down: where it went, not what it carried, which may be the user's notes.
 export function bare(action: Action): Action {
-  const { carrying, ...kept } = action;
-  return carrying === undefined ? action : kept;
+  const { carrying, first, ...kept } = action;
+  return carrying === undefined && first === undefined ? action : kept;
 }
 
 /// Reads and computation pass, but for a read of a secret. A write is judged by where it would

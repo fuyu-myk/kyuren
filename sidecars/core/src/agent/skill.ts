@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { Tool } from "#agent/tool.ts";
 import { lookupAll, type Resolve } from "#connect/web/nearby.ts";
 import { runSkill } from "#skill/run.ts";
+import { untried } from "#skill/shape.ts";
 import { sharedSkills } from "#skill/shared.ts";
 
 export const skillSchema = z.object({
@@ -30,16 +31,22 @@ export function skillTool(resolve: Resolve = lookupAll): Tool<z.infer<typeof ski
     description:
       "Use one of the approved skills. Give its name and the values it asks for. Only approved "
       + "skills can be used; a skill that is pending or broken will refuse.",
-    describe: (args) => ({
-      tool: "skill",
-      effect: "outbound",
-      target: whereItGoes(args.name),
-      carrying: Object.entries(args.values).map(([name, value]) => `${name}: ${value}`).join(", "),
-    }),
+    describe: (args) => {
+      const found = sharedSkills().named(args.name);
+      return {
+        tool: "skill",
+        effect: "outbound",
+        target: whereItGoes(args.name),
+        carrying: Object.entries(args.values).map(([name, value]) => `${name}: ${value}`).join(", "),
+        ...(found && untried(found) ? { first: `${found.name} has not been used since it was approved` } : {}),
+      };
+    },
     run: async (args) => {
       const skills = sharedSkills();
       const found = skills.named(args.name);
       if (!found) return { ok: false, reason: `there is no skill called ${args.name}` };
+      // Reached only past the gate, which asks about an untried skill whatever its host was allowed.
+      if (untried(found) && found.approved !== undefined) skills.confirm(found.id, found.approved);
 
       const ran = await runSkill(skills, found.id, args.values, resolve);
       if (!ran.ok) {

@@ -266,3 +266,47 @@ test("on the cloud, a read of the user's notes is asked about first, since what 
   await invoke(recall, { question: "what did I write" }, gate, ask, signal, local);
   assert.equal(asked.length, 2, "on this machine a read of notes asks nobody");
 });
+
+type Reach = { first: boolean };
+
+const reach: Tool<Reach> = {
+  name: "skill",
+  description: "reaches a host",
+  describe: (args) => ({
+    tool: "skill",
+    effect: "outbound",
+    target: "https://api.example.com",
+    ...(args.first ? { first: "weather_now has not been used since it was approved" } : {}),
+  }),
+  run: async () => ({ reached: true }),
+};
+
+function hostAllowed(): Gate {
+  const gate = new Gate(() => [], () => {});
+  gate.remember({ tool: "skill", effect: "outbound", target: "https://api.example.com" }, "allow");
+  return gate;
+}
+
+test("the first use of something newly approved is asked about, and says why, whatever its host was allowed", async () => {
+  const gate = hostAllowed();
+  const whys: Array<string | undefined> = [];
+  const ask = async (_action: Action, why?: string) => {
+    whys.push(why);
+    return "allow" as const;
+  };
+  const signal = new AbortController().signal;
+
+  assert.equal((await invoke(reach, { first: true }, gate, ask, signal)).ok, true);
+  assert.deepEqual(whys, ["weather_now has not been used since it was approved"]);
+  assert.equal((await invoke(reach, { first: false }, gate, ask, signal)).ok, true);
+  assert.equal(whys.length, 1, "once it has been used, what its host was allowed stands");
+});
+
+test("a no to a first use refuses that call alone, and what its host was allowed still stands", async () => {
+  const gate = hostAllowed();
+  const signal = new AbortController().signal;
+
+  const refused = await invoke(reach, { first: true }, gate, async () => "deny", signal);
+  assert.equal(refused.ok === false && refused.refused, true);
+  assert.equal(gate.decide({ tool: "skill", effect: "outbound", target: "https://api.example.com" }).verdict, "allow");
+});

@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
-import type { Draft } from "#skill/shape.ts";
+import { untried, type Draft } from "#skill/shape.ts";
 import { Skills } from "#skill/store.ts";
 
 function draft(changes: Partial<Draft> = {}): Draft {
@@ -107,4 +108,47 @@ test("a skill let go of is gone", () => {
   skills.forget(one.id);
   assert.equal(skills.find(one.id), undefined);
   assert.deepEqual(skills.list(), []);
+});
+
+test("an approved skill is untried until a call to it is confirmed, and is again once changed and approved anew", () => {
+  const skills = new Skills(":memory:");
+  const one = skills.draft(draft());
+  skills.approve(one.id, 1000);
+  assert.equal(untried(skills.find(one.id)!), true);
+
+  skills.confirm(one.id, 1000);
+  assert.equal(untried(skills.find(one.id)!), false);
+
+  skills.revise(one.id, draft({ url: "https://api.example.com/v2/weather/{city}" }), 2000);
+  skills.approve(one.id, 3000);
+  assert.equal(untried(skills.find(one.id)!), true, "approval is of a request, and this is another one");
+});
+
+test("a confirmation is of one approval, so one given for an earlier approval confirms nothing", () => {
+  const skills = new Skills(":memory:");
+  const one = skills.draft(draft());
+  skills.approve(one.id, 1000);
+  skills.confirm(one.id, 999);
+  assert.equal(untried(skills.find(one.id)!), true);
+});
+
+test("skills kept before confirmations were opens with every approved skill untried", () => {
+  const dir = mkdtempSync(join(tmpdir(), "kyuren-skills-old-"));
+  try {
+    const path = join(dir, "skills.db");
+    const old = new DatabaseSync(path);
+    old.exec(`create table skills (id text primary key, name text not null unique, state text not null,
+      drafted integer not null, approved integer, trouble text, template text not null)`);
+    old.prepare("insert into skills values (?, ?, ?, ?, ?, ?, ?)").run("s1", "weather_now", "approved", 1, 2, null, JSON.stringify(draft()));
+    old.close();
+
+    const skills = new Skills(path);
+    assert.equal(skills.named("weather_now")!.state, "approved");
+    assert.equal(untried(skills.named("weather_now")!), true);
+    skills.confirm("s1", 2);
+    assert.equal(untried(skills.named("weather_now")!), false);
+    skills.close();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

@@ -12,7 +12,8 @@ const SCHEMA = `
     drafted  integer not null,
     approved integer,
     trouble  text,
-    template text not null
+    template text not null,
+    confirmed integer
   );
 
   create index if not exists skills_state on skills(state);
@@ -26,6 +27,7 @@ type Row = {
   approved: number | null;
   trouble: string | null;
   template: string;
+  confirmed: number | null;
 };
 
 function shaped(row: Row): Skill {
@@ -36,6 +38,7 @@ function shaped(row: Row): Skill {
     state: row.state as State,
     drafted: row.drafted,
     approved: row.approved ?? undefined,
+    confirmed: row.confirmed ?? undefined,
     trouble: row.trouble ?? undefined,
   };
 }
@@ -53,6 +56,8 @@ export class Skills {
     this.db = new DatabaseSync(path);
     this.db.exec("pragma journal_mode = wal");
     this.db.exec(SCHEMA);
+    const columns = this.db.prepare("pragma table_info(skills)").all() as Array<{ name: string }>;
+    if (!columns.some((one) => one.name === "confirmed")) this.db.exec("alter table skills add column confirmed integer");
   }
 
   close(): void {
@@ -81,6 +86,12 @@ export class Skills {
       `)
       .run(draft.name, JSON.stringify(draft), at, id);
     return this.find(id);
+  }
+
+  /// The user said yes to the first call of this approval. One given for an earlier approval, before
+  /// the skill was changed and approved again, confirms nothing.
+  confirm(id: string, approval: number): void {
+    this.db.prepare("update skills set confirmed = ? where id = ? and approved = ?").run(approval, id, approval);
   }
 
   approve(id: string, at = Date.now()): boolean {

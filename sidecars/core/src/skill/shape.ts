@@ -45,11 +45,19 @@ export type Skill = {
   state: State;
   drafted: number;
   approved?: number;
+  /// The approval whose first call the user said yes to.
+  confirmed?: number;
   trouble?: string;
 };
 
 /// What a skill is before it has an identity or a standing: the part the model writes.
-export type Draft = Omit<Skill, "id" | "state" | "drafted" | "approved" | "trouble">;
+export type Draft = Omit<Skill, "id" | "state" | "drafted" | "approved" | "confirmed" | "trouble">;
+
+/// Approved, and not yet called with the user's yes since. Approving was of what it would do, so
+/// its first call is asked about whatever its host was allowed before.
+export function untried(skill: Skill): boolean {
+  return skill.state === "approved" && skill.approved !== undefined && skill.confirmed !== skill.approved;
+}
 
 const NAME = /^[a-z][a-z0-9_]{2,39}$/;
 const PARAMETER = /^[a-zA-Z][a-zA-Z0-9_]{0,39}$/;
