@@ -4,7 +4,7 @@ import type { Run as Turn, Transcript, Watching } from "#agent/loop.ts";
 import type { Ask, Tool } from "#agent/tool.ts";
 import type { Gate } from "#permission/gate.ts";
 import type { RunLog } from "#playbook/runlog.ts";
-import { runPlaybook, type Ran } from "#playbook/runner.ts";
+import { RunFailed, runPlaybook, type Ran } from "#playbook/runner.ts";
 import { sharedPlaybooks } from "#playbook/shared.ts";
 import type { Playbooks } from "#playbook/store.ts";
 import { inHandfuls } from "#projects/pool.ts";
@@ -102,7 +102,7 @@ export function playbookTool(on: Performing): Tool<z.infer<typeof playbookSchema
         ran = await start(on, args.name, args.inputs ?? {}, signal);
       } catch (failure) {
         const reason = failure instanceof Error ? failure.message : String(failure);
-        on.onRan?.(unfinished(args.name, reason));
+        on.onRan?.(failure instanceof RunFailed ? failure.ran : unfinished(args.name, reason));
         throw failure;
       }
       on.onRan?.(ran);
@@ -134,8 +134,12 @@ export function playbooksTool(on: Performing): Tool<z.infer<typeof playbooksSche
           return { name: one.name, outcome: done.run.outcome, proof: done.run.proof, log: done.path, said: done.transcript.text };
         } catch (failure) {
           const reason = failure instanceof Error ? failure.message : String(failure);
-          on.onRan?.(unfinished(one.name, reason));
-          return { name: one.name, outcome: "failed" as const, reason };
+          if (!(failure instanceof RunFailed)) {
+            on.onRan?.(unfinished(one.name, reason));
+            return { name: one.name, outcome: "failed" as const, reason };
+          }
+          on.onRan?.(failure.ran);
+          return { name: one.name, outcome: "failed" as const, reason, log: failure.ran.path };
         }
       });
       return { ran };

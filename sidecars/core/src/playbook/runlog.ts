@@ -6,7 +6,10 @@ export type Call = {
   tool: string;
   effect: string;
   target: string;
-  decision: "allow" | "deny" | "asked";
+  decision: "allow" | "deny";
+  /// The question was put, rather than the gate deciding from its policy, an earlier answer or the
+  /// run's allowance.
+  asked?: boolean;
   ok: boolean;
 };
 
@@ -99,10 +102,11 @@ export class RunLog {
   }
 
   /// Writes the run down and says how it ended. A single failed proof item fails the run: done
-  /// is a fact about every item, not an impression of the whole.
-  finish(run: Run, closing: string): string {
+  /// is a fact about every item, not an impression of the whole. A run that could not finish
+  /// failed, whatever its proof would have said.
+  finish(run: Run, closing: string, unfinished = false): string {
     run.closing = closing;
-    run.outcome = run.proof.some((one) => one.passed === false)
+    run.outcome = unfinished || run.proof.some((one) => one.passed === false)
       ? "failed"
       : run.proof.some((one) => one.passed === undefined)
         ? "unjudged"
@@ -139,7 +143,7 @@ export class RunLog {
 function render(run: Run): string {
   const inputs = Object.entries(run.inputs).map(([name, value]) => `- ${name}: ${value}`).join("\n") || "- none";
   const calls = run.calls.length
-    ? run.calls.map((one) => `| ${one.tool} | ${one.effect} | ${one.target} | ${one.decision} | ${one.ok ? "ok" : "failed"} |`).join("\n")
+    ? run.calls.map((one) => `| ${one.tool} | ${one.effect} | ${one.target} | ${one.decision}${one.asked ? " when asked" : ""} | ${one.ok ? "ok" : "failed"} |`).join("\n")
     : "| none | | | | |";
   const proof = run.proof.length
     ? run.proof.map((one, at) => `${at + 1}. ${one.passed === true ? "passed" : one.passed === false ? "failed" : "unjudged"}: ${one.item} (${one.why})`).join("\n")

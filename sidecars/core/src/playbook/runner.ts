@@ -1,5 +1,6 @@
 import { generateText } from "ai";
-import type { Run as Turn, Transcript, Watching } from "#agent/loop.ts";
+import { TurnFailed } from "#agent/failed.ts";
+import type { Called, Run as Turn, Transcript, Watching } from "#agent/loop.ts";
 import { NOTES_TO_CLOUD, type Ask } from "#agent/tool.ts";
 import { readOf } from "#agent/tools.ts";
 import { modelFor, optionsFor } from "#model/providers.ts";
@@ -46,6 +47,71 @@ export type Ran = {
   transcript: Transcript;
   path: string;
 };
+
+/// A run that could not finish, already written down as failed, so whoever started it can point
+/// at its log rather than at nothing.
+export class RunFailed extends Error {
+  readonly ran: Ran;
+
+  constructor(reason: string, ran: Ran, cause: unknown) {
+    super(reason, { cause });
+    this.ran = ran;
+  }
+}
+
+function logged(log: RunLog, run: Run, called: Called[]): void {
+  for (const one of called) {
+    log.called(run, {
+      tool: one.tool,
+      effect: one.effect ?? "",
+      target: one.target,
+      decision: one.refused ? "deny" : "allow",
+      ...(one.asked ? { asked: true } : {}),
+      ok: one.ok ?? false,
+    });
+  }
+}
+
+/// A run that started others answers for them: each is an item of its proof, and one that
+/// failed fails it.
+function subRuns(children: Ran[]): ProofResult[] {
+  return children.map((child) => ({
+    item: `sub-run: ${child.run.playbook} (${child.path})`,
+    passed: child.run.outcome === "done" ? true : child.run.outcome === "failed" ? false : undefined,
+    why: child.run.outcome === "done"
+      ? "its proof passed"
+      : child.run.outcome === "failed"
+        ? child.run.closing
+        : "not everything in it could be judged",
+  }));
+}
+
+/// A run the model gave up on part way, written down all the same: the calls it made were made,
+/// and the log is where a repair, and a person, look to see what happened.
+function abandoned(options: Running, name: string, failure: unknown, children: Ran[]): RunFailed {
+  const reason = failure instanceof Error ? failure.message : String(failure);
+  const turn = failure instanceof TurnFailed ? failure : undefined;
+  const run = options.log.begin(name, options.inputs, {
+    route: turn?.route ?? "unknown",
+    model: turn?.model ?? "unknown",
+    children: children.length,
+  });
+  logged(options.log, run, turn?.called ?? []);
+  options.log.proved(run, subRuns(children));
+  const path = options.log.finish(run, `could not finish: ${reason}`, true);
+  const transcript: Transcript = {
+    text: "",
+    difficulty: "hard",
+    route: turn?.route ?? "cloud",
+    model: turn?.model ?? "",
+    reason: "",
+    steps: 0,
+    called: turn?.called ?? [],
+    elapsedMs: 0,
+    exposed: turn?.exposed === true || children.some((child) => child.transcript.exposed === true),
+  };
+  return new RunFailed(reason, { run, transcript, path }, failure);
+}
 
 /// The tools that exist under their own names. A skill named in a playbook that is not one of
 /// these is a forged skill, reached through the skill tool.
@@ -235,6 +301,8 @@ export async function runPlaybook(options: Running): Promise<Ran> {
       steps: STEPS,
       onRan: (child) => children.push(child),
     });
+  } catch (failure) {
+    throw abandoned(options, book.name, failure, children);
   } finally {
     for (const done of withdraw) done();
   }
@@ -251,15 +319,7 @@ export async function runPlaybook(options: Running): Promise<Ran> {
     spentAll: children.reduce((sum, child) => added(sum, child.run.spentAll ?? child.run.spent), transcript.spent),
     children: children.length,
   });
-  for (const one of transcript.called) {
-    options.log.called(run, {
-      tool: one.tool,
-      effect: one.effect ?? "",
-      target: one.target,
-      decision: one.refused ? "deny" : "allow",
-      ok: one.ok ?? false,
-    });
-  }
+  logged(options.log, run, transcript.called);
 
   const judge = options.judge ?? judgeWith(transcript.route);
   const where = { inputs: options.inputs, home: options.home, fetched };
@@ -290,22 +350,10 @@ export async function runPlaybook(options: Running): Promise<Ran> {
     const proved = await prove(item, where);
     results.push({ item: proofLine(item), passed: proved.passed, why: proved.why });
   }
-  // A run that started others answers for them: each is an item of its proof, and one that
-  // failed fails it.
-  for (const child of children) {
-    results.push({
-      item: `sub-run: ${child.run.playbook} (${child.path})`,
-      passed: child.run.outcome === "done" ? true : child.run.outcome === "failed" ? false : undefined,
-      why: child.run.outcome === "done"
-        ? "its proof passed"
-        : child.run.outcome === "failed"
-          ? child.run.closing
-          : "not everything in it could be judged",
-    });
-  }
-  options.log.proved(run, results);
+  const proven = [...results, ...subRuns(children)];
+  options.log.proved(run, proven);
 
-  const failed = results.filter((one) => one.passed === false);
+  const failed = proven.filter((one) => one.passed === false);
   const closing = failed.length > 0
     ? `proof failed: ${failed.map((one) => one.why).join("; ")}`
     : transcript.text.slice(0, 400);

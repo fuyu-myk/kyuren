@@ -3,10 +3,12 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { TurnFailed } from "#agent/failed.ts";
 import type { Run as Turn, Transcript } from "#agent/loop.ts";
 import { authoringOffered, playbookTool, playbooksTool } from "#agent/playbook.ts";
 import { Gate } from "#permission/gate.ts";
 import { RunLog } from "#playbook/runlog.ts";
+import type { Ran } from "#playbook/runner.ts";
 import { Playbooks } from "#playbook/store.ts";
 
 const BOOK = `---
@@ -112,4 +114,30 @@ test("a playbook started from a turn on the cloud is started as one whose findin
   });
   await tool.run({ name: "tidy-notes", inputs: { week: "38" } }, new AbortController().signal);
   assert.equal(above, true);
+});
+
+test("a sub-run that could not finish is told of with the log it left, so its parent's proof can point at it", async () => {
+  const home = await mkdtemp(join(tmpdir(), "kyuren-playbooks-"));
+  const books = new Playbooks(join(home, "playbooks"));
+  books.propose(BOOK);
+  books.approve("tidy-notes", "fuyu");
+  const told: Ran[] = [];
+  const tool = playbooksTool({
+    books, runs: new RunLog(join(home, "runs")), vault: home, home,
+    gate: new Gate(() => [], () => {}), ask: async () => "allow",
+    perform: async () => {
+      throw new TurnFailed("the model stopped answering: overloaded", [{ tool: "write_file", target: join(home, "half.md"), effect: "write", ok: true }], "cloud", "claude-opus-5-5");
+    },
+    onRan: (ran) => told.push(ran),
+  });
+
+  const result = await tool.run({ runs: [{ name: "tidy-notes", inputs: { week: "38" } }] }, new AbortController().signal) as {
+    ran: Array<{ outcome: string; log?: string; reason?: string }>;
+  };
+
+  assert.equal(result.ran[0]?.outcome, "failed");
+  assert.match(result.ran[0]?.reason ?? "", /overloaded/);
+  assert.ok(told[0]?.path, "a log, not a stand-in with no path");
+  assert.equal(result.ran[0]?.log, told[0]?.path);
+  assert.equal(told[0]?.run.calls[0]?.tool, "write_file");
 });

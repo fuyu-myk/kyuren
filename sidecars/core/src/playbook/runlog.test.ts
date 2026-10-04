@@ -59,3 +59,23 @@ test("runs are only ever found under a playbook's own name", async () => {
   const run = log.begin("../elsewhere", {}, { route: "local", model: "qwen3.5:9b" });
   assert.throws(() => log.finish(run, "done"), /not a playbook's name/);
 });
+
+test("a call the user was asked about says so, whichever way they answered", async () => {
+  const log = new RunLog(await mkdtemp(join(tmpdir(), "kyuren-runs-")));
+  const run = log.begin("tidy", {}, { route: "cloud", model: "claude-opus-5-5" });
+  log.called(run, { tool: "write_file", effect: "write", target: "/tmp/a.md", decision: "allow", asked: true, ok: true });
+  log.called(run, { tool: "web_fetch", effect: "outbound", target: "https://example.com", decision: "deny", asked: true, ok: false });
+  log.called(run, { tool: "remember", effect: "read", target: "the week", decision: "allow", ok: true });
+  const text = await readFile(log.finish(run, ""), "utf8");
+  assert.ok(text.includes("| write_file | write | /tmp/a.md | allow when asked | ok |"));
+  assert.ok(text.includes("| web_fetch | outbound | https://example.com | deny when asked | failed |"));
+  assert.ok(text.includes("| remember | read | the week | allow | ok |"));
+});
+
+test("a run that could not finish is failed, whatever its proof says", async () => {
+  const log = new RunLog(await mkdtemp(join(tmpdir(), "kyuren-runs-")));
+  const run = log.begin("tidy", {}, { route: "cloud", model: "claude-opus-5-5" });
+  log.finish(run, "could not finish: the model stopped answering", true);
+  assert.equal(run.outcome, "failed");
+  assert.equal(log.recent("tidy")[0]?.outcome, "failed");
+});

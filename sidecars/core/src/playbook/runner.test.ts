@@ -3,12 +3,13 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { TurnFailed } from "#agent/failed.ts";
 import type { Run as Turn, Transcript } from "#agent/loop.ts";
 import { readOf } from "#agent/tools.ts";
 import { classify } from "#permission/action.ts";
 import { Gate, type AuditEntry } from "#permission/gate.ts";
 import { RunLog } from "#playbook/runlog.ts";
-import { runPlaybook, shownToJudge, toolsFor, verdictIn, type Ran } from "#playbook/runner.ts";
+import { RunFailed, runPlaybook, shownToJudge, toolsFor, verdictIn, type Ran } from "#playbook/runner.ts";
 import { parsePlaybook } from "#playbook/shape.ts";
 import { Playbooks } from "#playbook/store.ts";
 
@@ -143,6 +144,7 @@ test("a run that starts other runs proves them as its own, and one that failed f
   assert.ok(items.some((one) => one.startsWith("false: sub-run: child-b (")), items.join("\n"));
   const text = await readFile(ran.path, "utf8");
   assert.ok(text.includes("proof failed: ~/b.md does not exist"), "the child's own reason is in the parent's log");
+  assert.match(ran.run.closing, /^proof failed: .*~\/b\.md does not exist/, "and in how it closed");
 });
 
 
@@ -452,4 +454,54 @@ test("a judge for a run whose findings go to a turn on the cloud asks before it 
   });
   assert.ok(!shown.includes("A NOTE OF THE USER'S"), "what it says of the note goes back up to the cloud");
   assert.deepEqual(asked, ["what it reads would go to the cloud model"]);
+});
+
+test("a run the model gave up on part way is written down as failed, with every call it made first", async () => {
+  const { home, books, log } = await setUp();
+  books.propose(BOOK);
+  books.approve("tidy-notes", "fuyu");
+  const failure = await runPlaybook({
+    books, log, name: "tidy-notes", inputs: { week: "38" }, vault: home, home,
+    gate: new Gate(() => [], () => {}), ask: async () => "allow",
+    perform: async () => {
+      throw new TurnFailed(
+        "the model stopped answering: credit balance too low",
+        [
+          { tool: "web_fetch", target: "https://example.com/a", effect: "outbound", ok: true, asked: true },
+          { tool: "remember", target: "the week", effect: "read", ok: true },
+        ],
+        "cloud",
+        "claude-opus-5-5",
+      );
+    },
+    judge: async () => true,
+  }).then(() => undefined, (cause: unknown) => cause);
+
+  assert.ok(failure instanceof RunFailed, "it still fails");
+  assert.equal(failure.message, "the model stopped answering: credit balance too low");
+  assert.equal(failure.ran.run.outcome, "failed");
+  const text = await readFile(failure.ran.path, "utf8");
+  assert.ok(text.includes("outcome: failed"));
+  assert.ok(text.includes("model: claude-opus-5-5"));
+  assert.ok(text.includes("| web_fetch | outbound | https://example.com/a | allow when asked | ok |"));
+  assert.ok(text.includes("| remember | read | the week | allow | ok |"));
+  assert.ok(text.includes("could not finish: the model stopped answering: credit balance too low"));
+  assert.deepEqual(log.recent("tidy-notes").map((one) => one.outcome), ["failed"]);
+});
+
+test("a run that failed before it reached for anything is written down as well", async () => {
+  const { home, books, log } = await setUp();
+  books.propose(BOOK);
+  books.approve("tidy-notes", "fuyu");
+  const failure = await runPlaybook({
+    books, log, name: "tidy-notes", inputs: { week: "38" }, vault: home, home,
+    gate: new Gate(() => [], () => {}), ask: async () => "allow",
+    perform: async () => {
+      throw new Error("nothing answered");
+    },
+  }).then(() => undefined, (cause: unknown) => cause);
+
+  assert.ok(failure instanceof RunFailed);
+  const text = await readFile(failure.ran.path, "utf8");
+  assert.ok(text.includes("outcome: failed") && text.includes("could not finish: nothing answered"));
 });

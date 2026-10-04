@@ -1,6 +1,7 @@
 import { stepCountIs, streamText, tool, type ModelMessage } from "ai";
 import type { z } from "zod";
 import { invoke, type Ask, type Exposure, type Tool } from "#agent/tool.ts";
+import { TurnFailed } from "#agent/failed.ts";
 import { codeSchema, codeTool } from "#agent/code.ts";
 import { routeHolding } from "#agent/holding.ts";
 import { forgeSchema, forgeTool } from "#agent/forge.ts";
@@ -107,8 +108,13 @@ function adapt<A>(
       // rather than only the result.
       const action = subject.describe(args);
       const step = watching?.began(subject.name, action.target, action.effect);
-      const outcome = await invoke(subject, args, gate, ask, signal, exposure);
-      watching?.ended(step ?? "", outcome.ok, !outcome.ok && outcome.refused);
+      let asked = false;
+      const asking: Ask = (about, why) => {
+        asked = true;
+        return ask(about, why);
+      };
+      const outcome = await invoke(subject, args, gate, asking, signal, exposure);
+      watching?.ended(step ?? "", outcome.ok, !outcome.ok && outcome.refused, asked);
       if (outcome.ok) {
         const said = (outcome.value as { spoken?: unknown } | null)?.spoken;
         if (typeof said === "string" && said !== "") spoken.push(said);
@@ -124,7 +130,7 @@ function adapt<A>(
 /// Told what a turn is doing while it does it, for the layer of the mind that is live.
 export type Watching = {
   began: (tool: string, target: string, effect?: string) => string;
-  ended: (step: string, ok: boolean, refused?: boolean) => void;
+  ended: (step: string, ok: boolean, refused?: boolean, asked?: boolean) => void;
 };
 
 /// What a turn actually did, kept with the answer so that an answer can say how it was arrived at.
@@ -135,7 +141,11 @@ export type Called = {
   ok?: boolean;
   /// True when the gate said no, as opposed to the tool failing on its own.
   refused?: boolean;
+  /// True when the question was put, rather than the gate deciding from its policy, an earlier
+  /// answer or a run's allowance.
+  asked?: boolean;
 };
+
 
 /// What was already said in this session, so that resuming one is resuming a conversation rather
 /// than starting a fresh one that happens to be filed next to it.
@@ -223,13 +233,14 @@ export async function run(options: Run): Promise<Transcript> {
       where.set(step, called.push({ tool, target, effect }) - 1);
       return step;
     },
-    ended: (step, ok, refused) => {
+    ended: (step, ok, refused, asked) => {
       const at = where.get(step);
       if (at !== undefined) {
         called[at]!.ok = ok;
         called[at]!.refused = refused;
+        called[at]!.asked = asked;
       }
-      options.watching?.ended(step, ok, refused);
+      options.watching?.ended(step, ok, refused, asked);
     },
   };
   const performing = {
@@ -313,17 +324,21 @@ export async function run(options: Run): Promise<Transcript> {
       : {}),
   });
 
-  for await (const chunk of result.textStream) {
-    options.onText?.(chunk);
+  try {
+    for await (const chunk of result.textStream) {
+      options.onText?.(chunk);
+    }
+    if (trouble !== undefined) throw new Error(`the model stopped answering: ${said(trouble)}`);
+    // A turn cut off for length is not an answer, and a run that ends on one has done nothing it
+    // was asked to do while looking as though it chose to stop.
+    const finish = await result.finishReason;
+    if (finish === "length") throw new Error("the model ran out of room before it finished");
+    // A refusal the fallback refused as well. Said, so it is not mistaken for a model that chose
+    // to say nothing.
+    if (finish === "content-filter") throw new Error("the model declined to answer this, and so did the model it fell back to");
+  } catch (failure) {
+    throw new TurnFailed(said(failure), called, decision.route, nameFor(decision.route), exposure.held);
   }
-  if (trouble !== undefined) throw new Error(`the model stopped answering: ${said(trouble)}`);
-  // A turn cut off for length is not an answer, and a run that ends on one has done nothing it
-  // was asked to do while looking as though it chose to stop.
-  const finish = await result.finishReason;
-  if (finish === "length") throw new Error("the model ran out of room before it finished");
-  // A refusal the fallback refused as well. Said, so it is not mistaken for a model that chose
-  // to say nothing.
-  if (finish === "content-filter") throw new Error("the model declined to answer this, and so did the model it fell back to");
 
   const steps = await result.steps;
   // The SDK's usage is every step summed, which is what the turn cost. What the model read in its
