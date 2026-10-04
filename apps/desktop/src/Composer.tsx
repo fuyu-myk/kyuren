@@ -5,13 +5,15 @@ type ComposerProps = {
   placeholder: string;
   busy: boolean;
   onSend: (text: string) => void;
+  /// Stops what is being waited on, offered in place of sending while busy.
+  onStop?: () => void;
   /// What a slash may be followed by. With any given, typing a slash opens the menu.
   commands?: Command[];
 };
 
 /// The bar at the bottom of every page. It grows upwards as it fills, stops growing once it would
 /// take over the page, and scrolls from then on.
-export function Composer({ placeholder, busy, onSend, commands }: ComposerProps) {
+export function Composer({ placeholder, busy, onSend, onStop, commands }: ComposerProps) {
   const [text, setText] = useState("");
   const [scrolling, setScrolling] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -130,26 +132,34 @@ export function Composer({ placeholder, busy, onSend, commands }: ComposerProps)
           ))}
         </ul>
       ) : null}
-      <button className="send" type="submit" disabled={busy || text.trim() === ""} aria-label="send">
-        <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
-          <path
-            d="M13 3.5v4A2.5 2.5 0 0 1 10.5 10H4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <path
-            d="M6.5 7.5 4 10l2.5 2.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </button>
+      {busy && onStop ? (
+        <button className="send stop" type="button" onClick={onStop} aria-label="stop">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+            <rect x="4.5" y="4.5" width="7" height="7" rx="1.5" fill="currentColor" />
+          </svg>
+        </button>
+      ) : (
+        <button className="send" type="submit" disabled={busy || text.trim() === ""} aria-label="send">
+          <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+            <path
+              d="M13 3.5v4A2.5 2.5 0 0 1 10.5 10H4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M6.5 7.5 4 10l2.5 2.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      )}
     </form>
   );
 }

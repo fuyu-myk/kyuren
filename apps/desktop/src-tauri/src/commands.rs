@@ -182,10 +182,9 @@ pub async fn run_capability(
 
     sidecars
         .core
-        .request(
+        .request_untimed(
             "agent.run",
             json!({ "prompt": asked, "difficulty": "moderate", "pane": pane }),
-            GATHER_TIMEOUT,
         )
         .await
         .map_err(|failure| failure.to_string())

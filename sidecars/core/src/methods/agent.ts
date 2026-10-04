@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { run } from "#agent/loop.ts";
 import { createAsker, type Asker } from "#agent/asker.ts";
+import { Turns } from "#agent/turns.ts";
 import { watchedOver } from "#agent/watched.ts";
 import { briefHandlers } from "#methods/brief.ts";
 import { playbookHandlers } from "#methods/playbook.ts";
@@ -33,11 +34,11 @@ function titleOf(prompt: string): string {
 export function agentHandlers(transport: Transport) {
   const asker: Asker = createAsker(transport);
   const gate = sharedGate();
-  const running = new Map<string, AbortController>();
+  const turns = new Turns();
 
   return {
     ...briefHandlers(gate, asker.ask, vault),
-    ...playbookHandlers(gate, asker.ask, vault, () => watchedOver(transport)),
+    ...playbookHandlers(gate, asker.ask, vault, () => watchedOver(transport), turns),
     ...researchHandlers(vault),
 
     "agent.run": async (params: Record<string, unknown>) => {
@@ -54,9 +55,7 @@ export function agentHandlers(transport: Transport) {
       const thread = opened(sessions, params.session, params.pane, prompt, titleOf(prompt));
       const preferred = routeIn(params.route);
 
-      running.get(id)?.abort();
-      const controller = new AbortController();
-      running.set(id, controller);
+      const controller = turns.begin(id);
 
       try {
         const transcript = await run({
@@ -90,15 +89,13 @@ export function agentHandlers(transport: Transport) {
         if (thread.session && "route" in params) sessions.prefer(thread.session.id, preferred);
         return { ...transcript, session: thread.session?.id };
       } finally {
-        running.delete(id);
+        turns.end(id, controller);
       }
     },
 
     "agent.stop": async (params: Record<string, unknown>) => {
       const id = typeof params.id === "string" ? params.id : "default";
-      const controller = running.get(id);
-      controller?.abort();
-      return { stopped: Boolean(controller) };
+      return { stopped: turns.stop(id) };
     },
 
     "permission.answer": async (params: Record<string, unknown>) => {

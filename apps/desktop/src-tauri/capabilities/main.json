@@ -58,6 +58,7 @@
     "allow-skill-forget",
     "allow-skills-list",
     "allow-speak",
+    "allow-stop-turn",
     "allow-store-secret",
     "allow-vault-connect",
     "allow-vault-disconnect",

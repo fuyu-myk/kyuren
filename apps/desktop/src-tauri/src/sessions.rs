@@ -80,7 +80,18 @@ pub async fn ask(
         return Err("there is nothing there to ask".into());
     }
     let params = json!({ "prompt": prompt, "session": session, "pane": pane, "route": route });
-    asked(&sidecars, "agent.run", params, GATHER_TIMEOUT).await
+    sidecars
+        .core
+        .request_untimed("agent.run", params)
+        .await
+        .map_err(|failure| failure.to_string())
+}
+
+/// Stops a turn in progress: the one a window is waiting on, by the name it gave it, or the turn
+/// asked without a name. The turn itself then answers, as stopped.
+#[tauri::command]
+pub async fn stop_turn(id: Option<String>, sidecars: State<'_, Sidecars>) -> Result<Value, String> {
+    asked(&sidecars, "agent.stop", json!({ "id": id }), PING_TIMEOUT).await
 }
 
 /// The routes a turn may take and the model behind each.

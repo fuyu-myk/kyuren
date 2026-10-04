@@ -86,6 +86,13 @@ Windows it owns:
 Global hotkey via `tauri-plugin-global-shortcut`, which reaches Carbon and needs no permission.
 Menu bar via Tauri's tray support.
 
+A turn has no deadline in the broker: a research run reads the web for twenty minutes and a
+question waits on the user for as long as the user takes. It ends when the core answers it, when
+it is stopped, which the core answers as well, or when the core exits, which fails every request
+still open. The main window offers to stop the turn it is waiting on. What is timed is a model
+that has stalled: the core gives a model five minutes to begin each answer, and nothing after its
+first word, since a tool running or a question waiting may rightly take far longer.
+
 ### 4.2 Swift sidecar, `sidecars/perception`
 
 A SwiftPM executable bundled inside the app, speaking newline-delimited JSON over stdio. It

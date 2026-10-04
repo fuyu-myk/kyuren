@@ -89,6 +89,7 @@ pub fn run() {
             commands::run_capability,
             commands::askable_capabilities,
             sessions::ask,
+            sessions::stop_turn,
             island::island_rect,
             island::island_mode,
             island::island_focus,

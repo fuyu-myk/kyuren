@@ -4,12 +4,8 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
 
 use crate::sidecar::Sidecar;
-use std::time::Duration;
 
 use crate::state::{Sidecars, PING_TIMEOUT};
-
-/// A run reads, thinks and writes, and one that researches reads the web; minutes, not seconds.
-const RUN_TIMEOUT: Duration = Duration::from_secs(900);
 
 fn core(app: &AppHandle) -> Result<Arc<Sidecar>, String> {
     app.try_state::<Sidecars>()
@@ -63,16 +59,18 @@ pub async fn playbook_runs(app: AppHandle, name: String) -> Result<Value, String
 #[tauri::command]
 pub async fn playbook_repair(app: AppHandle, name: String) -> Result<Value, String> {
     core(&app)?
-        .request("playbook.repair", json!({ "name": name }), crate::state::GATHER_TIMEOUT)
+        .request_untimed("playbook.repair", json!({ "name": name }))
         .await
         .map_err(|failure| failure.to_string())
 }
 
-/// A slash command: the playbook by name and the words typed after it.
+/// A slash command: the playbook by name and the words typed after it. A run reads, thinks and
+/// writes, and one that researches reads the web for many minutes, so it is waited for until it
+/// ends; given a name, it can be stopped by that name.
 #[tauri::command]
-pub async fn playbook_invoke(app: AppHandle, name: String, text: String, pane: Option<String>) -> Result<Value, String> {
+pub async fn playbook_invoke(app: AppHandle, name: String, text: String, pane: Option<String>, id: Option<String>) -> Result<Value, String> {
     core(&app)?
-        .request("playbook.invoke", json!({ "name": name, "text": text, "pane": pane }), RUN_TIMEOUT)
+        .request_untimed("playbook.invoke", json!({ "name": name, "text": text, "pane": pane, "id": id }))
         .await
         .map_err(|failure| failure.to_string())
 }

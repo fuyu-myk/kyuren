@@ -115,9 +115,11 @@ the fallback and costs no application size; it has not been tried.
 **Builds.** The TypeScript core: Vercel AI SDK 7 as substrate, provider registrations for Ollama
 and for the cloud provider, the routing policy from KYUREN.md section 5 with three routes, a judge
 of how hard a request is, and a route the user may choose for a conversation. The agent loop with
-streaming and tool dispatch. The permission gate with fingerprint-keyed decision memory, allows
-kept between runs, and an audit log; once a conversation has read the user's notes, anything that
-would leave the machine is asked about. The session store.
+streaming and tool dispatch, a turn waited on until it ends and stoppable from the main window,
+and a model that has not begun to answer within five minutes taken as stalled. The permission
+gate with fingerprint-keyed decision memory, allows kept between runs, and an audit log; once a
+conversation has read the user's notes, anything that would leave the machine is asked about. The
+session store.
 
 **Gate.**
 1. An identical prompt routes to local or to cloud according to policy, demonstrated by forcing
@@ -277,8 +279,7 @@ chosen for it.
 **Builds.** Cross-repository situational awareness on one board: branch, working tree state and
 unpushed commits, refreshed on a timer and when the window comes forward. Supervised coding
 sessions, Claude Code in read-only plan mode, spawned into the correct repository and awaited for
-up to ten minutes by the core, though the window stops waiting for any turn after five. Where a
-project stood when work stopped, answered on demand from its README, its
+up to ten minutes. Where a project stood when work stopped, answered on demand from its README, its
 working tree and its last commits. Coding agents running anywhere on the Mac are followed on the
 island. Not built: open pull requests and continuous integration status on the board, and a record
 of what was decided.
@@ -289,8 +290,7 @@ of what was decided.
    built.*
 2. A spawned coding session runs in the right repository and its result is reported back into the
    pane. *Not yet seen. Finding the repository and reading the report are tested,
-   `projects/recall.test.ts` and `projects/spawn.test.ts`. A session that runs past five minutes
-   shows as timed out in the pane while it goes on.*
+   `projects/recall.test.ts` and `projects/spawn.test.ts`.*
 3. Asking about a project untouched for six months returns a useful answer about where it stopped.
    *Tested against a fixture, `projects/recall.test.ts`.*
 4. Scanning every repository does not block the interface. *Not yet seen; scanning a handful at

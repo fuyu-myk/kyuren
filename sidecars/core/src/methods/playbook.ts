@@ -1,5 +1,6 @@
 import { run, type Watching } from "#agent/loop.ts";
 import type { Ask } from "#agent/tool.ts";
+import type { Turns } from "#agent/turns.ts";
 import type { Starting } from "#ambient/schedule.ts";
 import type { Gate } from "#permission/gate.ts";
 import { inputsFor, inputsFrom } from "#playbook/invoke.ts";
@@ -36,7 +37,7 @@ function inputsIn(params: Record<string, unknown>): Record<string, string> {
 
 /// What Kyuren knows how to do by the book, and what standing each book has. Approving lives
 /// here and nowhere the model can reach: approving a playbook is also allowing it to run.
-export function playbookHandlers(gate: Gate, ask: Ask, vault: string, watch?: () => Watching) {
+export function playbookHandlers(gate: Gate, ask: Ask, vault: string, watch?: () => Watching, turns?: Turns) {
   const books = sharedPlaybooks();
   const runs = sharedRuns();
 
@@ -93,10 +94,17 @@ export function playbookHandlers(gate: Gate, ask: Ask, vault: string, watch?: ()
       if (!book) throw new Error(`there is no approved playbook named ${name}`);
       const text = typeof params.text === "string" ? params.text : "";
       const inputs = inputsFrom(book, text);
-      return performPlaybook(
-        { books, runs, sessions: sharedSessions(), gate, ask, vault, home: home(), perform: run, watching: watch?.() },
-        { name, inputs, saying: `/${name} ${text}`.trim(), pane: params.pane },
-      );
+      // Started under a name of the window's, it can be stopped by that name.
+      const id = typeof params.id === "string" ? params.id : undefined;
+      const controller = id !== undefined ? turns?.begin(id) : undefined;
+      try {
+        return await performPlaybook(
+          { books, runs, sessions: sharedSessions(), gate, ask, vault, home: home(), perform: run, watching: watch?.() },
+          { name, inputs, saying: `/${name} ${text}`.trim(), pane: params.pane, signal: controller?.signal },
+        );
+      } finally {
+        if (id !== undefined && controller) turns?.end(id, controller);
+      }
     },
 
     "playbook.run": async (params: Record<string, unknown>) => {

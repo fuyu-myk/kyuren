@@ -73,7 +73,7 @@ export type Invoked = {
 };
 
 /// A slash command: the playbook by name and the words typed after it, kept as a conversation
-/// in the pane it was typed in.
-export function invokePlaybook(name: string, text: string, pane: string): Promise<Invoked> {
-  return invoke<Invoked>("playbook_invoke", { name, text, pane });
+/// in the pane it was typed in. Given a name, the run can be stopped by it.
+export function invokePlaybook(name: string, text: string, pane: string, id?: string): Promise<Invoked> {
+  return invoke<Invoked>("playbook_invoke", { name, text, pane, id: id ?? null });
 }

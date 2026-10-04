@@ -7,7 +7,6 @@ use tauri::{AppHandle, Emitter, Manager};
 use crate::state::Sidecars;
 
 /// Long enough for a local model to think, and for its first run to load.
-const THINKING: Duration = Duration::from_secs(300);
 const SPEAKING: Duration = Duration::from_secs(180);
 
 /// Replies are read aloud, so they are asked for as speech rather than as a document. The stripping
@@ -35,11 +34,7 @@ pub fn on_transcript(app: &AppHandle, text: String) {
         let _ = app.emit("orb:state", "thinking");
 
         let reply = match core
-            .request(
-                "agent.run",
-                json!({ "prompt": text, "system": VOICE }),
-                THINKING,
-            )
+            .request_untimed("agent.run", json!({ "prompt": text, "system": VOICE }))
             .await
         {
             Ok(result) => {

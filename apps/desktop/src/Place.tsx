@@ -12,6 +12,7 @@ import { invokePlaybook, listPlaybooks } from "@/playbook";
 import { Recent } from "@/Recent";
 import { Research } from "@/Research";
 import { Standing, type Choice, type Stood } from "@/Standing";
+import { stopTurn } from "@/stopping";
 import { insideTauri } from "@/tauri";
 import {
   ask,
@@ -83,6 +84,9 @@ export function Place({ pane }: PlaceProps) {
   const [choice, setChoice] = useState<Choice>(kept);
   const [last, setLast] = useState<Stood>();
   const clearing = useRef<number>(0);
+  // The turn being waited on, so it can be stopped: a playbook run by the name it was started
+  // under, a question by none. One that was stopped ends as stopped, not as trouble.
+  const waiting = useRef<{ id?: string; stopped: boolean } | undefined>(undefined);
 
   const load = useCallback(async () => {
     try {
@@ -164,15 +168,18 @@ export function Place({ pane }: PlaceProps) {
     setBusy(true);
     setTrouble(undefined);
     setTurns((held) => [...held, { role: "user", text: saying, at: Date.now() }]);
+    const id = `${pane}:${crypto.randomUUID()}`;
+    waiting.current = { id, stopped: false };
     try {
-      const ran = await invokePlaybook(name, text, pane);
+      const ran = await invokePlaybook(name, text, pane, id);
       setTurns((held) => [...held, { role: "assistant", text: ran.answer, at: Date.now() }]);
       setProduced((count) => count + 1);
       await follow(ran.session);
       await load();
     } catch (failure) {
-      setTrouble(String(failure));
+      if (!waiting.current?.stopped) setTrouble(String(failure));
     } finally {
+      waiting.current = undefined;
       setBusy(false);
     }
   }
@@ -197,6 +204,7 @@ export function Place({ pane }: PlaceProps) {
     clear();
     setBusy(true);
     setTurns((held) => [...held, { role: "user", text: saying, at: Date.now() }]);
+    waiting.current = { stopped: false };
     try {
       const answer = await ask(saying, open ? { session: open.id } : { pane }, choice === "auto" ? undefined : choice);
       setLast(answer);
@@ -207,8 +215,9 @@ export function Place({ pane }: PlaceProps) {
       await follow(answer.session);
       await load();
     } catch (failure) {
-      setTrouble(String(failure));
+      if (!waiting.current?.stopped) setTrouble(String(failure));
     } finally {
+      waiting.current = undefined;
       setBusy(false);
     }
   }
@@ -237,6 +246,7 @@ export function Place({ pane }: PlaceProps) {
     setTrouble(undefined);
     // Shown as having been asked in the words it is actually asked in.
     setTurns((held) => [...held, { role: "user", text: asked.asking, at: Date.now() }]);
+    waiting.current = { stopped: false };
     try {
       const answer = await runCapability(one.label, one.pane);
       setLast(answer);
@@ -247,10 +257,18 @@ export function Place({ pane }: PlaceProps) {
       await follow(answer.session);
       await load();
     } catch (failure) {
-      setTrouble(String(failure));
+      if (!waiting.current?.stopped) setTrouble(String(failure));
     } finally {
+      waiting.current = undefined;
       setBusy(false);
     }
+  }
+
+  function stop(): void {
+    const turn = waiting.current;
+    if (!turn) return;
+    waiting.current = { ...turn, stopped: true };
+    void stopTurn(turn.id).catch((failure) => setTrouble(String(failure)));
   }
 
   function leave(): void {
@@ -277,6 +295,7 @@ export function Place({ pane }: PlaceProps) {
             placeholder={pane === "research" ? "a question to research, or / for a command" : "ask something, or / for a command"}
             busy={busy}
             onSend={(saying) => void send(saying)}
+            onStop={stop}
             commands={commands}
           />
           <Standing choice={choice} onChoose={choose} last={last} />

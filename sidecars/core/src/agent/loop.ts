@@ -192,7 +192,18 @@ export type Run = {
   /// Whether what the turn finds goes on to a model on the cloud, as a run's findings go back to a
   /// turn on the cloud that started it, wherever the run itself is answered.
   cloudAbove?: boolean;
+  /// How long the model may take to begin answering before the turn is given up as stalled.
+  firstWord?: number;
 };
+
+/// A model that has not begun to answer in this long has stalled: a local one loading and reading
+/// a long context takes a minute or two. What comes after its first word is not timed, since a
+/// tool, or a question waiting on the user, may rightly take far longer.
+const FIRST_WORD = 5 * 60_000;
+
+function waited(ms: number): string {
+  return ms >= 60_000 ? `${Math.round(ms / 60_000)} minutes` : `${ms} ms`;
+}
 
 export type Transcript = {
   text: string;
@@ -317,12 +328,24 @@ export async function run(options: Run): Promise<Transcript> {
   let trouble: unknown;
   // Counted as each step ends, so a turn that fails part way can still say what it cost.
   let finished: Spent | undefined;
+  // Each step's first word is waited for so long and no longer, so a model that has stalled before
+  // answering, or before taking the request at all, ends the turn rather than holding it.
+  const firstWord = options.firstWord ?? FIRST_WORD;
+  const quiet = new AbortController();
+  let listening: ReturnType<typeof setTimeout> | undefined;
+  const heard = () => clearTimeout(listening);
+  const listen = () => {
+    heard();
+    listening = setTimeout(() => quiet.abort(), firstWord);
+  };
   const result = streamText({
     model: modelFor(decision.route, difficulty),
     system: options.system,
     messages: messagesFor(options.history ?? [], options.prompt),
     stopWhen: stepCountIs(options.steps ?? MAX_STEPS),
-    abortSignal: options.signal,
+    abortSignal: options.signal ? AbortSignal.any([options.signal, quiet.signal]) : quiet.signal,
+    onStepStart: listen,
+    onChunk: heard,
     tools: offered,
     onError: ({ error }) => {
       trouble = error;
@@ -353,7 +376,14 @@ export async function run(options: Run): Promise<Transcript> {
     // to say nothing.
     if (finish === "content-filter") throw new Error("the model declined to answer this, and so did the model it fell back to");
   } catch (failure) {
-    throw new TurnFailed(said(failure), { called, route: decision.route, model: nameFor(decision.route), exposed: exposure.held, spent: finished });
+    const reason = options.signal?.aborted
+      ? "stopped before it finished"
+      : quiet.signal.aborted
+        ? `the model did not begin to answer within ${waited(firstWord)}`
+        : said(failure);
+    throw new TurnFailed(reason, { called, route: decision.route, model: nameFor(decision.route), exposed: exposure.held, spent: finished });
+  } finally {
+    heard();
   }
 
   const steps = await result.steps;

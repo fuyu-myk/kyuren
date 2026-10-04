@@ -26,6 +26,7 @@ export type Asked = {
   /// The words that asked for it, as a command would have been typed, which is the first turn.
   saying: string;
   pane: unknown;
+  signal?: AbortSignal;
 };
 
 export type Performed = {
@@ -70,6 +71,7 @@ export async function performPlaybook(on: Performing, asked: Asked): Promise<Per
       perform: on.perform,
       watching: on.watching,
       exposed: thread.exposed,
+      signal: asked.signal,
     });
   } catch (failure) {
     if (whole !== undefined) on.watching?.ended(whole, false);
