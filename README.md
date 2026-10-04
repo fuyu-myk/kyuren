@@ -39,7 +39,7 @@ Three processes, speaking newline-delimited JSON over stdio ([docs/PROTOCOL.md](
 | Part | Where | What |
 | --- | --- | --- |
 | Host and windows | `apps/desktop` | Tauri v2 in Rust, with React and TypeScript windows: the main window, the island, the mind graph. |
-| Perception | `sidecars/perception`, `sidecars/apple` | Swift: microphone, echo cancellation, voice activity, speech to text and back, the wake word, screen, hand pose, PDF text. |
+| Perception | `sidecars/perception`, `sidecars/apple` | Swift: microphone, voice activity, speech to text and back, the wake word, screen, hand pose, PDF text. |
 | Cognition | `sidecars/core` | TypeScript on Node: routing, the agent loop, tools, permissions, memory, sessions, playbooks, the coding agent watch. |
 | Hook relay | `sidecars/hook` | A small Rust program Claude Code runs to bring a permission prompt to the island. |
 

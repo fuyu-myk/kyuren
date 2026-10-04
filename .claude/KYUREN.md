@@ -60,7 +60,7 @@ not own.
        stdio NDJSON  |                               |  stdio NDJSON
                      v                               v
         Swift sidecar (perception)        TypeScript core (cognition)
-        mic, AEC, VAD, STT, TTS,          router, agent loop, tools,
+        mic, VAD, STT, TTS, wake word,    router, agent loop, tools,
         screen grab, hand pose, PDF text  permissions, memory, sessions
                      |
                      v

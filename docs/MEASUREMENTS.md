@@ -1,7 +1,9 @@
 # Measurements
 
 Numbers taken on the development machine, recorded so that a regression is visible rather than
-felt. Each entry names what was measured, how, and on what.
+felt. Each entry names what was measured, how, and on what. Entries are in the order they were
+taken, and a later one can overturn an earlier: echo cancellation, recorded early on as working, is
+unusable here and not used, which Echo cancellation and Whether Kyuren hears itself set out.
 
 Machine: Apple M3 Pro, 18 GB, macOS 26.6.2.
 
@@ -24,11 +26,14 @@ identical content. Level is read from the first.
 
 **Echo cancellation is confirmed working.** Speech played through the speakers produced no
 measurable rise over room tone, which is the point of `setVoiceProcessingEnabled`. Tested on
-speakers rather than headphones, since headphones would pass the test trivially.
+speakers rather than headphones, since headphones would pass the test trivially. Overturned since:
+with voice processing on, Kyuren cannot play its own voice, so it captures without it, and the
+microphone turned out not to hear these speakers at ordinary volumes anyway.
 
 ## Voice activity
 
-FluidAudio's FSMN voice activity model, taken 2026-09-14 against `kyuren-perception` over stdio.
+Silero's voice activity model as FluidAudio converts it, taken 2026-09-14 against `kyuren-perception`
+over stdio.
 
 | What | Value | How |
 | --- | --- | --- |
@@ -36,8 +41,8 @@ FluidAudio's FSMN voice activity model, taken 2026-09-14 against `kyuren-percept
 | Decision cadence | 256 ms | 4096 samples at 16 kHz, fixed by the model |
 | False positives, quiet room | 0 segments in 32 s | default threshold of 0.85 |
 
-The roadmap names Silero. The model here is FSMN, reached through FluidAudio, which implements
-Silero-compatible streaming semantics (hysteresis, minimum speech and silence durations, speech
+The model is Silero's, reached through FluidAudio's `VadManager`, which converts it for Core ML
+and implements its streaming semantics (hysteresis, minimum speech and silence durations, speech
 padding). It was chosen because it arrives ANE-accelerated in the same Apache-2.0 package that
 will supply transcription and synthesis, rather than requiring a separate ONNX runtime.
 
@@ -330,7 +335,8 @@ regardless. Playback therefore does not go through `AVAudioEngine` at all. Kokor
 wrapped as WAV and played by `AVAudioPlayer`, which is the only path that coexists with echo
 cancellation.
 
-Echo cancellation still does its job on that path. Measured across one long spoken sentence:
+Echo cancellation still does its job on that path. Measured across one long spoken sentence, a
+reading retracted under Echo cancellation below, since nothing was playing:
 
 | | Median | Max |
 | --- | --- | --- |
@@ -389,7 +395,8 @@ finishes ahead of the first playback step, which is the normal case on the Neura
 
 ## Echo cancellation
 
-Not usable on this machine, so Kyuren is half duplex.
+Not usable on this machine, so Kyuren is half duplex. It no longer is: Whether Kyuren hears itself,
+below, found the microphone deaf to these speakers at ordinary volumes, and it stays open.
 
 The default input runs at 48000 Hz and the default output at 44100 Hz. Voice processing needs one
 rate for both, so `kAUInitialize` on the output node fails with `-10875`. Enabling it on the input

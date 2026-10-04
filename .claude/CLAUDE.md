@@ -18,7 +18,7 @@ Layout:
 
 ```
 apps/desktop        Tauri v2 core (Rust) and the webview UI (pnpm, Vite, React, TypeScript)
-sidecars/perception Swift executable: mic, echo cancellation, VAD, STT, TTS, screen, hand pose, PDF text
+sidecars/perception Swift executable: mic, VAD, STT, TTS, wake word, screen, hand pose, PDF text
 sidecars/core       TypeScript: routing, agent loop, tools, permissions, memory, sessions
 docs                ROADMAP.md and design notes
 ```
