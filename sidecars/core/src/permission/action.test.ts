@@ -274,7 +274,7 @@ test("a write through a link to something not there yet is judged where it would
     assert.equal(classify(act({ target: join(folder, "other", "d.md") }), kept), "deny");
     assert.equal(classify(act({ target: join(folder, "other", "into", "note.md") }), kept), "deny");
     symlinkSync(join(folder, "other", "loop"), join(folder, "other", "loop"));
-    assert.equal(classify(act({ target: join(folder, "other", "loop") }), kept), "ask", "a link to itself is followed no further");
+    assert.equal(classify(act({ target: join(folder, "other", "loop") }), kept), "deny", "a link to itself lands nowhere, and is refused");
   } finally {
     rmSync(folder, { recursive: true, force: true });
   }
@@ -290,4 +290,57 @@ test("a folder Kyuren keeps for itself refuses writes, and changes nothing about
   assert.equal(classify(reading(join(kept, "vault", "note.md")), places), "allow");
   assert.equal(inVault(join(kept, "answers.json"), places), false, "none of it is the user's notes");
   assert.equal(inVault(join(kept, "vault", "note.md"), places), true);
+});
+
+test("a path spelled the kernel's own way, or leading to one, is refused a write and asked about a read", () => {
+  const kept = join(homedir(), ".kyuren-kept");
+  const places = [{ path: join(kept, "vault"), mode: "write" as const }, { path: kept, mode: "read" as const, own: true as const }];
+  const reading = (target: string) => ({ tool: "read_file", effect: "read" as const, target });
+  for (const target of [
+    `/.nofollow${kept}/answers.json`,
+    `/.NOFOLLOW${kept}/answers.json`,
+    `/.resolve/1${kept}/answers.json`,
+    "/.vol/16777233/65710735/answers.json",
+    "/.file/id=6571367.2",
+    "/dev/fd/1",
+    `/.nofollow${kept}/vault/note.md`,
+  ]) {
+    assert.equal(classify(act({ target }), places), "deny", target);
+  }
+  assert.equal(classify(reading(`/.nofollow${homedir()}/.aws/credentials`), places), "ask");
+  assert.equal(classify(reading("/dev/fd/0"), places), "ask", "what the core is told on its own input is no file to read");
+  assert.equal(inVault(`/.nofollow${kept}/answers.json`, places), true, "what cannot be placed may be the notes");
+
+  const folder = mkdtempSync(join(tmpdir(), "kyuren-untold-"));
+  try {
+    symlinkSync(`/.nofollow${kept}/answers.json`, join(folder, "innocent.md"));
+    symlinkSync("/dev/fd/1", join(folder, "out.md"));
+    assert.equal(classify(act({ target: join(folder, "innocent.md") }), places), "deny", "a link into the kernel's spellings");
+    assert.equal(classify(act({ target: join(folder, "out.md") }), places), "deny", "a link to an open file");
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
+});
+
+test("a link to something not there yet, inside a linked folder, is judged where the folder really is", () => {
+  const folder = mkdtempSync(join(tmpdir(), "kyuren-beside-"));
+  try {
+    mkdirSync(join(folder, "kept", "inner"), { recursive: true });
+    mkdirSync(join(folder, "other"));
+    symlinkSync(join(folder, "kept", "inner"), join(folder, "other", "through"));
+    symlinkSync("../made.md", join(folder, "kept", "inner", "dangling.md"));
+    const kept = [{ path: join(folder, "kept"), mode: "read" as const }];
+    assert.equal(classify(act({ target: join(folder, "other", "through", "dangling.md") }), kept), "deny");
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
+  }
+});
+
+test("the innermost place is found by where each lands, and Kyuren's own folder wins a place that only spells it", () => {
+  const kept = join(homedir(), ".kyuren-kept");
+  const own = { path: kept, mode: "read" as const, own: true as const };
+  const written = join(kept, "answers.json");
+  assert.equal(classify(act({ target: written }), [{ path: `/System/Volumes/Data${homedir()}`, mode: "write" }, own]), "deny", "a vault at the home folder, spelled long");
+  assert.equal(classify(act({ target: written }), [{ path: kept, mode: "ask" }, own]), "deny", "a vault connected at the folder itself");
+  assert.equal(classify(act({ target: join(kept, "vault", "note.md") }), [{ path: join(kept, "vault"), mode: "write" }, own]), "allow");
 });

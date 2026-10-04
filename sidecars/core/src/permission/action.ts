@@ -42,25 +42,47 @@ function remote(place: string): boolean {
 /// How many links are followed before a path is taken to go nowhere, as one that leads to itself does.
 const HOPS = 16;
 
+/// Spellings the kernel has for a path besides the path itself: a file reached by its number, or
+/// with a flag in front of the way to it, and a device or one of the process's own open files.
+const KERNEL = /^\/(?:\.nofollow|\.resolve|\.vol|\.file|dev)(?:\/|$)/i;
+
+/// A path whose landing the disk will not tell, so nothing judged by where it lands can be judged by
+/// it: a write there is refused and a read asked about, as for the worst place it could be.
+class Untold extends Error {}
+
 /// Where a path would land on the disk: the deepest part of it that is there, a link to something
 /// not there yet included, followed through its links, with the rest after it.
 function land(path: string, hops: number): string {
   let existing = plain(path);
+  if (KERNEL.test(existing)) throw new Untold(path);
   const after: string[] = [];
   while (existing !== dirname(existing) && lstatSync(existing, { throwIfNoEntry: false }) === undefined) {
     after.unshift(basename(existing));
     existing = dirname(existing);
   }
-  let real = existing;
+  let real: string;
   try {
     real = realpathSync.native(existing);
   } catch {
-    // A link to something not there yet: a write through it creates what it points at.
-    if (hops < HOPS && lstatSync(existing, { throwIfNoEntry: false })?.isSymbolicLink()) {
-      real = land(resolve(dirname(existing), readlinkSync(existing)), hops + 1);
-    }
+    if (hops >= HOPS || !lstatSync(existing, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Untold(path);
+    // A link to something not there yet: a write through it creates what it points at, read from
+    // the folder the link is really in.
+    real = land(resolve(land(dirname(existing), hops + 1), readlinkSync(existing)), hops + 1);
   }
+  if (KERNEL.test(real)) throw new Untold(path);
   return join(plain(real), ...after);
+}
+
+/// Whether where a path would land cannot be told.
+function untold(path: string | undefined): boolean {
+  if (path === undefined || remote(path)) return false;
+  try {
+    land(path, 0);
+    return false;
+  } catch (cause) {
+    if (cause instanceof Untold) return true;
+    throw cause;
+  }
 }
 
 /// Where a path would land on the disk, as the disk compares it: the Data volume's name for the
@@ -73,11 +95,24 @@ function landing(path: string): string {
 function within(target: string, root: string): boolean {
   // Resolving a remote address as a path would mangle it into something under the process's
   // working directory, and every comparison after that would be about the wrong thing.
-  const [path, base] = remote(root)
-    ? [target.trim().toLowerCase().replace(/\/+$/, ""), root.trim().toLowerCase().replace(/\/+$/, "")]
-    : [landing(target), landing(root)];
-
+  if (remote(root)) {
+    const [path, base] = [target.trim().toLowerCase().replace(/\/+$/, ""), root.trim().toLowerCase().replace(/\/+$/, "")];
+    return path === base || path.startsWith(`${base}/`);
+  }
+  const base = landed(root);
+  if (base === undefined) return false;
+  const path = landing(target);
   return path === base || path.startsWith(`${base}/`);
+}
+
+/// Where a place lands, or nothing for one the disk will not place, which then holds nothing.
+function landed(root: string): string | undefined {
+  try {
+    return landing(root);
+  } catch (cause) {
+    if (cause instanceof Untold) return undefined;
+    throw cause;
+  }
 }
 
 /// A folder Kyuren may read, and what it may do to it.
@@ -94,11 +129,13 @@ function notes(places: Place[]): Place[] {
 }
 
 /// Where a write would land, if anywhere. The innermost vault wins, so a folder connected inside
-/// another is governed by its own setting rather than its parent's.
+/// another is governed by its own setting rather than its parent's: innermost by where each lands,
+/// since a place can be spelled longer than one inside it. Kyuren's own folder wins a tie.
 function placeOf(target: string, places: Place[]): Place | undefined {
+  const depth = (place: Place) => (remote(place.path) ? place.path : (landed(place.path) ?? "")).length;
   return places
     .filter((place) => within(target, place.path))
-    .sort((a, b) => b.path.length - a.path.length)[0];
+    .sort((a, b) => depth(b) - depth(a) || Number(b.own === true) - Number(a.own === true))[0];
 }
 
 /// Files that hold a secret wherever they are kept.
@@ -124,6 +161,7 @@ function secret(target: string | undefined, places: Place[]): boolean {
   if (!target?.startsWith("/")) return false;
   const path = plain(target);
   if (SECRET_NAME.test(basename(path).toLowerCase())) return true;
+  if (untold(path)) return true;
   const where = landing(path);
   const place = placeOf(path, notes(places));
   const home = plain(homedir());
@@ -144,7 +182,10 @@ export function leaves(action: Action): boolean {
 /// Whether a path, or an address of a collection elsewhere, lies inside a connected vault, however
 /// either is spelled and whichever way the vault was connected.
 export function inVault(target: string | undefined, places: Place[]): boolean {
-  return target !== undefined && placeOf(target, notes(places)) !== undefined;
+  if (target === undefined) return false;
+  // What cannot be placed may be the notes, and is taken to be.
+  if (untold(target)) return true;
+  return placeOf(target, notes(places)) !== undefined;
 }
 
 /// An action as it is written down: where it went, not what it carried, which may be the user's notes.
@@ -169,6 +210,7 @@ export function classify(action: Action, places: Place[]): Verdict {
     case "personal":
       return "ask";
     case "write": {
+      if (untold(action.target)) return "deny";
       const place = placeOf(action.target, places);
       if (!place) return "ask";
       // A vault marked read only is refused rather than asked about, so no earlier approval and

@@ -146,7 +146,8 @@ A Node sidecar speaking newline-delimited JSON over stdio. Owns all cognition.
 - **Agent loop.** Tool dispatch, streaming, interruption, error recovery.
 - **Permissions.** See section 7.
 - **Memory.** See section 6.
-- **Sessions.** Per-pane session stores plus the consolidating chat hub.
+- **Sessions.** One session store, each session belonging to its pane, plus the consolidating
+  chat hub.
 
 ### 4.4 WebView, `apps/desktop/ui`
 
@@ -236,8 +237,10 @@ Autonomy inside an allowlist. The gate lives in the TypeScript core, below the m
   is hidden in the home folder or kept in its Library, where programs keep keys, tokens and
   histories, or of a file named as a secret anywhere, asks instead, since a secret read is one
   step from leaving. It is judged by the path as written and by the file it opens, so neither a
-  link nor a spelling the disk folds together gets past it. A connected vault is read freely, but
-  for what is hidden inside it.
+  link nor a spelling the disk folds together gets past it. A path the kernel spells for itself, a
+  file by its number or with a flag in front of the way to it, a device, or one of Kyuren's own
+  open files, cannot be told where it lands: a read there asks, and a write is refused. A
+  connected vault is read freely, but for what is hidden inside it.
 - **Requires confirmation:** writes outside the vault, shell execution, outbound actions that
   send, post, pay or delete, and a skill's first call after each approval, whatever its host was
   allowed before, with the question naming the skill. A no there refuses that call alone.
