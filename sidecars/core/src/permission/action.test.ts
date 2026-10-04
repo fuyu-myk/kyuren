@@ -279,3 +279,15 @@ test("a write through a link to something not there yet is judged where it would
     rmSync(folder, { recursive: true, force: true });
   }
 });
+
+test("a folder Kyuren keeps for itself refuses writes, and changes nothing about reading what is in it", () => {
+  const kept = join(homedir(), ".kyuren-kept");
+  const places = [{ path: join(kept, "vault"), mode: "write" as const }, { path: kept, mode: "read" as const, own: true as const }];
+  const reading = (target: string) => ({ tool: "read_file", effect: "read" as const, target });
+  assert.equal(classify(act({ target: join(kept, "answers.json") }), places), "deny");
+  assert.equal(classify(act({ target: join(kept, "vault", "days", "note.md") }), places), "allow", "the vault inside it decides for itself");
+  assert.equal(classify(reading(join(kept, "answers.json")), places), "ask", "still hidden in the home folder");
+  assert.equal(classify(reading(join(kept, "vault", "note.md")), places), "allow");
+  assert.equal(inVault(join(kept, "answers.json"), places), false, "none of it is the user's notes");
+  assert.equal(inVault(join(kept, "vault", "note.md"), places), true);
+});

@@ -22,3 +22,21 @@ test("no tool can write a playbook or a run log into place, however it asks", ()
     "reading a playbook is fine",
   );
 });
+
+test("no tool can write where Kyuren keeps what the user allowed, which vaults it may write, or anything else of its own", () => {
+  for (const target of [
+    root,
+    join(root, "answers.json"),
+    join(root, "vaults.json"),
+    join(root, "skills.db"),
+    join(root, "ambient.json"),
+    join(root, "settings.json"),
+    join(root, "sessions.db"),
+    join(root, "audit.jsonl"),
+    join(root, "bin", "kyuren-hook"),
+  ]) {
+    assert.equal(classify({ tool: "write_file", effect: "write", target }, guarded()), "deny", target);
+  }
+  const vault = [{ path: join(root, "vault"), mode: "write" as const }, ...guarded()];
+  assert.equal(classify({ tool: "write_file", effect: "write", target: join(root, "vault", "note.md") }, vault), "allow", "its vault is written as ever");
+});

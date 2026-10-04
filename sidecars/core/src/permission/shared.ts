@@ -14,10 +14,14 @@ let held: Gate | undefined;
 /// Folders no tool may write into, however the model asks. A playbook becomes approved by
 /// approval and nothing else, and a run log is written by the run and nothing else; a write
 /// there through a file tool would be a way past both, so it is refused rather than asked about.
+/// So is all of Kyuren's own folder, which holds what the user allowed, which vaults may be
+/// written, the skills approved and the rules that may read unattended: one yes to a write there
+/// would grant what only the user grants. The vault inside it is a place of its own, and decides.
 export function guarded(): Place[] {
   return [
     { path: join(root, "playbooks"), mode: "read" },
     { path: join(root, "runs"), mode: "read" },
+    { path: root, mode: "read", own: true },
   ];
 }
 

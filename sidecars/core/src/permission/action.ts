@@ -81,7 +81,14 @@ function within(target: string, root: string): boolean {
 export type Place = {
   path: string;
   mode: "read" | "ask" | "write";
+  /// Kept by Kyuren for itself rather than being the user's notes: it decides where a write may
+  /// land and nothing about a read, which is judged as though it were not there.
+  own?: true;
 };
+
+function notes(places: Place[]): Place[] {
+  return places.filter((one) => one.own !== true);
+}
 
 /// Where a write would land, if anywhere. The innermost vault wins, so a folder connected inside
 /// another is governed by its own setting rather than its parent's.
@@ -115,7 +122,7 @@ function secret(target: string | undefined, places: Place[]): boolean {
   const path = plain(target);
   if (SECRET_NAME.test(basename(path).toLowerCase())) return true;
   const where = landing(path);
-  const place = placeOf(path, places);
+  const place = placeOf(path, notes(places));
   const home = plain(homedir());
   const base = place?.path ?? (within(where, home) ? home : undefined);
   if (base === undefined) return false;
@@ -134,7 +141,7 @@ export function leaves(action: Action): boolean {
 /// Whether a path, or an address of a collection elsewhere, lies inside a connected vault, however
 /// either is spelled and whichever way the vault was connected.
 export function inVault(target: string | undefined, places: Place[]): boolean {
-  return target !== undefined && placeOf(target, places) !== undefined;
+  return target !== undefined && placeOf(target, notes(places)) !== undefined;
 }
 
 /// An action as it is written down: where it went, not what it carried, which may be the user's notes.

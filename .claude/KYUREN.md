@@ -240,7 +240,10 @@ Autonomy inside an allowlist. The gate lives in the TypeScript core, below the m
   for what is hidden inside it.
 - **Requires confirmation:** writes outside the vault, shell execution, outbound actions that
   send, post, pay or delete, and any newly forged skill's first invocation.
-- **Never automated:** credential entry, financial transactions, permanent deletion.
+- **Never automated:** credential entry, financial transactions, permanent deletion, and a write
+  into Kyuren's own folder outside its vault. That folder holds what the user allowed, which vaults
+  may be written, the skills approved and the rules that read unattended, so one yes to a write
+  there would grant what only the user grants. Reading there is judged as any hidden folder is.
 
 Decisions are remembered by **action fingerprint**, not by tool name, so approving one shape of
 action does not approve a different one wearing the same label. The fingerprint covers the tool,
