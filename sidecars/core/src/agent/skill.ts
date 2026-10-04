@@ -26,6 +26,9 @@ function whereItGoes(name: string): string {
 /// Declared as reaching out of the machine, and described by where it reaches rather than by its
 /// own name, so what is being agreed to is which host may be talked to.
 export function skillTool(resolve: Resolve = lookupAll): Tool<z.infer<typeof skillSchema>> {
+  // The approval each call was asked about under, so a skill approved again while the question was
+  // open, which may reach somewhere else, is not called on the strength of it.
+  const describedUnder = new WeakMap<object, number | undefined>();
   return {
     name: "skill",
     description:
@@ -33,6 +36,7 @@ export function skillTool(resolve: Resolve = lookupAll): Tool<z.infer<typeof ski
       + "skills can be used; a skill that is pending or broken will refuse.",
     describe: (args) => {
       const found = sharedSkills().named(args.name);
+      describedUnder.set(args, found?.approved);
       return {
         tool: "skill",
         effect: "outbound",
@@ -45,8 +49,13 @@ export function skillTool(resolve: Resolve = lookupAll): Tool<z.infer<typeof ski
       const skills = sharedSkills();
       const found = skills.named(args.name);
       if (!found) return { ok: false, reason: `there is no skill called ${args.name}` };
-      // Reached only past the gate, which asks about an untried skill whatever its host was allowed.
-      if (untried(found) && found.approved !== undefined) skills.confirm(found.id, found.approved);
+      if (found.state === "approved") {
+        if (!describedUnder.has(args) || describedUnder.get(args) !== found.approved) {
+          return { ok: false, reason: `${found.name} changed while it was being asked about; use it again to be asked about it as it is now` };
+        }
+        // Reached only past the gate, which asks about an untried skill whatever its host was allowed.
+        if (untried(found) && found.approved !== undefined) skills.confirm(found.id, found.approved);
+      }
 
       const ran = await runSkill(skills, found.id, args.values, resolve);
       if (!ran.ok) {

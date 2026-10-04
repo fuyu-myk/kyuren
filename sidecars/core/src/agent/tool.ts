@@ -47,7 +47,8 @@ export async function invoke<A>(
 
   let resolution = gate.decide(action, fresh || action.first !== undefined);
   if (resolution.verdict === "ask") {
-    const answer = await ask(action, toCloud ? NOTES_TO_CLOUD : fresh ? NOTES_READ : action.first);
+    const why = [toCloud ? NOTES_TO_CLOUD : fresh ? NOTES_READ : undefined, action.first].filter((one) => one !== undefined);
+    const answer = await ask(action, why.length > 0 ? why.join(", and ") : undefined);
     // A no to a first use is about that one thing; kept, it would take back what its host was allowed.
     if (fresh || (action.first !== undefined && answer === "deny")) {
       resolution = gate.once(action, answer);

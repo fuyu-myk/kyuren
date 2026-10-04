@@ -310,3 +310,14 @@ test("a no to a first use refuses that call alone, and what its host was allowed
   assert.equal(refused.ok === false && refused.refused, true);
   assert.equal(gate.decide({ tool: "skill", effect: "outbound", target: "https://api.example.com" }).verdict, "allow");
 });
+
+test("a first use in a conversation that has read the notes is asked about for both, and says both", async () => {
+  const whys: Array<string | undefined> = [];
+  const ask = async (_action: Action, why?: string) => {
+    whys.push(why);
+    return "allow" as const;
+  };
+  const outcome = await invoke(reach, { first: true }, hostAllowed(), ask, new AbortController().signal, { held: true });
+  assert.equal(outcome.ok, true);
+  assert.deepEqual(whys, ["this conversation has read your notes, and weather_now has not been used since it was approved"]);
+});

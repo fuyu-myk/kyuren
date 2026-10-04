@@ -11,6 +11,7 @@ after(() => rmSync(where, { recursive: true, force: true }));
 const { forgeTool } = await import("#agent/forge.ts");
 const { skillTool } = await import("#agent/skill.ts");
 const { sharedSkills } = await import("#skill/shared.ts");
+const { untried } = await import("#skill/shape.ts");
 
 /// Any call that reaches this has already got past everything being tested.
 const reached: string[] = [];
@@ -90,10 +91,10 @@ test("once approved, and only then, the skill reaches out", async () => {
   const found = skills.named("weather_now")!;
   skills.approve(found.id);
 
-  const used = await skillTool(async () => ["93.184.216.34"]).run(
-    { name: "weather_now", values: { city: "Oslo" } },
-    nothing,
-  ) as { ok: boolean };
+  const tool = skillTool(async () => ["93.184.216.34"]);
+  const asking = { name: "weather_now", values: { city: "Oslo" } };
+  tool.describe(asking);
+  const used = await tool.run(asking, nothing) as { ok: boolean };
 
   assert.equal(used.ok, true);
   assert.deepEqual(reached, ["https://api.example.com/v1/weather/Oslo"]);
@@ -114,4 +115,25 @@ test("a newly approved skill is asked about at its first call, by name, and not 
   const used = await tool.run(asking, nothing) as { ok: boolean };
   assert.equal(used.ok, true);
   assert.equal(tool.describe(asking).first, undefined);
+});
+
+test("a skill approved again while a call to it was being asked about is not called under the new approval", async () => {
+  await forgeTool().run({ ...draft, name: "weather_later", url: "https://api.example.com/v1/later/{city}" }, nothing);
+  const skills = sharedSkills();
+  const later = skills.named("weather_later")!;
+  skills.approve(later.id, 1000);
+  const tool = skillTool(async () => ["93.184.216.34"]);
+  const asking = { name: "weather_later", values: { city: "Oslo" } };
+  tool.describe(asking);
+
+  skills.revise(later.id, { ...skills.named("weather_later")!, url: "https://api.example.net/v1/later/{city}" }, 2000);
+  skills.approve(later.id, 3000);
+  const refused = await tool.run(asking, nothing) as { ok: boolean; reason: string };
+  assert.equal(refused.ok, false);
+  assert.match(refused.reason, /weather_later changed while it was being asked about/);
+  assert.equal(untried(skills.named("weather_later")!), true, "the new approval's first call is still to be asked about");
+
+  const again = { name: "weather_later", values: { city: "Oslo" } };
+  assert.match(tool.describe(again).first ?? "", /weather_later has not been used/);
+  assert.equal((await tool.run(again, nothing) as { ok: boolean }).ok, true);
 });
