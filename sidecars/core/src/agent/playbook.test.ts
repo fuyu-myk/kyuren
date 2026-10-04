@@ -126,7 +126,11 @@ test("a sub-run that could not finish is told of with the log it left, so its pa
     books, runs: new RunLog(join(home, "runs")), vault: home, home,
     gate: new Gate(() => [], () => {}), ask: async () => "allow",
     perform: async () => {
-      throw new TurnFailed("the model stopped answering: overloaded", [{ tool: "write_file", target: join(home, "half.md"), effect: "write", ok: true }], "cloud", "claude-opus-5-5");
+      throw new TurnFailed("the model stopped answering: overloaded", {
+        called: [{ tool: "write_file", target: join(home, "half.md"), effect: "write", ok: true }],
+        route: "cloud",
+        model: "claude-opus-5-5",
+      });
     },
     onRan: (ran) => told.push(ran),
   });

@@ -764,8 +764,9 @@ capability layer of the mind, as everything Kyuren can do must.
 **Runs.** Every run of a playbook writes one markdown file under `~/.kyuren/runs/<playbook>/`: its inputs,
 the route and model, each tool call with the gate's decision and whether the question was put,
 each proof item's result, time and cost, and a closing note on what went wrong. A run the model
-gave up on part way is written down as well, as failed, with the calls it had already made, and a
-parent's proof points at that log. Runs are what a repair reads. The session store keeps the
+gave up on part way is written down as well, as failed, with the calls it had already made and
+what its finished steps cost, and a parent's proof points at that log; it is not repaired from,
+since nothing in the playbook failed. Runs are what a repair reads. The session store keeps the
 conversation; the run log keeps the work.
 
 **Schedules.** A playbook can run at a time of day, on the days named, without being asked, by

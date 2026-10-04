@@ -464,15 +464,15 @@ test("a run the model gave up on part way is written down as failed, with every 
     books, log, name: "tidy-notes", inputs: { week: "38" }, vault: home, home,
     gate: new Gate(() => [], () => {}), ask: async () => "allow",
     perform: async () => {
-      throw new TurnFailed(
-        "the model stopped answering: credit balance too low",
-        [
+      throw new TurnFailed("the model stopped answering: credit balance too low", {
+        called: [
           { tool: "web_fetch", target: "https://example.com/a", effect: "outbound", ok: true, asked: true },
           { tool: "remember", target: "the week", effect: "read", ok: true },
         ],
-        "cloud",
-        "claude-opus-5-5",
-      );
+        route: "cloud",
+        model: "claude-opus-5-5",
+        spent: { input: 1000, output: 100, cacheRead: 400, cacheWrite: 200 },
+      });
     },
     judge: async () => true,
   }).then(() => undefined, (cause: unknown) => cause);
@@ -486,7 +486,25 @@ test("a run the model gave up on part way is written down as failed, with every 
   assert.ok(text.includes("| web_fetch | outbound | https://example.com/a | allow when asked | ok |"));
   assert.ok(text.includes("| remember | read | the week | allow | ok |"));
   assert.ok(text.includes("could not finish: the model stopped answering: credit balance too low"));
+  assert.ok(text.includes("tokens: 1000 in, 400 of them from the cache and 200 into it, 100 out"), "what the steps it finished cost");
   assert.deepEqual(log.recent("tidy-notes").map((one) => one.outcome), ["failed"]);
+});
+
+test("a run whose log cannot be written fails with why the model stopped, and says it was not written", async () => {
+  const { home, books } = await setUp();
+  books.propose(BOOK);
+  books.approve("tidy-notes", "fuyu");
+  await writeFile(join(home, "blocked"), "a file where the folder of runs would be");
+  await assert.rejects(
+    runPlaybook({
+      books, log: new RunLog(join(home, "blocked")), name: "tidy-notes", inputs: { week: "38" }, vault: home, home,
+      gate: new Gate(() => [], () => {}), ask: async () => "allow",
+      perform: async () => {
+        throw new Error("the model stopped answering: overloaded");
+      },
+    }),
+    /^Error: the model stopped answering: overloaded; it could not be written down: /,
+  );
 });
 
 test("a run that failed before it reached for anything is written down as well", async () => {

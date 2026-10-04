@@ -75,7 +75,11 @@ test("a call the user was asked about says so, whichever way they answered", asy
 test("a run that could not finish is failed, whatever its proof says", async () => {
   const log = new RunLog(await mkdtemp(join(tmpdir(), "kyuren-runs-")));
   const run = log.begin("tidy", {}, { route: "cloud", model: "claude-opus-5-5" });
-  log.finish(run, "could not finish: the model stopped answering", true);
+  const text = await readFile(log.finish(run, "could not finish: the model stopped answering", true), "utf8");
   assert.equal(run.outcome, "failed");
   assert.equal(log.recent("tidy")[0]?.outcome, "failed");
+  assert.match(text, /^finished: no$/m, "said where a reader of the file looks first");
+  const done = log.begin("tidy", {}, { route: "cloud", model: "claude-opus-5-5" });
+  log.proved(done, [{ item: "exits zero: true", passed: false, why: "exited 1" }]);
+  assert.doesNotMatch(await readFile(log.finish(done, "proof failed"), "utf8"), /^finished:/m);
 });

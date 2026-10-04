@@ -86,14 +86,20 @@ function subRuns(children: Ran[]): ProofResult[] {
   }));
 }
 
+function reasonOf(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}
+
 /// A run the model gave up on part way, written down all the same: the calls it made were made,
 /// and the log is where a repair, and a person, look to see what happened.
 function abandoned(options: Running, name: string, failure: unknown, children: Ran[]): RunFailed {
-  const reason = failure instanceof Error ? failure.message : String(failure);
+  const reason = reasonOf(failure);
   const turn = failure instanceof TurnFailed ? failure : undefined;
   const run = options.log.begin(name, options.inputs, {
     route: turn?.route ?? "unknown",
     model: turn?.model ?? "unknown",
+    spent: turn?.spent,
+    spentAll: children.reduce((sum, child) => added(sum, child.run.spentAll ?? child.run.spent), turn?.spent),
     children: children.length,
   });
   logged(options.log, run, turn?.called ?? []);
@@ -302,7 +308,14 @@ export async function runPlaybook(options: Running): Promise<Ran> {
       onRan: (child) => children.push(child),
     });
   } catch (failure) {
-    throw abandoned(options, book.name, failure, children);
+    let told: Error;
+    try {
+      told = abandoned(options, book.name, failure, children);
+    } catch (writing) {
+      // What the run ended on is the model's failure; that it could not be written down goes with it.
+      told = new Error(`${reasonOf(failure)}; it could not be written down: ${reasonOf(writing)}`, { cause: failure });
+    }
+    throw told;
   } finally {
     for (const done of withdraw) done();
   }

@@ -57,6 +57,8 @@ export type Run = {
   proof: ProofResult[];
   outcome: Outcome;
   closing: string;
+  /// The model stopped part way, so the run never reached its proof.
+  unfinished?: true;
   path?: string;
 };
 
@@ -106,6 +108,7 @@ export class RunLog {
   /// failed, whatever its proof would have said.
   finish(run: Run, closing: string, unfinished = false): string {
     run.closing = closing;
+    if (unfinished) run.unfinished = true;
     run.outcome = unfinished || run.proof.some((one) => one.passed === false)
       ? "failed"
       : run.proof.some((one) => one.passed === undefined)
@@ -154,7 +157,7 @@ started: ${run.startedAt}
 route: ${run.route}
 model: ${run.model}
 ${run.spent ? `tokens: ${counted(run.spent)}\n` : ""}${run.spentAll && run.children ? `tokens with sub-runs: ${counted(run.spentAll)}\n` : ""}outcome: ${run.outcome}
----
+${run.unfinished ? "finished: no\n" : ""}---
 
 ## Inputs
 

@@ -62,6 +62,10 @@ export async function repairPlaybook(options: Repairing): Promise<Repaired> {
   const runPath = options.run ?? options.log.recent(options.name, 1)[0]?.path;
   if (!runPath) throw new Error(`${options.name} has no run to repair from`);
   const run = readFileSync(runPath, "utf8");
+  // A run the model gave up on failed for want of a model, not of a better playbook.
+  if (/^finished: no$/m.test(run)) {
+    throw new Error(`that run of ${options.name} could not finish, so nothing in the playbook failed to repair`);
+  }
 
   const transcript = await options.perform({
     prompt: "Propose the repaired playbook now, then say in two lines what you changed and why.",

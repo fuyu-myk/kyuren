@@ -1,4 +1,4 @@
-import { stepCountIs, streamText, tool, type ModelMessage } from "ai";
+import { stepCountIs, streamText, tool, type LanguageModelUsage, type ModelMessage } from "ai";
 import type { z } from "zod";
 import { invoke, type Ask, type Exposure, type Tool } from "#agent/tool.ts";
 import { TurnFailed } from "#agent/failed.ts";
@@ -27,7 +27,7 @@ import { messagesFor } from "#agent/moment.ts";
 import { difficultyOf } from "#model/difficulty.ts";
 import { cloudConfigured, modelFor, nameFor, online, optionsFor } from "#model/providers.ts";
 import type { Gate } from "#permission/gate.ts";
-import type { Spent } from "#playbook/runlog.ts";
+import { added, type Spent } from "#playbook/runlog.ts";
 import type { Ran } from "#playbook/runner.ts";
 import { home, sharedPlaybooks, sharedRuns } from "#playbook/shared.ts";
 import { route, type Demand, type Route } from "#model/route.ts";
@@ -68,6 +68,17 @@ function cachedUpTo(messages: ModelMessage[]): ModelMessage[] {
 
 function said(trouble: unknown): string {
   return trouble instanceof Error ? trouble.message : String(trouble);
+}
+
+function spentOf(usage: LanguageModelUsage | undefined): Spent | undefined {
+  return typeof usage?.inputTokens === "number"
+    ? {
+        input: usage.inputTokens,
+        output: usage.outputTokens ?? 0,
+        cacheRead: usage.inputTokenDetails?.cacheReadTokens ?? 0,
+        cacheWrite: usage.inputTokenDetails?.cacheWriteTokens ?? 0,
+      }
+    : undefined;
 }
 
 /// What the assistant can do, as the mind graph shows it. Names and descriptions only: a list of
@@ -304,6 +315,8 @@ export async function run(options: Run): Promise<Transcript> {
   // A stream ends quietly on an error unless told to say so. Quiet, a turn cut off by a rate
   // limit looks like a model that chose to stop, and a run's proof then fails for the wrong reason.
   let trouble: unknown;
+  // Counted as each step ends, so a turn that fails part way can still say what it cost.
+  let finished: Spent | undefined;
   const result = streamText({
     model: modelFor(decision.route, difficulty),
     system: options.system,
@@ -313,6 +326,9 @@ export async function run(options: Run): Promise<Transcript> {
     tools: offered,
     onError: ({ error }) => {
       trouble = error;
+    },
+    onStepEnd: (step) => {
+      finished = added(finished, spentOf(step.usage));
     },
     ...(decision.route === "cloud"
       ? {
@@ -337,7 +353,7 @@ export async function run(options: Run): Promise<Transcript> {
     // to say nothing.
     if (finish === "content-filter") throw new Error("the model declined to answer this, and so did the model it fell back to");
   } catch (failure) {
-    throw new TurnFailed(said(failure), called, decision.route, nameFor(decision.route), exposure.held);
+    throw new TurnFailed(said(failure), { called, route: decision.route, model: nameFor(decision.route), exposed: exposure.held, spent: finished });
   }
 
   const steps = await result.steps;
@@ -353,14 +369,7 @@ export async function run(options: Run): Promise<Transcript> {
     usage: typeof usage?.inputTokens === "number"
       ? { input: usage.inputTokens, output: usage.outputTokens ?? 0 }
       : undefined,
-    spent: typeof total?.inputTokens === "number"
-      ? {
-          input: total.inputTokens,
-          output: total.outputTokens ?? 0,
-          cacheRead: total.inputTokenDetails?.cacheReadTokens ?? 0,
-          cacheWrite: total.inputTokenDetails?.cacheWriteTokens ?? 0,
-        }
-      : undefined,
+    spent: spentOf(total),
     difficulty,
     spoken: spoken.length > 0 ? spoken.join(" ") : undefined,
     route: decision.route,

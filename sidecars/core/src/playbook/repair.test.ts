@@ -119,3 +119,26 @@ test("without the cloud there is no repair, only the reason", async () => {
     if (token !== undefined) process.env.ANTHROPIC_AUTH_TOKEN = token;
   }
 });
+
+test("a run that could not finish is not repaired from, since nothing in the playbook failed", async () => {
+  const { home, books, log } = await setUp();
+  const cut = log.begin("say-hello", {}, { route: "cloud", model: "claude-opus-5-5" });
+  const path = log.finish(cut, "could not finish: the model stopped answering: credit balance too low", true);
+  remember("anthropic", "held");
+  try {
+    let performed = false;
+    await assert.rejects(
+      repairPlaybook({
+        books, log, name: "say-hello", run: path, vault: home, gate: new Gate(() => [], () => {}), ask: async () => "allow",
+        perform: async () => {
+          performed = true;
+          return transcript("");
+        },
+      }),
+      /could not finish, so nothing in the playbook failed/,
+    );
+    assert.equal(performed, false, "no model is asked");
+  } finally {
+    forget("anthropic");
+  }
+});
