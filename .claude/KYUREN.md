@@ -95,6 +95,12 @@ from both windows. What is timed is a model that has stalled: one that says noth
 minutes while no tool is running ends its turn. A tool running, or a question waiting on the user,
 is not the model's silence.
 
+A sidecar that exits is started again behind the same handle, after a second, the pause doubling
+to a minute while it keeps dying young; while it is down a request is refused at once with that
+said plainly. The core is handed its credentials again and perception resumes listening for its
+name if it was. What a sidecar writes to stderr goes into the event log, so an exit leaves its
+reason where it can be read.
+
 ### 4.2 Swift sidecar, `sidecars/perception`
 
 A SwiftPM executable bundled inside the app, speaking newline-delimited JSON over stdio. It

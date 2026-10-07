@@ -1,13 +1,14 @@
 use std::collections::HashMap;
-use std::path::Path;
+use std::os::unix::process::ExitStatusExt;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Weak};
+use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::process::{Child, ChildStdin, Command};
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::process::{Child, ChildStderr, ChildStdin, ChildStdout, Command};
 use tokio::sync::{oneshot, Mutex};
 
 use crate::sidecar::protocol::{parse, Failure, Inbound};
@@ -17,12 +18,27 @@ type Answer = oneshot::Receiver<Result<Value, Failure>>;
 
 pub type EventSink = Arc<dyn Fn(&str, &str, Value) + Send + Sync>;
 
+/// A process that exits is started again after a pause that doubles while it keeps dying young,
+/// so one that cannot run costs a try a minute rather than a loop of them.
+const FIRST_PAUSE: Duration = Duration::from_secs(1);
+const LONGEST_PAUSE: Duration = Duration::from_secs(60);
+const STEADY: Duration = Duration::from_secs(60);
+const LINE_KEPT: usize = 2_000;
+const LINE_READ: u64 = 16 * 1024;
+
 pub struct Sidecar {
     name: String,
-    stdin: Mutex<ChildStdin>,
+    program: String,
+    args: Vec<String>,
+    cwd: PathBuf,
+    events: EventSink,
+    /// Empty while the process is down, so a request is refused at once rather than written into
+    /// a pipe nobody reads.
+    stdin: Mutex<Option<ChildStdin>>,
     pending: Pending,
     next_id: AtomicU64,
-    child: Mutex<Child>,
+    child: Mutex<Option<Child>>,
+    stopping: AtomicBool,
 }
 
 impl Sidecar {
@@ -33,60 +49,46 @@ impl Sidecar {
         cwd: &Path,
         events: EventSink,
     ) -> Result<Arc<Self>, String> {
-        let mut child = Command::new(program)
-            .args(args)
-            .current_dir(cwd)
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
-            .kill_on_drop(true)
-            .spawn()
-            .map_err(|cause| format!("could not start {name}: {cause}"))?;
-
-        let stdin = child
-            .stdin
-            .take()
-            .ok_or_else(|| format!("{name} has no stdin"))?;
-        let stdout = child
-            .stdout
-            .take()
-            .ok_or_else(|| format!("{name} has no stdout"))?;
-
         let sidecar = Arc::new(Self {
             name: name.to_string(),
-            stdin: Mutex::new(stdin),
+            program: program.to_string(),
+            args: args.iter().map(|arg| arg.to_string()).collect(),
+            cwd: cwd.to_path_buf(),
+            events,
+            stdin: Mutex::new(None),
             pending: Pending::default(),
             next_id: AtomicU64::new(1),
-            child: Mutex::new(child),
+            child: Mutex::new(None),
+            stopping: AtomicBool::new(false),
         });
-
-        let pending = Arc::clone(&sidecar.pending);
-        let label = name.to_string();
-        tauri::async_runtime::spawn(async move {
-            let mut lines = BufReader::new(stdout).lines();
-            while let Ok(Some(line)) = lines.next_line().await {
-                match parse(&line) {
-                    Inbound::Response { id, result } => {
-                        if let Some(waiter) = pending.lock().await.remove(&id) {
-                            let _ = waiter.send(result);
-                        }
-                    }
-                    Inbound::Event { name, data } => events(&label, &name, data),
-                    Inbound::Malformed { reason } => {
-                        events(&label, "sidecar.malformed", json!({ "reason": reason }))
-                    }
-                }
-            }
-            for (_, waiter) in pending.lock().await.drain() {
-                let _ = waiter.send(Err(Failure {
-                    code: "sidecar_closed".into(),
-                    message: format!("{label} exited"),
-                }));
-            }
-            events(&label, "sidecar.exited", Value::Null);
-        });
-
+        let streams = sidecar.launch().await?;
+        tauri::async_runtime::spawn(supervise(Arc::downgrade(&sidecar), streams));
         Ok(sidecar)
+    }
+
+    /// Under the child's lock, so a shutdown either comes first and nothing is started, or comes
+    /// after and finds the process to stop.
+    async fn launch(&self) -> Result<(ChildStdout, ChildStderr), String> {
+        let mut held = self.child.lock().await;
+        if self.stopping.load(Ordering::Relaxed) {
+            return Err(format!("{} is shutting down", self.name));
+        }
+        let mut child = Command::new(&self.program)
+            .args(&self.args)
+            .current_dir(&self.cwd)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+            .map_err(|cause| format!("could not start {}: {cause}", self.name))?;
+
+        let stdin = child.stdin.take().ok_or_else(|| format!("{} has no stdin", self.name))?;
+        let stdout = child.stdout.take().ok_or_else(|| format!("{} has no stdout", self.name))?;
+        let stderr = child.stderr.take().ok_or_else(|| format!("{} has no stderr", self.name))?;
+        *self.stdin.lock().await = Some(stdin);
+        *held = Some(child);
+        Ok((stdout, stderr))
     }
 
     pub async fn request(
@@ -121,21 +123,30 @@ impl Sidecar {
             self.name,
             self.next_id.fetch_add(1, Ordering::Relaxed)
         );
-        let (tx, rx) = oneshot::channel();
-        self.pending.lock().await.insert(id.clone(), tx);
-
         let line = format!(
             "{}\n",
             json!({ "id": &id, "method": method, "params": params })
         );
-        if let Err(cause) = self.stdin.lock().await.write_all(line.as_bytes()).await {
+        // Waited for only while the way in is held, so a request is never waited for by one process
+        // and written to the next.
+        let mut stdin = self.stdin.lock().await;
+        let Some(pipe) = stdin.as_mut() else {
+            return Err(self.down());
+        };
+        let (tx, rx) = oneshot::channel();
+        self.pending.lock().await.insert(id.clone(), tx);
+        if pipe.write_all(line.as_bytes()).await.is_err() {
             self.pending.lock().await.remove(&id);
-            return Err(Failure {
-                code: "write_failed".into(),
-                message: cause.to_string(),
-            });
+            return Err(self.down());
         }
         Ok((id, rx))
+    }
+
+    fn down(&self) -> Failure {
+        Failure {
+            code: "sidecar_down".into(),
+            message: format!("Kyuren's {} process has stopped and is being started again; try again in a moment", self.name),
+        }
     }
 
     fn received(&self, arrived: Result<Result<Value, Failure>, oneshot::error::RecvError>) -> Result<Value, Failure> {
@@ -147,9 +158,128 @@ impl Sidecar {
         })
     }
 
+    /// Called once its output has ended. The process is gone first, since a writer blocked on a full
+    /// pipe holds the way in until it is; then the way in is closed before the open requests are
+    /// failed, so a request either reaches the drain or is refused, and none is left waiting.
+    async fn ended(&self) -> Value {
+        let status = self.reaped().await;
+        *self.stdin.lock().await = None;
+        for (_, waiter) in self.pending.lock().await.drain() {
+            let _ = waiter.send(Err(Failure {
+                code: "sidecar_closed".into(),
+                message: format!("Kyuren's {} process stopped before it answered", self.name),
+            }));
+        }
+        status
+    }
+
+    async fn reaped(&self) -> Value {
+        let Some(mut child) = self.child.lock().await.take() else {
+            return Value::Null;
+        };
+        // Output can end before the process does; it must be gone before another is started.
+        let status = match tokio::time::timeout(Duration::from_secs(2), child.wait()).await {
+            Ok(status) => status,
+            Err(_) => {
+                let _ = child.kill().await;
+                child.wait().await
+            }
+        };
+        match status {
+            Ok(status) => json!({ "code": status.code(), "signal": status.signal() }),
+            Err(failure) => json!({ "unknown": failure.to_string() }),
+        }
+    }
+
     pub async fn shutdown(&self) {
-        let mut child = self.child.lock().await;
-        let _ = child.kill().await;
+        let mut held = self.child.lock().await;
+        self.stopping.store(true, Ordering::Relaxed);
+        if let Some(child) = held.as_mut() {
+            let _ = child.kill().await;
+        }
+    }
+}
+
+/// Reads what the process says until it exits, then starts it again, for as long as anything
+/// still holds the sidecar and it has not been shut down.
+async fn supervise(sidecar: Weak<Sidecar>, mut streams: (ChildStdout, ChildStderr)) {
+    let mut pause = Duration::ZERO;
+    loop {
+        let began = Instant::now();
+        let Some((name, pending, events)) = sidecar
+            .upgrade()
+            .map(|held| (held.name.clone(), Arc::clone(&held.pending), Arc::clone(&held.events)))
+        else {
+            return;
+        };
+        let (stdout, stderr) = streams;
+        let relayed = tauri::async_runtime::spawn(relay(name.clone(), stderr, Arc::clone(&events)));
+        answer(&name, stdout, &pending, &events).await;
+
+        let Some(held) = sidecar.upgrade() else { return };
+        let status = held.ended().await;
+        // The last words before an exit belong before the exit in the log.
+        let _ = tokio::time::timeout(Duration::from_secs(1), relayed).await;
+        events(&name, "sidecar.exited", status);
+        if held.stopping.load(Ordering::Relaxed) {
+            return;
+        }
+        drop(held);
+
+        pause = if pause.is_zero() || began.elapsed() >= STEADY { FIRST_PAUSE } else { (pause * 2).min(LONGEST_PAUSE) };
+        streams = loop {
+            tokio::time::sleep(pause).await;
+            let Some(held) = sidecar.upgrade() else { return };
+            if held.stopping.load(Ordering::Relaxed) {
+                return;
+            }
+            match held.launch().await {
+                Ok(streams) => {
+                    events(&name, "sidecar.restarted", Value::Null);
+                    break streams;
+                }
+                Err(_) if held.stopping.load(Ordering::Relaxed) => return,
+                Err(reason) => {
+                    events(&name, "sidecar.restart_failed", json!({ "reason": reason }));
+                    pause = (pause * 2).min(LONGEST_PAUSE);
+                }
+            }
+        };
+    }
+}
+
+async fn answer(name: &str, stdout: ChildStdout, pending: &Pending, events: &EventSink) {
+    let mut lines = BufReader::new(stdout).lines();
+    while let Ok(Some(line)) = lines.next_line().await {
+        match parse(&line) {
+            Inbound::Response { id, result } => {
+                if let Some(waiter) = pending.lock().await.remove(&id) {
+                    let _ = waiter.send(result);
+                }
+            }
+            Inbound::Event { name: event, data } => events(name, &event, data),
+            Inbound::Malformed { reason } => events(name, "sidecar.malformed", json!({ "reason": reason })),
+        }
+    }
+}
+
+/// What the process writes to stderr, a line at a time, which is where a crash says why. Read to
+/// its end whatever it holds, since a pipe left full would stall the process writing to it.
+async fn relay(name: String, stderr: ChildStderr, events: EventSink) {
+    let mut reader = BufReader::new(stderr);
+    let mut bytes = Vec::new();
+    loop {
+        bytes.clear();
+        // Bounded, so output that never ends a line is passed on in pieces rather than held whole.
+        match (&mut reader).take(LINE_READ).read_until(b'\n', &mut bytes).await {
+            Ok(0) | Err(_) => return,
+            Ok(_) => {
+                let line: String = String::from_utf8_lossy(&bytes).trim_end().chars().take(LINE_KEPT).collect();
+                if !line.is_empty() {
+                    events(&name, "sidecar.stderr", json!({ "line": line }));
+                }
+            }
+        }
     }
 }
 
@@ -193,6 +323,77 @@ done"#;
                 .await
                 .expect("not left waiting");
             assert_eq!(failed.expect_err("the sidecar left").code, "sidecar_closed");
+        });
+    }
+
+    /// Every event a sidecar sends, handed on as it comes.
+    fn heard() -> (EventSink, tokio::sync::mpsc::UnboundedReceiver<(String, Value)>) {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+        (Arc::new(move |_, name, data| { let _ = tx.send((name.to_string(), data)); }), rx)
+    }
+
+    /// The events up to and including the first called `name`.
+    async fn until(rx: &mut tokio::sync::mpsc::UnboundedReceiver<(String, Value)>, name: &str) -> Vec<(String, Value)> {
+        let mut seen = Vec::new();
+        loop {
+            let next = tokio::time::timeout(Duration::from_secs(10), rx.recv()).await.expect("the event came").expect("the sink is open");
+            let last = next.0 == name;
+            seen.push(next);
+            if last {
+                return seen;
+            }
+        }
+    }
+
+    /// Answers one request with the id of the process that answered, then exits.
+    const ONCE: &str = r#"read line
+id=$(printf '%s' "$line" | sed 's/.*"id":"\([^"]*\)".*/\1/')
+printf '{"id":"%s","ok":true,"result":"%s"}\n' "$id" "$$"
+exit 0"#;
+
+    #[test]
+    fn a_sidecar_that_exits_is_refused_to_at_once_then_started_again() {
+        runtime().block_on(async {
+            let (sink, mut rx) = heard();
+            let sidecar = Sidecar::spawn("core", "/bin/sh", &["-c", ONCE], &std::env::temp_dir(), sink).await.expect("it starts");
+            let first = sidecar.request("ping", json!({}), Duration::from_secs(5)).await.expect("the first answers");
+
+            let exited = until(&mut rx, "sidecar.exited").await;
+            assert_eq!(exited.last().map(|(_, data)| data["code"].clone()), Some(json!(0)));
+            let refused = sidecar.request("ping", json!({}), Duration::from_secs(5)).await.expect_err("nobody is there");
+            assert_eq!(refused.code, "sidecar_down");
+            assert!(refused.message.contains("started again"), "said plainly, not as a broken pipe: {}", refused.message);
+
+            until(&mut rx, "sidecar.restarted").await;
+            let second = sidecar.request("ping", json!({}), Duration::from_secs(5)).await.expect("the next one answers");
+            assert_ne!(first, second, "answered by a process of its own");
+            sidecar.shutdown().await;
+        });
+    }
+
+    #[test]
+    fn what_a_sidecar_says_as_it_dies_is_passed_on_before_its_exit() {
+        runtime().block_on(async {
+            let (sink, mut rx) = heard();
+            let sidecar = Sidecar::spawn("core", "/bin/sh", &["-c", "echo 'TypeError: boom' >&2; exit 3"], &std::env::temp_dir(), sink).await.expect("it starts");
+            let seen = until(&mut rx, "sidecar.exited").await;
+            sidecar.shutdown().await;
+            let said = seen.iter().position(|(name, data)| name == "sidecar.stderr" && data["line"] == "TypeError: boom");
+            assert!(said.is_some(), "its last words are kept: {seen:?}");
+            assert_eq!(seen.last().map(|(_, data)| data["code"].clone()), Some(json!(3)));
+        });
+    }
+
+    #[test]
+    fn a_sidecar_shut_down_is_not_started_again() {
+        runtime().block_on(async {
+            let (sink, mut rx) = heard();
+            let sidecar = Sidecar::spawn("core", "/bin/sh", &["-c", "while read line; do :; done"], &std::env::temp_dir(), sink).await.expect("it starts");
+            sidecar.shutdown().await;
+            until(&mut rx, "sidecar.exited").await;
+            tokio::time::sleep(FIRST_PAUSE * 2).await;
+            let after: Vec<String> = std::iter::from_fn(|| rx.try_recv().ok()).map(|(name, _)| name).collect();
+            assert!(!after.iter().any(|name| name == "sidecar.restarted"), "it stays down: {after:?}");
         });
     }
 }

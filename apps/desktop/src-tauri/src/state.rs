@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::{json, Value};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 use crate::paths::workspace_root;
 use crate::sidecar::{EventSink, Sidecar};
@@ -137,9 +137,46 @@ fn logged<'a>(name: &str, data: &'a Value) -> std::borrow::Cow<'a, Value> {
     }
 }
 
+/// A process started again knows only what it reads for itself: the core is handed its credentials
+/// again, and perception goes back to listening for its name if it was.
+fn restored(app: &AppHandle, sidecar: &str) {
+    let app = app.clone();
+    match sidecar {
+        "core" => {
+            tauri::async_runtime::spawn(async move {
+                // A restart during launch can come before the sidecars are managed, where the core is found.
+                while app.try_state::<Sidecars>().is_none() {
+                    tokio::time::sleep(Duration::from_millis(200)).await;
+                }
+                crate::secrets::resend(&app).await
+            });
+        }
+        "perception" => {
+            let wake = crate::wake::wanted();
+            if wake.on {
+                tauri::async_runtime::spawn(async move {
+                    if let Err(failure) = crate::wake::apply(&app, wake).await {
+                        eprintln!("kyuren wake: {failure}");
+                    }
+                });
+            }
+        }
+        _ => {}
+    }
+}
+
 fn event_sink(app: AppHandle) -> EventSink {
     Arc::new(move |sidecar: &str, name: &str, data: Value| {
         log_event(sidecar, name, &data);
+        if name == "sidecar.stderr" {
+            if let Some(line) = data.get("line").and_then(Value::as_str) {
+                eprintln!("{sidecar}: {line}");
+            }
+            return;
+        }
+        if name == "sidecar.restarted" {
+            restored(&app, sidecar);
+        }
         if name == "speech.start" || name == "speech.end" {
             let speaking = name == "speech.start";
             let _ = app.emit("speech", speaking);
