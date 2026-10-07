@@ -62,6 +62,8 @@ export class Ambient {
     const rules = readRules(this.rulesPath).rules;
     try {
       await this.look();
+    } catch (failure) {
+      this.failed(failure);
     } finally {
       this.timer = setTimeout(() => void this.round(), rules.every * 60_000);
       this.timer.unref();
@@ -106,6 +108,17 @@ export class Ambient {
       data: { at: looked.at, read: looked.read, notAllowed: looked.notAllowed, fired: looked.firings.length, trouble: looked.trouble ?? null },
     });
     return looked;
+  }
+
+  // Nothing waits on a look started by the timer, so a failure left to escape would end the process.
+  private failed(failure: unknown): void {
+    const trouble = `the look did not finish: ${failure instanceof Error ? failure.message : String(failure)}`;
+    const looked: Looked = { at: new Date().toISOString(), enabled: true, firings: [], read: [], notAllowed: [], trouble };
+    this.lastLooked = looked;
+    this.transport.send({
+      event: "ambient.looked",
+      data: { at: looked.at, read: [], notAllowed: [], fired: 0, trouble },
+    });
   }
 
   private surface(firing: Firing): void {

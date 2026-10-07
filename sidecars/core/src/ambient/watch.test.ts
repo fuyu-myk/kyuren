@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import { Ambient } from "#ambient/watch.ts";
 import type { Item, Source } from "#connect/source.ts";
 import { Gate } from "#permission/gate.ts";
@@ -96,4 +96,33 @@ test("switched off, nothing is read and nothing fires, whatever the rules say", 
   assert.equal(looked.enabled, false);
   assert.deepEqual(looked.read, []);
   assert.equal(sent.filter((one) => (one as { event: string }).event === "ambient.notice").length, 0);
+});
+
+// A look runs on a timer, where nothing waits on it. One that fails, here because what was allowed
+// could not be saved, must cost that look and be said, not take the whole process down with it.
+test("a look that fails is reported as trouble and the next look still comes", async () => {
+  const root = mkdtempSync(join(tmpdir(), "ambient-"));
+  writeFileSync(join(root, "ambient.json"), JSON.stringify({ enabled: true, every: 5, read: ["test_calendar"], rules: [{ id: "soon", when: "event", within: 10 }] }));
+  const sent: Outbound[] = [];
+  const full = { read: () => [], write: () => { throw new Error("EMFILE: too many open files"); } };
+  const ambient = new Ambient({ send: (message) => sent.push(message), listen: () => {} }, new Gate(() => [], () => {}, full), [calendar([soon])], root);
+  const settled = () => new Promise((done) => setImmediate(done));
+  const troubles = () => sent.flatMap((one) => ("event" in one && one.event === "ambient.looked" ? [String((one.data as { trouble: string | null }).trouble)] : []));
+
+  mock.timers.enable({ apis: ["setTimeout"] });
+  try {
+    ambient.start();
+    mock.timers.tick(20_000);
+    await settled();
+    assert.equal(troubles().length, 1, "the failed look is announced like any other");
+    assert.match(troubles()[0]!, /the look did not finish: EMFILE: too many open files/);
+    assert.match(String((ambient.state().lastLook as { trouble?: string }).trouble), /did not finish/, "and asked after, it is what the last look says");
+
+    mock.timers.tick(5 * 60_000);
+    await settled();
+    assert.equal(troubles().length, 2, "looking goes on");
+  } finally {
+    ambient.stop();
+    mock.timers.reset();
+  }
 });

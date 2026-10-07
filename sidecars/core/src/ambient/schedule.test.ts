@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import { Scheduler, type Starting } from "#ambient/schedule.ts";
 import type { Outbound } from "#protocol.ts";
 
@@ -76,4 +76,31 @@ test("the state says when each schedule is next due and how its last run went", 
   const [after] = scheduler.state(at(2026, 9, 21, 7, 31));
   assert.equal(after!.next, at(2026, 9, 22, 7, 30).toISOString());
   assert.equal(after!.last?.why, "proof failed: no file");
+});
+
+test("a check that fails is said and the next one still comes", async () => {
+  const { scheduler, sent } = setUp(file, async () => ({ ok: true, why: "done" }));
+  let checks = 0;
+  scheduler.tick = async () => {
+    checks += 1;
+    throw new Error("EMFILE: too many open files");
+  };
+  const settled = () => new Promise((done) => setImmediate(done));
+
+  mock.timers.enable({ apis: ["setTimeout"] });
+  try {
+    scheduler.start();
+    mock.timers.tick(20_000);
+    await settled();
+    const said = sent.flatMap((one) => ("event" in one && one.event === "schedule.failed" ? [one.data as { reason: string }] : []));
+    assert.equal(said.length, 1);
+    assert.match(said[0]!.reason, /EMFILE: too many open files/);
+
+    mock.timers.tick(60_000);
+    await settled();
+    assert.equal(checks, 2, "checking goes on");
+  } finally {
+    scheduler.stop();
+    mock.timers.reset();
+  }
 });

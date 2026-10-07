@@ -72,6 +72,12 @@ export class Scheduler {
   private async round(): Promise<void> {
     try {
       await this.tick();
+    } catch (failure) {
+      // Nothing waits on a check started by the timer, so a failure left to escape would end the process.
+      this.transport.send({
+        event: "schedule.failed",
+        data: { at: new Date().toISOString(), reason: failure instanceof Error ? failure.message : String(failure) },
+      });
     } finally {
       this.timer = setTimeout(() => void this.round(), TICK);
       this.timer.unref();
