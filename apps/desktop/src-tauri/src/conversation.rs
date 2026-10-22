@@ -6,9 +6,6 @@ use tauri::{AppHandle, Emitter, Manager};
 
 use crate::state::Sidecars;
 
-/// Long enough for a local model to think, and for its first run to load.
-const SPEAKING: Duration = Duration::from_secs(180);
-
 /// Replies are read aloud, so they are asked for as speech rather than as a document. The stripping
 /// on the perception side is the backstop; this is the request.
 ///
@@ -27,16 +24,15 @@ pub fn on_transcript(app: &AppHandle, text: String) {
         return;
     };
     let core = Arc::clone(&state.core);
-    let perception = Arc::clone(&state.perception);
     let app = app.clone();
+    let turn = crate::speaking::begin(&app);
 
     tauri::async_runtime::spawn(async move {
         let _ = app.emit("orb:state", "thinking");
 
-        let reply = match core
-            .request_untimed("agent.run", json!({ "prompt": text, "system": VOICE }))
-            .await
-        {
+        // Said as it arrives, a sentence at a time, rather than read out once it is whole.
+        let asked = json!({ "prompt": text, "system": VOICE, "speak": true, "id": turn });
+        let reply = match core.request_untimed("agent.run", asked).await {
             Ok(result) => {
                 // Which model answered, and why, is part of the answer. Degrading to a local model
                 // because the network is gone is only honest if it is visible.
@@ -58,13 +54,6 @@ pub fn on_transcript(app: &AppHandle, text: String) {
         };
 
         let _ = app.emit("agent:reply", &reply);
-        if let Err(failure) = perception
-            .request("voice.say", json!({ "text": reply }), SPEAKING)
-            .await
-        {
-            eprintln!("kyuren voice.say: {failure}");
-            let _ = app.emit("orb:state", "listening");
-        }
     });
 }
 
@@ -113,6 +102,8 @@ pub fn forward(app: &AppHandle, event: &str, data: &Value) {
         "permission.request" => {
             let _ = app.emit("permission", data);
         }
+        "agent.say" => crate::speaking::said(app, data),
+        "agent.say.end" => crate::speaking::ended(app, data),
         // A question whose turn was stopped no longer waits, in either window.
         "permission.withdrawn" => {
             if let Some(id) = data.get("id").and_then(Value::as_str) {

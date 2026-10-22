@@ -255,3 +255,44 @@ test("a turn stopped while a question is open ends at once, and the question is 
   assert.equal(asker.pending(), 0);
   assert.equal(existsSync(written), false);
 });
+
+type Told = { event: string; data: Record<string, unknown> };
+
+async function speakingHandlers(told: Told[]) {
+  const { agentHandlers } = await import("#methods/agent.ts");
+  return agentHandlers({ send: (message) => void told.push(message as Told), listen: () => undefined });
+}
+
+const aloud = (told: Told[]) => told.filter((one) => one.event.startsWith("agent.say"));
+
+test("a spoken turn says its reply a sentence at a time as it arrives, and says when it is over", async () => {
+  const told: Told[] = [];
+  const handlers = await speakingHandlers(told);
+  replies.push(saying("Your first meeting is at nine with the design team. The afternoon is completely free."));
+  await handlers["agent.run"]({ prompt: "what is on", speak: true, id: "voice:1", sensitive: true, difficulty: "moderate" });
+  assert.deepEqual(aloud(told), [
+    { event: "agent.say", data: { id: "voice:1", text: "Your first meeting is at nine with the design team." } },
+    { event: "agent.say", data: { id: "voice:1", text: "The afternoon is completely free." } },
+    { event: "agent.say.end", data: { id: "voice:1" } },
+  ]);
+});
+
+test("a turn not asked to be spoken says nothing aloud", async () => {
+  const told: Told[] = [];
+  const handlers = await speakingHandlers(told);
+  replies.push(saying("Your first meeting is at nine with the design team."));
+  await handlers["agent.run"]({ prompt: "what is on", id: "chat:1", sensitive: true, difficulty: "moderate" });
+  assert.deepEqual(aloud(told), []);
+});
+
+test("a spoken turn stopped part way says nothing more, and still says it is over", async () => {
+  const told: Told[] = [];
+  const handlers = await speakingHandlers(told);
+  replies.push(silent);
+  const running = handlers["agent.run"]({ prompt: "what is on", speak: true, id: "voice:2", sensitive: true, difficulty: "moderate" })
+    .then(() => undefined, (cause: unknown) => cause);
+  await new Promise((later) => setTimeout(later, 200));
+  await handlers["agent.stop"]({ id: "voice:2" });
+  assert.ok(await running instanceof Error);
+  assert.deepEqual(aloud(told), [{ event: "agent.say.end", data: { id: "voice:2" } }]);
+});

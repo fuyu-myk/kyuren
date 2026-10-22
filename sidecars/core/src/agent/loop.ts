@@ -106,7 +106,7 @@ function adapt<A>(
   schema: z.ZodType<A>,
   gate: Gate,
   ask: Ask,
-  spoken: string[],
+  toSay: (said: string) => void,
   watching: Watching,
   exposure: Exposure,
 ) {
@@ -128,7 +128,7 @@ function adapt<A>(
       watching?.ended(step ?? "", outcome.ok, !outcome.ok && outcome.refused, asked);
       if (outcome.ok) {
         const said = (outcome.value as { spoken?: unknown } | null)?.spoken;
-        if (typeof said === "string" && said !== "") spoken.push(said);
+        if (typeof said === "string" && said !== "") toSay(said);
         return outcome.value;
       }
       // A refusal is reported back to the model as a result, not thrown. The turn stays coherent
@@ -194,6 +194,8 @@ export type Run = {
   cloudAbove?: boolean;
   /// How long the model may say nothing, while no tool is running, before the turn is given up.
   silence?: number;
+  /// Told of a tool's words to be spoken as they are, the moment the tool gives them.
+  onSpoken?: (text: string) => void;
 };
 
 /// A model that says nothing for this long, while no tool is running, has stalled: a local one
@@ -251,6 +253,12 @@ export async function run(options: Run): Promise<Transcript> {
 
   const began = performance.now();
   const spoken: string[] = [];
+  // A tool's words to be spoken are told as the tool gives them, so a spoken turn can say them at
+  // once, as well as kept for the answer.
+  const toSay = (said: string) => {
+    spoken.push(said);
+    options.onSpoken?.(said);
+  };
   const exposure: Exposure = { held: options.exposed === true, cloud: decision.route === "cloud" || options.cloudAbove === true };
 
   // The model's silence ends the turn only while no tool is running, so it is watched with what runs.
@@ -305,20 +313,20 @@ export async function run(options: Run): Promise<Transcript> {
     },
   };
   const everything = {
-    read_file: adapt(readFile, readFileSchema, options.gate, options.ask, spoken, watching, exposure),
-      list_directory: adapt(listDirectory, listSchema, options.gate, options.ask, spoken, watching, exposure),
-      write_file: adapt(writeFile, writeFileSchema, options.gate, options.ask, spoken, watching, exposure),
-      add_to_notion: adapt(noteTool, noteSchema, options.gate, options.ask, spoken, watching, exposure),
-      project: adapt(projectTool(), projectSchema, options.gate, options.ask, spoken, watching, exposure),
-      code: adapt(codeTool(), codeSchema, options.gate, options.ask, spoken, watching, exposure),
-      forge: adapt(forgeTool(), forgeSchema, options.gate, options.ask, spoken, watching, exposure),
-      skill: adapt(skillTool(), skillSchema, options.gate, options.ask, spoken, watching, exposure),
+    read_file: adapt(readFile, readFileSchema, options.gate, options.ask, toSay, watching, exposure),
+      list_directory: adapt(listDirectory, listSchema, options.gate, options.ask, toSay, watching, exposure),
+      write_file: adapt(writeFile, writeFileSchema, options.gate, options.ask, toSay, watching, exposure),
+      add_to_notion: adapt(noteTool, noteSchema, options.gate, options.ask, toSay, watching, exposure),
+      project: adapt(projectTool(), projectSchema, options.gate, options.ask, toSay, watching, exposure),
+      code: adapt(codeTool(), codeSchema, options.gate, options.ask, toSay, watching, exposure),
+      forge: adapt(forgeTool(), forgeSchema, options.gate, options.ask, toSay, watching, exposure),
+      skill: adapt(skillTool(), skillSchema, options.gate, options.ask, toSay, watching, exposure),
       remember: adapt(
         rememberTool(sharedMemory()),
         rememberSchema,
         options.gate,
         options.ask,
-        spoken,
+        toSay,
         watching,
         exposure,
       ),
@@ -327,18 +335,18 @@ export async function run(options: Run): Promise<Transcript> {
         todaySchema,
         options.gate,
         options.ask,
-        spoken,
+        toSay,
         watching,
         exposure,
       ),
-    web_search: adapt(webSearchTool(), webSearchSchema, options.gate, options.ask, spoken, watching, exposure),
-    web_fetch: adapt(webFetchTool(), webFetchSchema, options.gate, options.ask, spoken, watching, exposure),
-    playbook: adapt(playbookTool(performing), playbookSchema, options.gate, options.ask, spoken, watching, exposure),
-    playbooks: adapt(playbooksTool(performing), playbooksSchema, options.gate, options.ask, spoken, watching, exposure),
+    web_search: adapt(webSearchTool(), webSearchSchema, options.gate, options.ask, toSay, watching, exposure),
+    web_fetch: adapt(webFetchTool(), webFetchSchema, options.gate, options.ask, toSay, watching, exposure),
+    playbook: adapt(playbookTool(performing), playbookSchema, options.gate, options.ask, toSay, watching, exposure),
+    playbooks: adapt(playbooksTool(performing), playbooksSchema, options.gate, options.ask, toSay, watching, exposure),
     // Authoring is for the frontier model only. The local models run playbooks and never write
     // them, so the tool does not exist on their routes.
     ...(authoringOffered(decision.route)
-      ? { playbook_propose: adapt(proposeTool(), proposeSchema, options.gate, options.ask, spoken, watching, exposure) }
+      ? { playbook_propose: adapt(proposeTool(), proposeSchema, options.gate, options.ask, toSay, watching, exposure) }
       : {}),
   };
   const offered = options.tools

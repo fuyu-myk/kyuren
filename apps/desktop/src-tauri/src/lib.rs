@@ -24,6 +24,7 @@ mod shelf_icon;
 mod shortcuts;
 mod sidecar;
 mod sight;
+mod speaking;
 mod state;
 mod stats;
 mod tray;
@@ -177,6 +178,7 @@ pub fn run() {
             }
 
             tauri::async_runtime::block_on(paths::adopt_login_path());
+            speaking::install(&handle);
             let sidecars = tauri::async_runtime::block_on(Sidecars::start(&handle))?;
             let status = tauri::async_runtime::block_on(sidecars.probe());
             eprintln!("kyuren sidecars: {status}");

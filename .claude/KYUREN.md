@@ -129,7 +129,11 @@ and no good answer anywhere else.
   `SpeechAnalyzer` and `SpeechTranscriber` are the fallback if FluidAudio disappoints; they cost
   zero application size because the OS manages the models.
 - **Text to speech.** Kokoro on the Neural Engine, streamed in sentence chunks so first audio
-  arrives before the sentence is finished.
+  arrives before the sentence is finished. A spoken reply is said as it arrives: the core hands
+  each finished sentence to the voice while the model is still writing the next, and the voice
+  keeps one utterance open until it is told the reply is over. A tool's own words, as a brief's
+  are, are said the moment the tool gives them, and what the model writes after them is not said,
+  since it only retells them. Talked over or dismissed, the turn behind the reply is stopped too.
 - **Screen.** `ScreenCaptureKit`, single frame on request only. Never a continuous stream.
 - **Hand pose.** MediaPipe's palm detector and hand landmark models, converted once to ONNX and
   run through ONNX Runtime inside the sidecar, with the pipeline between them written in plain

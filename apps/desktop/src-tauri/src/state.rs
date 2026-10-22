@@ -233,6 +233,10 @@ fn event_sink(app: AppHandle) -> EventSink {
         if name == "voice.finished" || name == "voice.interrupted" {
             let _ = app.emit("orb:state", "listening");
         }
+        // Talked over, the reply is not wanted, so neither is the rest of the turn behind it.
+        if name == "voice.interrupted" {
+            crate::speaking::interrupt(&app);
+        }
         crate::conversation::forward(&app, name, &data);
 
         if name == "transcript.partial" || name == "transcript.final" {

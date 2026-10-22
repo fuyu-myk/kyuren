@@ -813,3 +813,26 @@ session at work, have not been seen.
 | `http://localhost:11434` given to the reader | refused |
 | every window used once: the main window's places and settings, the island's tabs, the mind | nothing failed for want of a permission |
 | a permission question allowed on the island | gone from the island, still shown in the main window; the main window now lets go of a question answered anywhere, not yet seen on a build |
+
+## Speaking a reply as it arrives
+
+2026-10-22, the core and the voice driven directly over stdio as the app drives them, qwen3.5:2b on
+the local route, the voice warmed first.
+
+| | first word | first sentence | whole reply | first sound |
+| --- | --- | --- | --- | --- |
+| two sentences, the moon and the sun | 6991 ms | 7439 ms | 8086 ms | 8101 ms |
+| two sentences, rain and snow | 10037 ms | 10529 ms | 10556 ms | 11063 ms |
+
+Sound now starts once the first sentence is ready rather than once the reply is whole. From the
+first word it is about a second: half waiting for the first sentence to end, half the synthesiser
+taking 530 to 660 ms over a full sentence, far more than the 125 to 140 ms measured on short ones.
+
+What dominates is before the first word. Judging and routing took about half a second; the rest
+was the model. Asked what photosynthesis is, directly, the same model answered in 1.4 s with
+reasoning off, and took 52 s at the low setting and 78 s at its default, thinking 2,256 and 3,533
+tokens for an answer no better. A turn judged moderate reasons, so a spoken question needing
+nothing looked up waits for that: seven and ten seconds in the runs above, and through the core
+5.5 s for the same two sentences and 17.6 s for the time in Tokyo, against 1.1 s for a greeting
+judged trivial.
+

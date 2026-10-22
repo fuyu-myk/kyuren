@@ -39,6 +39,9 @@ pub fn on_summon(app: &AppHandle) {
         // Summoning is the earliest warning that a question is coming, and dismissing abandons a
         // reply that is no longer wanted.
         let method = if listening { "model.warm" } else { "agent.stop" };
+        if !listening {
+            crate::speaking::interrupt(app);
+        }
         tauri::async_runtime::spawn(async move {
             let _ = core.request(method, json!({}), PING_TIMEOUT).await;
         });

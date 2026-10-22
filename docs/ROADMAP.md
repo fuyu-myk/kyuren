@@ -93,9 +93,9 @@ listening and the reply's while speaking; partial transcripts stream to the UI a
    onset. *Failed, First partial after speech start: a median of 573 ms from when voice activity
    reports speech, nearer 830 ms from onset.*
 2. Time to first audio out is measured and recorded. Budget: under 300 ms from the first token.
-   *Failed as built: a reply is spoken once it is whole, so its first audio waits for its last
-   token. Speaking itself begins 125 to 140 ms after it is asked for when warm, Latency after the
-   fix, and about a second after for a conversation's first reply, Speech synthesis, cold paths.*
+   *Failed, Speaking a reply as it arrives: about a second from the first word to the first sound,
+   half of it waiting for the first sentence to finish and half synthesising it. The reply is now
+   said as it arrives rather than once it is whole.*
 3. Speaking over a reply stops it, and the hotkey does too, with the queued audio discarded.
    *Recorded for the hotkey, Behaviour verified by running. Speaking over not yet seen.*
 4. Playing audio through speakers while the microphone is live does not cause self-transcription.

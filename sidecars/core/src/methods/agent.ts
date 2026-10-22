@@ -2,6 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { run } from "#agent/loop.ts";
 import { createAsker, type Asker } from "#agent/asker.ts";
+import { Speech } from "#agent/speech.ts";
 import { Turns } from "#agent/turns.ts";
 import { watchedOver } from "#agent/watched.ts";
 import { briefHandlers } from "#methods/brief.ts";
@@ -56,6 +57,10 @@ export function agentHandlers(transport: Transport) {
       const preferred = routeIn(params.route);
 
       const controller = turns.begin(id);
+      // Asked to be spoken, the reply is said as it arrives rather than once it is whole.
+      const speech = params.speak === true
+        ? new Speech((text) => transport.send({ event: "agent.say", data: { id, text } }))
+        : undefined;
 
       try {
         const transcript = await run({
@@ -72,10 +77,14 @@ export function agentHandlers(transport: Transport) {
           gate,
           ask: asker.ask,
           signal: controller.signal,
-          onText: (chunk) =>
-            transport.send({ event: "agent.text", data: { id, chunk } }),
+          onText: (chunk) => {
+            transport.send({ event: "agent.text", data: { id, chunk } });
+            speech?.heard(chunk);
+          },
+          onSpoken: (said) => speech?.spoken(said),
           watching: watchedOver(transport, id),
         });
+        speech?.done();
 
         answered(
           sessions,
@@ -90,6 +99,7 @@ export function agentHandlers(transport: Transport) {
         return { ...transcript, session: thread.session?.id };
       } finally {
         turns.end(id, controller);
+        if (speech) transport.send({ event: "agent.say.end", data: { id } });
       }
     },
 
