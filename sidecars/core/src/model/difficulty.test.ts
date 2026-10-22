@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { difficultyOf } from "#model/difficulty.ts";
+import { difficultyOf, readSpoken, spokenDifficultyOf } from "#model/difficulty.ts";
 
 /// These reach the local model. They are about the routing decision, not about the wording of any
 /// one answer, so they assert the tier rather than the text.
@@ -42,4 +42,38 @@ test("an unreadable answer settles in the middle rather than the top", async () 
   // failure must never land on the tier that costs the most.
   const decided = await difficultyOf("~~~ %%% ???");
   assert.ok(["trivial", "moderate", "hard"].includes(decided));
+});
+
+test("asked aloud, general knowledge is known, to be answered without reasoning first", async () => {
+  assert.equal(await spokenDifficultyOf("what is photosynthesis"), "known");
+});
+
+test("asked aloud, a question about the user's own day still needs a look, and so a tool", async () => {
+  assert.equal(await spokenDifficultyOf("what's on today"), "moderate");
+});
+
+test("asked aloud, a greeting is still trivial", async () => {
+  assert.equal(await spokenDifficultyOf("hello"), "trivial");
+});
+
+test("asked aloud, nothing about the user's life or about now is taken as known", async () => {
+  for (const asked of ["what did the professor say about the essay", "who won the game last night", "has the parcel arrived"]) {
+    assert.notEqual(await spokenDifficultyOf(asked), "known", asked);
+  }
+});
+
+test("the spoken judge's words are read as tiers, and an unreadable one as needing a look", () => {
+  const asked = "what is photosynthesis";
+  assert.equal(readSpoken("known", asked), "known");
+  assert.equal(readSpoken(" Look.", asked), "moderate");
+  assert.equal(readSpoken("trivial", asked), "trivial");
+  assert.equal(readSpoken("hard", asked), "hard");
+  assert.equal(readSpoken("perhaps", asked), "moderate");
+});
+
+test("a request about the user's own things or about now is never known, whatever the judge said", () => {
+  assert.equal(readSpoken("known", "what is my sister's name"), "moderate");
+  assert.equal(readSpoken("known", "what is the news today"), "moderate");
+  assert.equal(readSpoken("known", "is it raining tonight"), "moderate");
+  assert.equal(readSpoken("known", "how do I boil an egg"), "known");
 });

@@ -91,3 +91,8 @@ test("a chosen cloud never overrides privacy or absence, and a chosen local rout
   assert.notEqual(route({ ...base, preferred: "cloud", online: false }).route, "cloud");
   assert.notEqual(route({ ...base, preferred: "cloud", cloudConfigured: false }).route, "cloud");
 });
+
+test("what the model already knows is answered locally on the small model, even with the cloud there", () => {
+  const decided = route({ sensitive: false, online: true, cloudConfigured: true, difficulty: "known" });
+  assert.equal(decided.route, "local-small");
+});

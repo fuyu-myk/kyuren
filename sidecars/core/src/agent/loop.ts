@@ -24,7 +24,7 @@ import { sharedMemory } from "#memory/shared.ts";
 import { BACK_DAYS, FORWARD_DAYS, SOURCES } from "#methods/brief.ts";
 import { listDirectory, listSchema, readFile, readFileSchema, writeFile, writeFileSchema } from "#agent/tools.ts";
 import { messagesFor } from "#agent/moment.ts";
-import { difficultyOf } from "#model/difficulty.ts";
+import { difficultyOf, spokenDifficultyOf } from "#model/difficulty.ts";
 import { cloudConfigured, modelFor, nameFor, online, optionsFor } from "#model/providers.ts";
 import type { Gate } from "#permission/gate.ts";
 import { added, type Spent } from "#playbook/runlog.ts";
@@ -196,6 +196,9 @@ export type Run = {
   silence?: number;
   /// Told of a tool's words to be spoken as they are, the moment the tool gives them.
   onSpoken?: (text: string) => void;
+  /// Asked aloud, where waiting is felt most, so judged by the judge that tells what the model
+  /// knows from what needs a look.
+  spoken?: boolean;
 };
 
 /// A model that says nothing for this long, while no tool is running, has stalled: a local one
@@ -240,7 +243,7 @@ export type Transcript = {
 export async function run(options: Run): Promise<Transcript> {
   // Judged rather than assumed. Every turn was being answered as though it were trivial, which is
   // right for a greeting and wrong for anything that needs working out.
-  const difficulty = options.difficulty ?? (await difficultyOf(options.prompt));
+  const difficulty = options.difficulty ?? (await (options.spoken ? spokenDifficultyOf : difficultyOf)(options.prompt));
 
   const demand = {
     sensitive: options.sensitive ?? false,

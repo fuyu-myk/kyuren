@@ -7,8 +7,9 @@ export type Demand = {
   sensitive: boolean;
   online: boolean;
   cloudConfigured: boolean;
-  /// How much reasoning the request appears to need.
-  difficulty: "trivial" | "moderate" | "hard";
+  /// How much reasoning the request appears to need. Known is what a model can say from what it
+  /// already knows, judged only of a question asked aloud.
+  difficulty: "trivial" | "known" | "moderate" | "hard";
   /// A route the user chose, honoured wherever the drivers above allow it.
   preferred?: Route;
 };

@@ -50,13 +50,29 @@ const failing: Reply = (response) => {
   response.writeHead(400, { "content-type": "application/json" }).end(JSON.stringify({ error: { message: "the scripted model gives up here" } }));
 };
 
+/// What each request to the model asked for, in order.
+const bodies: string[] = [];
+
+/// Answers a request that does not stream, as the difficulty judge's does.
+function judged(word: string): Reply {
+  return (response) => {
+    response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify({
+      id: "scripted", object: "chat.completion", created: 0, model: "scripted",
+      choices: [{ index: 0, message: { role: "assistant", content: word }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 10, completion_tokens: 1, total_tokens: 11 },
+    }));
+  };
+}
+
 const server = createServer((request, response) => {
-  request.resume();
+  let body = "";
+  request.on("data", (chunk) => (body += chunk));
   request.on("end", () => {
     if (request.url !== "/v1/chat/completions") {
       response.writeHead(200, { "content-type": "application/json" }).end("{}");
       return;
     }
+    bodies.push(body);
     (replies.shift() ?? failing)(response);
   });
 });
@@ -295,4 +311,24 @@ test("a spoken turn stopped part way says nothing more, and still says it is ove
   await handlers["agent.stop"]({ id: "voice:2" });
   assert.ok(await running instanceof Error);
   assert.deepEqual(aloud(told), [{ event: "agent.say.end", data: { id: "voice:2" } }]);
+});
+
+test("a spoken question judged known is put to the model without reasoning, and a typed one as before", async () => {
+  const handlers = await speakingHandlers([]);
+  const answer = "Photosynthesis is how plants turn light into sugar.";
+
+  bodies.length = 0;
+  replies.push(judged("known"), judged("yes"), saying(answer));
+  await handlers["agent.run"]({ prompt: "what is photosynthesis", speak: true, id: "voice:known", sensitive: true });
+  assert.match(bodies[2] ?? "", /"reasoning_effort":"none"/);
+
+  bodies.length = 0;
+  replies.push(judged("known"), judged("no"), saying(answer));
+  await handlers["agent.run"]({ prompt: "what is photosynthesis", speak: true, id: "voice:doubted", sensitive: true });
+  assert.doesNotMatch(bodies[2] ?? "", /reasoning_effort/, "known only once no encyclopedia would fall short");
+
+  bodies.length = 0;
+  replies.push(judged("known"), saying(answer));
+  await handlers["agent.run"]({ prompt: "what is photosynthesis", id: "chat:known", sensitive: true });
+  assert.doesNotMatch(bodies[1] ?? "", /reasoning_effort/, "the typed judge has no word for it, and reasons");
 });

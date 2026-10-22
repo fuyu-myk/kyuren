@@ -81,7 +81,9 @@ export function modelFor(route: Route, difficulty: Demand["difficulty"] = "moder
   if (route === "cloud") {
     return createAnthropic({ apiKey: cloudKey() })(CLOUD);
   }
-  return (difficulty === "trivial" ? quiet : ollama)(nameFor(route));
+  // Nor is a question answered from what the model knows: thinking there took up to a minute and
+  // improved nothing. See MEASUREMENTS.
+  return (difficulty === "trivial" || difficulty === "known" ? quiet : ollama)(nameFor(route));
 }
 
 async function reachable(url: string, timeoutMs: number): Promise<boolean> {

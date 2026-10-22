@@ -70,6 +70,7 @@ export function agentHandlers(transport: Transport) {
           exposed: thread.exposed,
           system: typeof params.system === "string" ? params.system : undefined,
           sensitive: params.sensitive === true,
+          spoken: params.speak === true,
           // Left unset when the caller did not say, so the request is judged rather than assumed.
           // Defaulting here meant every turn arrived pre-labelled and the router never ran.
           difficulty: difficultyIn(params.difficulty),

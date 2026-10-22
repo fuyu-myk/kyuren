@@ -836,3 +836,27 @@ nothing looked up waits for that: seven and ten seconds in the runs above, and t
 5.5 s for the same two sentences and 17.6 s for the time in Tokyo, against 1.1 s for a greeting
 judged trivial.
 
+## A spoken question the model already knows
+
+2026-10-22, qwen3.5:2b judging, and the core driven over stdio with the voice's instructions.
+
+A question asked aloud that needs nothing looked up is answered without reasoning; one about the
+user's life or about the present still reasons, since only a model that reasons calls a tool.
+Telling the two apart is where it can go wrong: a question taken as known when it was not is
+answered from nothing. Two sets of phrasings were judged, the second written after the prompts
+were settled. A request naming the user's own things or the present, such as my, today or news,
+is never taken as known in either row.
+
+| | about the user or now, taken as known | general knowledge, kept as known |
+| --- | --- | --- |
+| the judge, first set | 9 of 18 | 14 of 16 |
+| the judge, second set | 3 of 16 | 15 of 16 |
+| the judge, then whether an encyclopedia printed last year could answer it, first set | 0 of 18 | 13 of 16 |
+| the same, second set | 0 of 16 | 13 of 16 |
+
+The judge alone took a game last night, a professor's comments, a parcel, a library's hours and
+an exchange rate, among others, for general knowledge.
+
+Asking twice costs about 0.4 s before a known question reaches the model. Through the core, three
+questions judged known gave their first word in 903 to 947 ms. In the same run two that still
+reasoned took 2.9 and 3.1 s, and earlier the same day two took 5.5 and 17.6 s.
