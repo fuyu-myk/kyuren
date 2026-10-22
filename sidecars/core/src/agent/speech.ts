@@ -19,7 +19,8 @@ export class Speech {
   private held = "";
   private begun = false;
   private told = false;
-  private over = false;
+  /// Whether the voice holds an utterance open, waiting for more of it.
+  private open = false;
   private readonly say: (text: string) => void;
   private readonly end: () => void;
 
@@ -45,16 +46,21 @@ export class Speech {
   spoken(text: string): void {
     this.flush();
     this.told = true;
-    this.over = false;
-    if (text.trim() !== "") this.say(text.trim());
+    if (text.trim() !== "") this.utter(text.trim());
+  }
+
+  /// A tool has begun. What was said before it is all there is until it is done, which may be a
+  /// while if it asks first, so the voice is not left holding the reply open through it.
+  working(): void {
+    this.flush();
+    this.close();
+    this.begun = false;
   }
 
   /// The model has begun another step. After a tool has spoken, nothing the model goes on to say
   /// is said, so the voice is told the reply is over rather than kept waiting through the retelling.
   moved(): void {
-    if (!this.told || this.over) return;
-    this.over = true;
-    this.end();
+    if (this.told) this.close();
   }
 
   /// The reply is over, and what is held is said.
@@ -71,6 +77,17 @@ export class Speech {
     this.held = "";
     if (rest === "") return;
     this.begun = true;
-    this.say(rest);
+    this.utter(rest);
+  }
+
+  private utter(text: string): void {
+    this.open = true;
+    this.say(text);
+  }
+
+  private close(): void {
+    if (!this.open) return;
+    this.open = false;
+    this.end();
   }
 }

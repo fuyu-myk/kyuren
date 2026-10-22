@@ -29,6 +29,26 @@ private final class Rendered: @unchecked Sendable {
     }
 }
 
+/// Keeps what the voice says about whether it is speaking, in order.
+private final class Announced: @unchecked Sendable {
+    private let lock = NSLock()
+    private var said: [Bool] = []
+
+    func note(_ speaking: Bool) { lock.withLock { said.append(speaking) } }
+    var all: [Bool] { lock.withLock { said } }
+}
+
+/// Stands in for synthesis on the Neural Engine, which goes on to the end once begun even when
+/// what asked for it has been cancelled.
+private func stubborn(_ ms: Int) -> Rendering {
+    { _ in
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(ms)) { done.resume() }
+        }
+        return ([Float](repeating: 0.001, count: 2_400), 1)
+    }
+}
+
 private func eventually(_ holds: () -> Bool) async -> Bool {
     let deadline = Date().addingTimeInterval(5)
     while Date() < deadline {
@@ -162,5 +182,24 @@ struct VoiceTests {
         #expect(!told.events.contains("voice.failed"), "stopping is not failing")
         #expect(!told.events.contains("voice.finished"))
         #expect(!voice.isSpeaking)
+    }
+
+    @Test("utterances still being made when a stop came say nothing of speaking, so what follows is heard as speech")
+    func staleSayNothing() async {
+        let told = Told()
+        let announced = Announced()
+        let voice = Voice(transport: told, rendering: stubborn(150))
+        voice.whenSpeakingChanges { announced.note($0) }
+
+        voice.add(first)
+        voice.say("Your meeting with the design team starts in five minutes.")
+        try? await Task.sleep(for: .milliseconds(50))
+        voice.stop()
+        voice.add(second)
+        voice.end()
+        #expect(await eventually { told.events.contains("voice.started") })
+        #expect(announced.all.last == true, "what is heard is heard as speaking")
+        #expect(await eventually { told.events.contains("voice.finished") })
+        #expect(announced.all == [true, false, true, false])
     }
 }

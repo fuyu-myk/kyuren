@@ -31,6 +31,11 @@ function saying(text: string): Reply {
   return (response) => streamed(response, { role: "assistant", content: text }, "stop");
 }
 
+function sayingThenCalling(text: string, name: string, args: object): Reply {
+  return (response) =>
+    streamed(response, { role: "assistant", content: text, tool_calls: [{ index: 0, id: "call_1", type: "function", function: { name, arguments: JSON.stringify(args) } }] }, "tool_calls");
+}
+
 /// Takes the request and says nothing, as a model that has stalled before its first word.
 const silent: Reply = () => undefined;
 
@@ -349,8 +354,9 @@ test("a tool's words to be spoken are told the moment the tool gives them, befor
     prompt: "keep the tides endpoint", vault, sensitive: true, difficulty: "moderate", gate: gate(), ask: async () => "allow",
     onSpoken: (said) => order.push(said),
     onStep: () => order.push("step"),
+    onTool: () => order.push("tool"),
   });
-  assert.deepEqual(order, ["step", forged("tides"), "step"]);
+  assert.deepEqual(order, ["step", "tool", forged("tides"), "step"]);
 });
 
 test("a spoken turn whose tool has spoken is over once the model moves on, and its retelling is not said", async () => {
@@ -370,5 +376,30 @@ test("a spoken turn whose tool has spoken is over once the model moves on, and i
     { event: "agent.say", data: { id: "voice:forge", text: forged("harbour_tides") } },
     { event: "agent.say.end", data: { id: "voice:forge" } },
     { event: "agent.say.end", data: { id: "voice:forge" } },
+  ]);
+});
+
+test("a spoken turn's words before a tool are over once the tool begins, so nothing is held open through it", async () => {
+  const told: Told[] = [];
+  const { agentHandlers } = await import("#methods/agent.ts");
+  const handlers = agentHandlers({
+    send: (message) => {
+      const one = message as Told;
+      told.push(one);
+      if (one.event === "permission.request") void handlers["permission.answer"]?.({ id: one.data.id, verdict: "allow" });
+    },
+    listen: () => undefined,
+  });
+  replies.push(
+    sayingThenCalling("Let me draft that for you", "forge", { name: "ferry_times", about: "Ferry times for a harbour, by name.", url: "https://example.com/ferries/{harbour}", parameters: [{ name: "harbour", in: "path" }] }),
+    saying("It is drafted."),
+  );
+  await handlers["agent.run"]?.({ prompt: "keep the ferry endpoint", speak: true, id: "voice:before", sensitive: true, difficulty: "moderate" });
+  assert.deepEqual(aloud(told), [
+    { event: "agent.say", data: { id: "voice:before", text: "Let me draft that for you" } },
+    { event: "agent.say.end", data: { id: "voice:before" } },
+    { event: "agent.say", data: { id: "voice:before", text: forged("ferry_times") } },
+    { event: "agent.say.end", data: { id: "voice:before" } },
+    { event: "agent.say.end", data: { id: "voice:before" } },
   ]);
 });

@@ -121,12 +121,13 @@ fn log_event(sidecar: &str, name: &str, data: &Value) {
 /// What of an event the log keeps: all of it, except a coding agent's question, which carries the
 /// command the agent would run, and how a turn went, read from the session's own transcript: both
 /// are the agent's to keep, not this log's. Nor what one of Kyuren's own questions would carry,
-/// which may be the user's notes, nor what a spoken turn says, which may be their day.
+/// which may be the user's notes, nor what a turn says, which may be their day: that is the
+/// conversation's to keep.
 fn logged<'a>(name: &str, data: &'a Value) -> std::borrow::Cow<'a, Value> {
     match name {
         "coding.permission" => std::borrow::Cow::Owned(json!({ "id": data.get("id") })),
         "coding.done" => std::borrow::Cow::Owned(json!({ "session": data.get("session") })),
-        "agent.say" => std::borrow::Cow::Owned(json!({ "id": data.get("id") })),
+        "agent.say" | "agent.text" => std::borrow::Cow::Owned(json!({ "id": data.get("id") })),
         "permission.request" if data.get("carrying").is_some() => {
             let mut kept = data.clone();
             if let Some(fields) = kept.as_object_mut() {
@@ -180,6 +181,7 @@ fn event_sink(app: AppHandle) -> EventSink {
         }
         if name == "speech.start" || name == "speech.end" {
             let speaking = name == "speech.start";
+            crate::speaking::hearing(&app, speaking);
             let _ = app.emit("speech", speaking);
             let _ = app.emit("orb:state", if speaking { "listening" } else { "thinking" });
         }
@@ -228,11 +230,18 @@ fn event_sink(app: AppHandle) -> EventSink {
             crate::secrets::store_from(&app, &data);
             return;
         }
+        if name == "microphone.stopped" {
+            crate::speaking::hearing(&app, false);
+        }
         if name == "voice.started" {
+            crate::speaking::sounding(&app, true);
             let _ = app.emit("orb:state", "speaking");
         }
         if name == "voice.finished" || name == "voice.interrupted" {
-            let _ = app.emit("orb:state", "listening");
+            crate::speaking::sounding(&app, false);
+            // Heard out while its turn goes on, as through a tool, the reply is still being worked on.
+            let working = name == "voice.finished" && crate::speaking::live(&app);
+            let _ = app.emit("orb:state", if working { "thinking" } else { "listening" });
         }
         // Talked over, the reply is not wanted, so neither is the rest of the turn behind it.
         if name == "voice.interrupted" {
@@ -320,9 +329,11 @@ mod tests {
     }
 
     #[test]
-    fn what_a_spoken_turn_says_is_logged_by_its_turn_alone() {
+    fn what_a_turn_says_is_logged_by_its_turn_alone() {
         let said = json!({ "id": "voice:3", "text": "Your first meeting is at nine with the design team." });
         assert_eq!(*logged("agent.say", &said), json!({ "id": "voice:3" }));
+        let streamed = json!({ "id": "chat:7", "chunk": "Your first meeting" });
+        assert_eq!(*logged("agent.text", &streamed), json!({ "id": "chat:7" }));
     }
 
     #[test]

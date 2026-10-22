@@ -15,6 +15,8 @@ public final class Voice: @unchecked Sendable {
     private let speaker: Speaker
     private let rendering: Rendering?
     private let lock = NSLock()
+    /// Held while whoever listens is told whether Kyuren is speaking, so two tellings cannot cross.
+    private let announcing = NSLock()
 
     private var manager: KokoroAneManager?
     private var loading: Task<KokoroAneManager?, Never>?
@@ -27,6 +29,8 @@ public final class Voice: @unchecked Sendable {
     /// Moved on by every stop, so an utterance still finishing from before one can tell that
     /// nothing it does now is wanted.
     private var generation = 0
+    /// What whoever listens was last told. Read and written only while announcing.
+    private var lastTold = false
 
     public convenience init(station: Station, transport: any Transport) {
         self.init(transport: transport, rendering: nil)
@@ -67,8 +71,15 @@ public final class Voice: @unchecked Sendable {
         lock.withLock { onSpeaking = handler }
     }
 
-    private func announceSpeaking(_ speaking: Bool) {
-        lock.withLock { onSpeaking }?(speaking)
+    /// Tells whoever listens whether Kyuren is speaking as things now stand. Called after every
+    /// change, so whichever telling comes last is the truth, and nothing is told twice over.
+    private func announceSpeaking() {
+        announcing.withLock {
+            let (speaking, listener) = lock.withLock { (!settled, onSpeaking) }
+            guard speaking != lastTold else { return }
+            lastTold = speaking
+            listener?(speaking)
+        }
     }
 
     /// Loads the synthesiser ahead of the first reply. Cold loading takes about ten seconds, which
@@ -153,7 +164,7 @@ public final class Voice: @unchecked Sendable {
         running?.cancel()
         closing?.finish()
         speaker.stop()
-        announceSpeaking(false)
+        announceSpeaking()
     }
 
     public func shutdown() {
@@ -220,19 +231,14 @@ public final class Voice: @unchecked Sendable {
     private func perform(_ stream: AsyncStream<String>, as mine: Int) async {
         guard let render = await renderer() else { return }
 
-        // Echo cancellation has to be on before any audio plays: switching it restarts the capture
-        // engine, and the switch is what stops Kyuren hearing itself.
-        announceSpeaking(true)
         let begun = ongoing(mine) {
             synthesising = true
             settled = false
             said = ""
         }
-        guard begun else {
-            // Stopped as it began, so what was just announced is taken back.
-            announceSpeaking(false)
-            return
-        }
+        guard begun else { return }
+        // Told before any audio plays, so everything else is lowered before Kyuren is heard.
+        announceSpeaking()
 
         let began = Date()
         var announced = false
@@ -304,7 +310,7 @@ public final class Voice: @unchecked Sendable {
         }
         guard claimed else { return }
 
-        announceSpeaking(false)
+        announceSpeaking()
         transport.send(.event(name: "voice.finished", data: nil))
     }
 }

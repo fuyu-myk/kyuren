@@ -92,3 +92,18 @@ test("a comma or colon inside a number or a time is no pause", () => {
   speech.done();
   assert.deepEqual(said, ["The city has a population of about 1,000,000 people and the ferry leaves at 10:30 every day."]);
 });
+
+test("a tool beginning ends what was said before it, and what the model says after it begins anew", () => {
+  const { speech, said } = speaking();
+  speech.heard("Let me look that up for you");
+  speech.working();
+  speech.working();
+  speech.heard("The page says the library opens at nine, and closes at six on weekdays.");
+  speech.done();
+  assert.deepEqual(said, [
+    "Let me look that up for you",
+    "<end>",
+    "The page says the library opens at nine,",
+    "and closes at six on weekdays.",
+  ]);
+});

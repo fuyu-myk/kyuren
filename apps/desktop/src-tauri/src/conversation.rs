@@ -33,7 +33,10 @@ pub fn on_transcript(app: &AppHandle, text: String) {
         // Said as it arrives, a sentence at a time, rather than read out once it is whole.
         let asked = json!({ "prompt": text, "system": VOICE, "speak": true, "id": &turn });
         let answered = core.request_untimed("agent.run", asked).await;
-        crate::speaking::settled(&app, &turn);
+        if crate::speaking::settled(&app, &turn) {
+            // Its words were heard out before it ended, which left the orb thinking.
+            let _ = app.emit("orb:state", "listening");
+        }
         let reply = match answered {
             Ok(result) => {
                 // Which model answered, and why, is part of the answer. Degrading to a local model
@@ -121,7 +124,8 @@ pub fn forward(app: &AppHandle, event: &str, data: &Value) {
         }
         "agent.text" => {
             if let Some(chunk) = data.get("chunk").and_then(Value::as_str) {
-                let _ = app.emit("agent:text", chunk);
+                let id = data.get("id").and_then(Value::as_str).unwrap_or("default");
+                let _ = app.emit("agent:text", json!({ "id": id, "chunk": chunk }));
             }
         }
         _ => {}

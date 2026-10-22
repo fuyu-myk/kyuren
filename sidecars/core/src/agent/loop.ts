@@ -198,6 +198,8 @@ export type Run = {
   onSpoken?: (text: string) => void;
   /// Told as each step of the turn begins.
   onStep?: () => void;
+  /// Told as each tool begins, before it asks anything or does anything.
+  onTool?: () => void;
   /// Asked aloud, where waiting is felt most, so judged by the judge that tells what the model
   /// knows from what needs a look.
   spoken?: boolean;
@@ -284,6 +286,7 @@ export async function run(options: Run): Promise<Transcript> {
     began: (tool, target, effect) => {
       working += 1;
       heard();
+      options.onTool?.();
       const step = options.watching?.began(tool, target, effect) ?? `step:${called.length}`;
       where.set(step, called.push({ tool, target, effect }) - 1);
       return step;

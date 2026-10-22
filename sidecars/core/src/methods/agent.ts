@@ -87,6 +87,7 @@ export function agentHandlers(transport: Transport) {
           },
           onSpoken: (said) => speech?.spoken(said),
           onStep: () => speech?.moved(),
+          onTool: () => speech?.working(),
           watching: watchedOver(transport, id),
         });
         speech?.done();

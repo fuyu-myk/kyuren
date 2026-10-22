@@ -34,7 +34,7 @@ export function Harness({ notch }: { notch: Notch }) {
         </button>
         <button type="button" onClick={() => emitPreview("transcript", { text: "what does my afternoon", final: false })}>hearing</button>
         <button type="button" onClick={() => emitPreview("transcript", { text: "what does my afternoon look like", final: true })}>heard</button>
-        <button type="button" onClick={() => emitPreview("agent:text", "Two things this afternoon: ")}>stream</button>
+        <button type="button" onClick={() => emitPreview("agent:text", { id: "voice:1", chunk: "Two things this afternoon: " })}>stream</button>
         <button type="button" onClick={() => emitPreview("agent:reply", "Two things this afternoon: the BIO215 discussion at one, and the signals problem set due at five.")}>reply</button>
         <button
           type="button"
