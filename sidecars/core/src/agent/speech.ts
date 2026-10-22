@@ -2,6 +2,8 @@
 /// words at a time cost the synthesiser more in overhead than they save in waiting.
 const SHORTEST = 24;
 const ENDS = new Set([".", "!", "?", "\n"]);
+/// Where a sentence pauses, once a space follows: a comma in a number or a colon in a time does not.
+const PAUSES = new Set([",", ";", ":"]);
 
 /// Markup the voice can strip only whole, which a sentence end inside would split: a fenced block,
 /// or a link whose address has full stops in it.
@@ -15,6 +17,7 @@ function inMarkup(held: string): boolean {
 /// tool gives them, and the model's words after them are not: they retell what was just heard.
 export class Speech {
   private held = "";
+  private begun = false;
   private told = false;
   private over = false;
   private readonly say: (text: string) => void;
@@ -29,8 +32,12 @@ export class Speech {
   heard(chunk: string): void {
     if (this.told) return;
     for (const character of chunk) {
+      // The opening is said at its first pause rather than its first full stop. A long first
+      // sentence would otherwise be waited for whole, and synthesised whole, before any sound.
+      const paused = !this.begun && /\s/.test(character) && PAUSES.has(this.held.at(-1) ?? "");
+      if (paused && this.ready()) this.flush();
       this.held += character;
-      if (ENDS.has(character) && this.held.trim().length >= SHORTEST && !inMarkup(this.held)) this.flush();
+      if (ENDS.has(character) && this.ready()) this.flush();
     }
   }
 
@@ -55,9 +62,15 @@ export class Speech {
     if (!this.told) this.flush();
   }
 
+  private ready(): boolean {
+    return this.held.trim().length >= SHORTEST && !inMarkup(this.held);
+  }
+
   private flush(): void {
     const rest = this.held.trim();
     this.held = "";
-    if (rest !== "") this.say(rest);
+    if (rest === "") return;
+    this.begun = true;
+    this.say(rest);
   }
 }

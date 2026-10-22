@@ -860,3 +860,20 @@ an exchange rate, among others, for general knowledge.
 Asking twice costs about 0.4 s before a known question reaches the model. Through the core, three
 questions judged known gave their first word in 903 to 947 ms. In the same run two that still
 reasoned took 2.9 and 3.1 s, and earlier the same day two took 5.5 and 17.6 s.
+
+## Saying the opening of a spoken reply at its first pause
+
+2026-10-22, the core driven over stdio, four spoken questions judged known.
+
+| | first sentence ends | first pause | first said |
+| --- | --- | --- | --- |
+| what is photosynthesis | 1745 ms, 150 characters | 1305 ms, 46 characters | 1305 ms |
+| describe the water cycle | 2208 ms, 295 characters | 1142 ms, 44 characters | 1142 ms |
+| why is the sky blue | 2671 ms, 288 characters | 1991 ms, 139 characters | 1991 ms |
+| how do vaccines work | 1740 ms, 151 characters | none before it | 1740 ms |
+
+Opening sentences ran to nearly 300 characters, and the first sentence of five replies said in
+the app took 249 to 400 ms of acoustic synthesis, against about 90 ms for a short phrase. So the
+opening is said at its first comma, semicolon or colon followed by a space, once it is 24
+characters long, and the rest a sentence at a time. Of eight questions asked earlier, three
+paused before their first full stop.

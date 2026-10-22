@@ -129,16 +129,17 @@ and no good answer anywhere else.
   `SpeechAnalyzer` and `SpeechTranscriber` are the fallback if FluidAudio disappoints; they cost
   zero application size because the OS manages the models.
 - **Text to speech.** Kokoro on the Neural Engine, streamed in sentence chunks so first audio
-  arrives before the sentence is finished. A spoken reply is said as it arrives: the core hands
-  each finished sentence to the voice while the model is still writing the next, and the voice
-  keeps one utterance open until it is told the reply is over. A tool's own words, as a brief's
-  are, are said the moment the tool gives them, and what the model writes after them is not said,
-  since it only retells them, so the reply is over once the model moves on from them. Talked over
-  or dismissed, the turn behind the reply is stopped too, and a pause between its sentences is
-  still the reply. A notice, or a later tool's words, is said after what is being said rather than
-  over it, and the voice is told a turn is over however it ended, so a core that stops part way
-  never leaves it waiting. Markup that spans sentences, a code block or a link, is held until it
-  closes, so the voice can leave it out whole.
+  arrives before the sentence is finished. A spoken reply is said as it arrives: the core hands each
+  finished sentence to the voice while the model is still writing the next, and the voice keeps one
+  utterance open until it is told the reply is over. The opening is said at its first pause rather
+  than its first full stop, so a long first sentence is not waited for whole. A tool's own words, as
+  a brief's are, are said the moment the tool gives them, and what the model writes after them is
+  not said, since it only retells them, so the reply is over once the model moves on from them.
+  Talked over or dismissed, the turn behind the reply is stopped too, and a pause between its
+  sentences is still the reply. A notice, or a later tool's words, is said after what is being said
+  rather than over it, and the voice is told a turn is over however it ended, so a core that stops
+  part way never leaves it waiting. Markup that spans sentences, a code block or a link, is held
+  until it closes, so the voice can leave it out whole.
 - **Screen.** `ScreenCaptureKit`, single frame on request only. Never a continuous stream.
 - **Hand pose.** MediaPipe's palm detector and hand landmark models, converted once to ONNX and
   run through ONNX Runtime inside the sidecar, with the pipeline between them written in plain

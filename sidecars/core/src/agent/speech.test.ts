@@ -73,3 +73,22 @@ test("a code block or a link is said whole rather than split where a sentence wo
     "It explains the setup.",
   ]);
 });
+
+test("the opening of a reply is said at its first pause, and the rest a sentence at a time", () => {
+  const { speech, said } = speaking();
+  speech.heard("Photosynthesis is the process by which plants, algae, and some bacteria turn light into chemical energy.");
+  speech.heard(" It happens in the chloroplasts, mostly in the leaves.");
+  speech.done();
+  assert.deepEqual(said, [
+    "Photosynthesis is the process by which plants,",
+    "algae, and some bacteria turn light into chemical energy.",
+    "It happens in the chloroplasts, mostly in the leaves.",
+  ]);
+});
+
+test("a comma or colon inside a number or a time is no pause", () => {
+  const { speech, said } = speaking();
+  speech.heard("The city has a population of about 1,000,000 people and the ferry leaves at 10:30 every day.");
+  speech.done();
+  assert.deepEqual(said, ["The city has a population of about 1,000,000 people and the ferry leaves at 10:30 every day."]);
+});
