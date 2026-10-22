@@ -501,7 +501,7 @@ the reader none at all.
 | Risk | Stage | Mitigation |
 | --- | --- | --- |
 | Permission grants lost on every rebuild | 0 | Stable signing identity before any permission-touching code. Gate check 0.3. |
-| Neural Engine latency figures are vendor-reported and unconfirmed | 2 | Measured in gate 2.1, and the first partial missed its budget. Apple `SpeechAnalyzer` is the fallback, not yet tried. Gate 2.2 fails for another reason: a reply is spoken only once it is whole. |
+| Neural Engine latency figures are vendor-reported and unconfirmed | 2 | Measured in gate 2.1, and the first partial missed its budget. Apple `SpeechAnalyzer` is the fallback, not yet tried. Gate 2.2 fails for another reason: about a second from the first word to the first sound, half of it the first sentence finishing and half synthesising it. |
 | Building the agent loop instead of adopting one | 3 | Gate checks 3.3 through 3.5 target exactly the parts a framework would have supplied. |
 | Local model quality gap makes hybrid routing a downgrade | 3 | Measured in gate 3.6: hard requests go to the cloud whenever it is set up. Policy is data-driven, and routing thresholds move with the evidence. |
 | Force simulation collapses at scale | 6 | Gate 6.4 sets the bar at one thousand nodes. |

@@ -269,10 +269,10 @@ export function Island() {
         if (heard.final) dispatch({ type: "said" });
       }),
       // Replies stream for every turn, including ones typed in the main window; only the ones
-      // this island is waiting on are shown.
+      // this island is waiting on are shown. A spoken reply goes on arriving after it is first heard.
       on<string>("agent:text", (chunk) => {
         const { state: s, voice: v, asking: a } = now.current;
-        if ((s.summoned && v === "thinking") || a) tell({ type: "chunk", text: chunk });
+        if ((s.summoned && (v === "thinking" || v === "speaking")) || a) tell({ type: "chunk", text: chunk });
       }),
       on<string>("agent:reply", (text) => {
         tell({ type: "replied", text, asked: "spoken" });

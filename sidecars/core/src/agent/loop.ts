@@ -196,6 +196,8 @@ export type Run = {
   silence?: number;
   /// Told of a tool's words to be spoken as they are, the moment the tool gives them.
   onSpoken?: (text: string) => void;
+  /// Told as each step of the turn begins.
+  onStep?: () => void;
   /// Asked aloud, where waiting is felt most, so judged by the judge that tells what the model
   /// knows from what needs a look.
   spoken?: boolean;
@@ -367,7 +369,10 @@ export async function run(options: Run): Promise<Transcript> {
     messages: messagesFor(options.history ?? [], options.prompt),
     stopWhen: stepCountIs(options.steps ?? MAX_STEPS),
     abortSignal: options.signal ? AbortSignal.any([options.signal, quiet.signal]) : quiet.signal,
-    onStepStart: listen,
+    onStepStart: () => {
+      listen();
+      options.onStep?.();
+    },
     onChunk: ({ chunk }) => {
       if (spoke(chunk)) listen();
     },

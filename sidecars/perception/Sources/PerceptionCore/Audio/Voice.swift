@@ -6,7 +6,8 @@ typealias Rendering = @Sendable (String) async throws -> (samples: [Float], acou
 
 /// Speaks text aloud, one sentence at a time so audio starts before the whole reply is generated.
 /// A reply can be given as it arrives: what is added joins what is being said, and it ends once
-/// its end has been said and all of it heard.
+/// its end has been said and all of it heard. Each utterance is said after the one before it rather
+/// than over it, until something stops them all.
 public final class Voice: @unchecked Sendable {
     public static let sampleRate = Double(KokoroAneConstants.sampleRate)
 
@@ -23,6 +24,9 @@ public final class Voice: @unchecked Sendable {
     private var settled = true
     private var onSpeaking: (@Sendable (Bool) -> Void)?
     private var said = ""
+    /// Moved on by every stop, so an utterance still finishing from before one can tell that
+    /// nothing it does now is wanted.
+    private var generation = 0
 
     public convenience init(station: Station, transport: any Transport) {
         self.init(transport: transport, rendering: nil)
@@ -48,8 +52,10 @@ public final class Voice: @unchecked Sendable {
         )
     }
 
+    /// Sound playing, or an utterance under way, the pauses between its sentences included: talking
+    /// over a pause is talking over the reply.
     public var isSpeaking: Bool {
-        speaker.isPlaying
+        speaker.isPlaying || lock.withLock { open != nil || !settled }
     }
 
     /// What was last read aloud, so a transcript of it can be told apart from the user talking.
@@ -78,33 +84,47 @@ public final class Voice: @unchecked Sendable {
         }
     }
 
-    /// A whole reply, said in place of whatever was being said.
+    /// Something said in its own right, such as a notice: whole, and after whatever is being said,
+    /// which goes on being said.
     public func say(_ text: String) {
-        stop()
-        add(text)
-        end()
+        let utterance = lock.withLock { utter() }
+        utterance.yield(text)
+        utterance.finish()
     }
 
-    /// More of what is being said, spoken after what came before it; with nothing being said, the
+    /// More of what is being said, spoken after what came before it; with nothing open, the
     /// beginning of something new.
     public func add(_ text: String) {
-        let joined = lock.withLock { () -> Bool in
-            guard let open else { return false }
-            open.yield(text)
-            return true
-        }
-        if joined { return }
-
-        stop()
-        let (stream, continuation) = AsyncStream<String>.makeStream()
-        continuation.yield(text)
-        lock.withLock { said = "" }
-        let task = Task<Void, Never> { [weak self] in
-            await self?.perform(stream)
-        }
         lock.withLock {
-            open = continuation
-            self.task = task
+            if open == nil { open = utter() }
+            open?.yield(text)
+        }
+    }
+
+    /// An utterance of its own, heard once the one before it is over. Called holding the lock.
+    private func utter() -> AsyncStream<String>.Continuation {
+        let (stream, continuation) = AsyncStream<String>.makeStream()
+        let before = task
+        let mine = generation
+        task = Task<Void, Never> { [weak self] in
+            await withTaskCancellationHandler {
+                await before?.value
+            } onCancel: {
+                before?.cancel()
+            }
+            await self?.perform(stream, as: mine)
+        }
+        return continuation
+    }
+
+    /// Makes a change for an utterance only while nothing has been stopped since it began, and says
+    /// whether it was.
+    @discardableResult
+    private func ongoing(_ mine: Int, _ change: () -> Void = {}) -> Bool {
+        lock.withLock {
+            guard generation == mine else { return false }
+            change()
+            return true
         }
     }
 
@@ -118,21 +138,21 @@ public final class Voice: @unchecked Sendable {
         closing?.finish()
     }
 
-    /// Cancels synthesis and silences playback at once. This is the barge-in path.
+    /// Cancels synthesis and silences playback at once, with everything waiting to be said. This is
+    /// the barge-in path.
     public func stop() {
         let (running, closing) = lock.withLock { () -> (Task<Void, Never>?, AsyncStream<String>.Continuation?) in
+            generation += 1
             let taken = (task, open)
             task = nil
             open = nil
-            return taken
-        }
-        closing?.finish()
-        running?.cancel()
-        speaker.stop()
-        lock.withLock {
             synthesising = false
             settled = true
+            return taken
         }
+        running?.cancel()
+        closing?.finish()
+        speaker.stop()
         announceSpeaking(false)
     }
 
@@ -197,16 +217,21 @@ public final class Voice: @unchecked Sendable {
         }
     }
 
-    private func perform(_ stream: AsyncStream<String>) async {
+    private func perform(_ stream: AsyncStream<String>, as mine: Int) async {
         guard let render = await renderer() else { return }
-        if Task.isCancelled { return }
 
         // Echo cancellation has to be on before any audio plays: switching it restarts the capture
         // engine, and the switch is what stops Kyuren hearing itself.
         announceSpeaking(true)
-        lock.withLock {
+        let begun = ongoing(mine) {
             synthesising = true
             settled = false
+            said = ""
+        }
+        guard begun else {
+            // Stopped as it began, so what was just announced is taken back.
+            announceSpeaking(false)
+            return
         }
 
         let began = Date()
@@ -214,13 +239,13 @@ public final class Voice: @unchecked Sendable {
         var spoken = 0
 
         for await text in stream {
-            if Task.isCancelled { return }
-            lock.withLock { said = said.isEmpty ? text : "\(said) \(text)" }
+            guard ongoing(mine, { said = said.isEmpty ? text : "\(said) \(text)" }) else { return }
 
             for part in sentences(of: speakable(text)) {
-                if Task.isCancelled { return }
+                guard ongoing(mine) else { return }
 
                 guard let result = try? await render(part) else {
+                    guard ongoing(mine) else { return }
                     // A sentence the synthesiser cannot pronounce must not strand the whole
                     // utterance, which is what happened when the failure fell on the last one.
                     transport.send(.event(
@@ -229,11 +254,14 @@ public final class Voice: @unchecked Sendable {
                     ))
                     continue
                 }
-                if Task.isCancelled { return }
 
-                speaker.enqueue(result.samples) { [weak self] in
-                    self?.settleIfDone()
+                // Queued under the same check, so a stop in between cannot leave it to be heard.
+                let queued = ongoing(mine) {
+                    speaker.enqueue(result.samples) { [weak self] in
+                        self?.settleIfDone()
+                    }
                 }
+                guard queued else { return }
 
                 spoken += 1
                 if !announced {
@@ -252,7 +280,7 @@ public final class Voice: @unchecked Sendable {
             }
         }
 
-        lock.withLock { synthesising = false }
+        guard ongoing(mine, { synthesising = false }) else { return }
         if spoken == 0 {
             transport.send(.event(
                 name: "voice.failed",
@@ -270,7 +298,7 @@ public final class Voice: @unchecked Sendable {
         guard ready, !speaker.isPlaying else { return }
 
         let claimed = lock.withLock { () -> Bool in
-            guard !settled else { return false }
+            guard !synthesising, !settled else { return false }
             settled = true
             return true
         }

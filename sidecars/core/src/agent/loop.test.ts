@@ -332,3 +332,43 @@ test("a spoken question judged known is put to the model without reasoning, and 
   await handlers["agent.run"]({ prompt: "what is photosynthesis", id: "chat:known", sensitive: true });
   assert.doesNotMatch(bodies[1] ?? "", /reasoning_effort/, "the typed judge has no word for it, and reasons");
 });
+
+/// Drafting a skill speaks for itself. Each test drafts its own, since a name once drafted is taken.
+const forging = (name: string) => calling("forge", {
+  name,
+  about: "Tide times for a harbour, by name.",
+  url: "https://example.com/tides/{harbour}",
+  parameters: [{ name: "harbour", in: "path" }],
+});
+const forged = (name: string) => `${name} is drafted and waiting to be approved. It is not callable yet.`;
+
+test("a tool's words to be spoken are told the moment the tool gives them, before the model's next step", async () => {
+  const order: string[] = [];
+  replies.push(forging("tides"), saying("The tides skill is drafted."));
+  await run({
+    prompt: "keep the tides endpoint", vault, sensitive: true, difficulty: "moderate", gate: gate(), ask: async () => "allow",
+    onSpoken: (said) => order.push(said),
+    onStep: () => order.push("step"),
+  });
+  assert.deepEqual(order, ["step", forged("tides"), "step"]);
+});
+
+test("a spoken turn whose tool has spoken is over once the model moves on, and its retelling is not said", async () => {
+  const told: Told[] = [];
+  const { agentHandlers } = await import("#methods/agent.ts");
+  const handlers = agentHandlers({
+    send: (message) => {
+      const one = message as Told;
+      told.push(one);
+      if (one.event === "permission.request") void handlers["permission.answer"]?.({ id: one.data.id, verdict: "allow" });
+    },
+    listen: () => undefined,
+  });
+  replies.push(forging("harbour_tides"), saying("The tides skill is drafted and waits for you to approve it."));
+  await handlers["agent.run"]?.({ prompt: "keep the tides endpoint", speak: true, id: "voice:forge", sensitive: true, difficulty: "moderate" });
+  assert.deepEqual(aloud(told), [
+    { event: "agent.say", data: { id: "voice:forge", text: forged("harbour_tides") } },
+    { event: "agent.say.end", data: { id: "voice:forge" } },
+    { event: "agent.say.end", data: { id: "voice:forge" } },
+  ]);
+});

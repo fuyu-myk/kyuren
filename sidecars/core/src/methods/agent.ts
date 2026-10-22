@@ -59,7 +59,10 @@ export function agentHandlers(transport: Transport) {
       const controller = turns.begin(id);
       // Asked to be spoken, the reply is said as it arrives rather than once it is whole.
       const speech = params.speak === true
-        ? new Speech((text) => transport.send({ event: "agent.say", data: { id, text } }))
+        ? new Speech(
+          (text) => transport.send({ event: "agent.say", data: { id, text } }),
+          () => transport.send({ event: "agent.say.end", data: { id } }),
+        )
         : undefined;
 
       try {
@@ -83,6 +86,7 @@ export function agentHandlers(transport: Transport) {
             speech?.heard(chunk);
           },
           onSpoken: (said) => speech?.spoken(said),
+          onStep: () => speech?.moved(),
           watching: watchedOver(transport, id),
         });
         speech?.done();

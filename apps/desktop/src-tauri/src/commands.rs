@@ -3,7 +3,7 @@ use tauri::{AppHandle, State};
 
 use crate::conversation::answer_permission;
 use crate::secrets;
-use crate::state::{Sidecars, GATHER_TIMEOUT, PING_TIMEOUT, SPEAK_TIMEOUT};
+use crate::state::{Sidecars, GATHER_TIMEOUT, PING_TIMEOUT};
 
 #[tauri::command]
 pub async fn sidecar_status(sidecars: State<'_, Sidecars>) -> Result<Value, String> {
@@ -11,13 +11,9 @@ pub async fn sidecar_status(sidecars: State<'_, Sidecars>) -> Result<Value, Stri
 }
 
 #[tauri::command]
-pub async fn speak(text: String, sidecars: State<'_, Sidecars>) -> Result<(), String> {
-    sidecars
-        .perception
-        .request("voice.say", json!({ "text": text }), SPEAK_TIMEOUT)
-        .await
-        .map(|_| ())
-        .map_err(|failure| failure.to_string())
+pub async fn speak(app: AppHandle, text: String) -> Result<(), String> {
+    crate::speaking::notice(&app, text);
+    Ok(())
 }
 
 #[tauri::command]

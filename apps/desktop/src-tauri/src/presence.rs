@@ -4,7 +4,7 @@ use serde_json::{json, Value};
 use tauri::{AppHandle, Manager};
 
 use crate::sidecar::Sidecar;
-use crate::state::{Sidecars, PING_TIMEOUT, SPEAK_TIMEOUT};
+use crate::state::{Sidecars, PING_TIMEOUT};
 
 fn core(app: &AppHandle) -> Option<Arc<Sidecar>> {
     app.try_state::<Sidecars>().map(|state| Arc::clone(&state.core))
@@ -20,21 +20,8 @@ pub fn on_notice(app: &AppHandle, data: &Value) {
     if !voice || title.is_empty() {
         return;
     }
-    let Some(perception) = app
-        .try_state::<Sidecars>()
-        .map(|state| Arc::clone(&state.perception))
-    else {
-        return;
-    };
     let said = if why.is_empty() { format!("{title}.") } else { format!("{title}, {why}.") };
-    tauri::async_runtime::spawn(async move {
-        if let Err(failure) = perception
-            .request("voice.say", json!({ "text": said }), SPEAK_TIMEOUT)
-            .await
-        {
-            eprintln!("kyuren ambient voice.say: {failure}");
-        }
-    });
+    crate::speaking::notice(app, said);
 }
 
 #[tauri::command]

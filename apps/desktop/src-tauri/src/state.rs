@@ -121,11 +121,12 @@ fn log_event(sidecar: &str, name: &str, data: &Value) {
 /// What of an event the log keeps: all of it, except a coding agent's question, which carries the
 /// command the agent would run, and how a turn went, read from the session's own transcript: both
 /// are the agent's to keep, not this log's. Nor what one of Kyuren's own questions would carry,
-/// which may be the user's notes.
+/// which may be the user's notes, nor what a spoken turn says, which may be their day.
 fn logged<'a>(name: &str, data: &'a Value) -> std::borrow::Cow<'a, Value> {
     match name {
         "coding.permission" => std::borrow::Cow::Owned(json!({ "id": data.get("id") })),
         "coding.done" => std::borrow::Cow::Owned(json!({ "session": data.get("session") })),
+        "agent.say" => std::borrow::Cow::Owned(json!({ "id": data.get("id") })),
         "permission.request" if data.get("carrying").is_some() => {
             let mut kept = data.clone();
             if let Some(fields) = kept.as_object_mut() {
@@ -316,6 +317,12 @@ mod tests {
     fn a_finished_turn_is_logged_by_its_session_alone() {
         let finished = json!({ "session": "s9", "project": "kyuren", "worked": 40000, "outcome": { "tests": null, "files": 3 } });
         assert_eq!(*logged("coding.done", &finished), json!({ "session": "s9" }), "what a turn did is read from its transcript, and kept nowhere");
+    }
+
+    #[test]
+    fn what_a_spoken_turn_says_is_logged_by_its_turn_alone() {
+        let said = json!({ "id": "voice:3", "text": "Your first meeting is at nine with the design team." });
+        assert_eq!(*logged("agent.say", &said), json!({ "id": "voice:3" }));
     }
 
     #[test]
