@@ -186,6 +186,7 @@ fn event_sink(app: AppHandle) -> EventSink {
             let _ = app.emit("orb:state", if speaking { "listening" } else { "thinking" });
         }
         if name == "agent.step" {
+            crate::speaking::acted(&app, &data);
             let _ = app.emit("mind:step", &data);
         }
         if name == "agent.step.done" {
@@ -245,7 +246,7 @@ fn event_sink(app: AppHandle) -> EventSink {
         }
         // Talked over, the reply is not wanted, so neither is the rest of the turn behind it.
         if name == "voice.interrupted" {
-            crate::speaking::interrupt(&app);
+            crate::speaking::talked_over(&app);
         }
         crate::conversation::forward(&app, name, &data);
 

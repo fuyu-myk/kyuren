@@ -13,6 +13,8 @@ const NOTICE_WAIT: Duration = Duration::from_secs(60);
 /// only paused is not talked over.
 const QUIET: Duration = Duration::from_millis(1500);
 const LOOK: Duration = Duration::from_millis(250);
+/// How long a question talked over before any of its reply was heard waits for the rest of it.
+const CARRY: Duration = Duration::from_secs(10);
 
 /// What the voice is told, in the order it was told.
 #[derive(Debug, Clone, PartialEq)]
@@ -48,6 +50,11 @@ pub struct Current {
     asked: Option<String>,
     /// Some of that turn's reply has been heard.
     answered: bool,
+    /// That turn has begun to use a tool, so asking it again would do what it did twice.
+    acted: bool,
+    /// When that turn was talked over before any of its reply was heard: by its own question going
+    /// on, which what is heard next may carry on.
+    cut: Option<Instant>,
     /// Sentences of that turn sent to the voice and not yet heard out.
     unheard: usize,
     /// The voice is saying something.
@@ -57,11 +64,13 @@ pub struct Current {
 }
 
 impl Current {
-    /// What a new turn is asked. Heard while the turn being said goes on and before any of its reply,
-    /// it carries on that turn's question after a pause rather than asking one of its own.
-    pub fn asking(&self, heard: &str) -> String {
+    /// What a new turn is asked. Heard while the turn being said goes on, or soon after it was
+    /// talked over, and before any of its reply or anything it did, it carries on that turn's
+    /// question after a pause rather than asking one of its own.
+    pub fn asking(&self, heard: &str, now: Instant) -> String {
+        let going = self.live || self.cut.is_some_and(|at| now.saturating_duration_since(at) < CARRY);
         match &self.asked {
-            Some(before) if self.live && !self.answered => format!("{before} {heard}"),
+            Some(before) if going && !self.answered && !self.acted => format!("{before} {heard}"),
             _ => heard.to_string(),
         }
     }
@@ -74,6 +83,8 @@ impl Current {
         self.live = true;
         self.asked = Some(asked);
         self.answered = false;
+        self.acted = false;
+        self.cut = None;
         // Whatever was sounding is hushed as the turn begins.
         self.unheard = 0;
         self.sounding = false;
@@ -84,12 +95,35 @@ impl Current {
         self.turn.as_deref() == Some(id)
     }
 
-    /// Talked over or dismissed: nothing more of it is said, and it is to be stopped.
+    /// Dismissed: nothing more of it is said, it is to be stopped, and nothing heard later carries
+    /// its question on.
     pub fn interrupt(&mut self) -> Option<String> {
+        self.asked = None;
+        self.cut = None;
+        self.halt()
+    }
+
+    /// Talked over: nothing more of it is said, and it is to be stopped. Before any of its reply
+    /// was heard, what talked over it was its own question going on.
+    pub fn talked_over(&mut self, now: Instant) -> Option<String> {
+        if (self.live || self.unheard > 0) && !self.answered {
+            self.cut = Some(now);
+        }
+        self.halt()
+    }
+
+    fn halt(&mut self) -> Option<String> {
         self.live = false;
         self.unheard = 0;
         self.sounding = false;
         self.turn.take()
+    }
+
+    /// The turn being said has begun to use a tool, if that is the turn.
+    pub fn acts(&mut self, turn: &str) {
+        if self.is(turn) {
+            self.acted = true;
+        }
     }
 
     /// A sentence of the turn being said goes to the voice, if that is the turn.
@@ -118,7 +152,9 @@ impl Current {
     /// The voice has begun saying something, or has finished or been stopped.
     pub fn sounds(&mut self, sounding: bool) {
         self.sounding = sounding;
-        if sounding && self.live {
+        // Only the turn's own words, begun after its question ended, are its reply heard: not a
+        // notice, and not words that began while the question was still going on.
+        if sounding && self.unheard > 0 && !self.hearing {
             self.answered = true;
         }
         if !sounding {
@@ -190,7 +226,7 @@ fn send(app: &AppHandle, turn: Option<String>, line: Line) {
 /// way, and the turn it replaces is stopped. Returns the turn and what it is asked.
 pub fn begin(app: &AppHandle, heard: &str) -> (String, String) {
     let begun = with(app, |current| {
-        let asked = current.asking(heard);
+        let asked = current.asking(heard, Instant::now());
         let (turn, previous) = current.begin(asked.clone());
         (turn, previous, asked)
     });
@@ -276,9 +312,27 @@ pub fn notice(app: &AppHandle, text: String) {
     });
 }
 
-/// Talked over or dismissed: the spoken turn is stopped and says nothing more.
+/// Dismissed: the spoken turn is stopped and says nothing more.
 pub fn interrupt(app: &AppHandle) {
     let stopped = with(app, Current::interrupt).flatten();
+    silence(app, stopped);
+}
+
+/// Talked over: the spoken turn is stopped and says nothing more, though what is heard next may
+/// carry its question on.
+pub fn talked_over(app: &AppHandle) {
+    let stopped = with(app, |current| current.talked_over(Instant::now())).flatten();
+    silence(app, stopped);
+}
+
+/// A spoken turn has begun to use a tool.
+pub fn acted(app: &AppHandle, data: &Value) {
+    if let Some(turn) = data.get("id").and_then(Value::as_str) {
+        with(app, |current| current.acts(turn));
+    }
+}
+
+fn silence(app: &AppHandle, stopped: Option<String>) {
     // A sentence already on its way when the voice stopped would begin again, so it is stopped too.
     send(app, None, Line::Hush);
     if let Some(turn) = stopped {
@@ -378,22 +432,62 @@ mod tests {
 
     #[test]
     fn more_heard_before_any_reply_joins_the_question_and_after_it_is_a_question_of_its_own() {
+        let now = Instant::now();
         let mut current = Current::default();
-        assert_eq!(current.asking("what is on my calendar"), "what is on my calendar");
+        assert_eq!(current.asking("what is on my calendar", now), "what is on my calendar");
         current.begin("what is on my calendar".into());
-        let asked = current.asking("for tomorrow afternoon");
+        let asked = current.asking("for tomorrow afternoon", now);
         assert_eq!(asked, "what is on my calendar for tomorrow afternoon", "a pause, not a new question");
-        current.begin(asked);
-        assert_eq!(current.asking("and the evening"), "what is on my calendar for tomorrow afternoon and the evening");
+        let (turn, _) = current.begin(asked);
+        assert_eq!(current.asking("and the evening", now), "what is on my calendar for tomorrow afternoon and the evening");
 
+        current.adds(&turn);
         current.sounds(true);
-        assert_eq!(current.asking("thanks"), "thanks", "its reply has begun, so this answers it");
+        assert_eq!(current.asking("thanks", now), "thanks", "its reply has begun, so this answers it");
         let (turn, _) = current.begin("thanks".into());
         current.settle(&turn);
-        assert_eq!(current.asking("one more thing"), "one more thing", "nor once a turn is over");
+        assert_eq!(current.asking("one more thing", now), "one more thing", "nor once a turn is over");
         current.begin("one more thing".into());
         current.interrupt();
-        assert_eq!(current.asking("never mind"), "never mind", "nor once it is talked over");
+        assert_eq!(current.asking("never mind", now), "never mind", "nor once it is dismissed");
+    }
+
+    #[test]
+    fn a_question_talked_over_before_its_reply_is_heard_is_carried_on_for_a_while() {
+        let now = Instant::now();
+        let mut current = Current::default();
+        let (turn, _) = current.begin("what is on my calendar".into());
+        current.hears(true);
+        current.adds(&turn);
+        current.sounds(true);
+        assert!(current.talked_over(now).is_some(), "its first words came while the question went on");
+        assert_eq!(current.asking("for tomorrow", now + Duration::from_secs(2)), "what is on my calendar for tomorrow");
+        assert_eq!(current.asking("for tomorrow", now + Duration::from_secs(30)), "for tomorrow", "not long after");
+
+        let (turn, _) = current.begin("what is the weather".into());
+        current.hears(false);
+        current.adds(&turn);
+        current.sounds(true);
+        current.talked_over(now);
+        assert_eq!(current.asking("thanks", now), "thanks", "its reply was heard, then talked over");
+    }
+
+    #[test]
+    fn a_question_whose_turn_has_begun_to_act_is_not_carried_on_so_nothing_is_done_twice() {
+        let now = Instant::now();
+        let mut current = Current::default();
+        let (turn, _) = current.begin("add the lab report to my assignments".into());
+        current.acts(&turn);
+        assert_eq!(current.asking("due friday", now), "due friday");
+    }
+
+    #[test]
+    fn a_notice_heard_as_a_turn_begins_is_not_its_reply() {
+        let now = Instant::now();
+        let mut current = Current::default();
+        current.begin("what is on my calendar".into());
+        current.sounds(true);
+        assert_eq!(current.asking("for tomorrow", now), "what is on my calendar for tomorrow");
     }
 
     #[test]
