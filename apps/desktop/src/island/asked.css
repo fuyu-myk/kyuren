@@ -1,0 +1,243 @@
+/* A question opened whole: the way back and who asks, all of what it asks, and the answers. */
+.view.asked {
+  gap: 6px;
+}
+
+.asked .head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.asked .back {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgb(205 214 244 / 12%);
+  border-radius: 11px;
+  background: rgb(17 17 27 / 70%);
+  color: #bac2de;
+  cursor: default;
+}
+
+.asked .head .what {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  color: #cdd6f4;
+  font-size: 11.5px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.asked .left {
+  flex: none;
+  color: #9399b2;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* What it asks, scrolled when it is long and wrapped where it is wide: an answer is to all of it,
+   and nothing in it may run out of sight to the side. */
+.asked .whole {
+  min-height: 0;
+  flex: 1;
+  margin: 0;
+  padding: 8px 12px;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  border: 1px solid rgb(205 214 244 / 7%);
+  border-radius: 12px;
+  background: rgb(24 24 37 / 58%);
+  color: #cdd6f4;
+  font-size: 12px;
+}
+
+.asked .question + .question {
+  margin-top: 10px;
+}
+
+.asked .topic {
+  color: #9399b2;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.asked .asks {
+  margin: 2px 0 6px;
+}
+
+.asked .hint {
+  color: #7f849c;
+  font-size: 10.5px;
+}
+
+.asked .options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.asked .option {
+  display: flex;
+  max-width: 260px;
+  padding: 5px 11px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  border: 1px solid rgb(205 214 244 / 10%);
+  border-radius: 12px;
+  background: rgb(17 17 27 / 70%);
+  color: #cdd6f4;
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: default;
+}
+
+.asked .option span {
+  color: #9399b2;
+  font-size: 10.5px;
+}
+
+.asked .option:hover,
+.asked .option.on {
+  border-color: rgb(180 190 254 / 45%);
+}
+
+.asked .option.on {
+  background: rgb(180 190 254 / 12%);
+}
+
+/* A plan reads as the prose it was written as. */
+.asked .plan p,
+.asked .plan ul,
+.asked .plan ol {
+  margin: 0 0 6px;
+}
+
+.asked .plan ul,
+.asked .plan ol {
+  padding-left: 18px;
+}
+
+.asked .plan pre {
+  white-space: pre-wrap;
+}
+
+.asked .plan h3,
+.asked .plan h4,
+.asked .plan h5,
+.asked .plan h6 {
+  margin: 4px 0;
+  font-size: 12.5px;
+}
+
+/* An edit: the file and its counts, then every line taken out red and put in green. */
+.asked .change-head {
+  display: flex;
+  margin: 0;
+  align-items: baseline;
+  gap: 6px;
+  color: #cdd6f4;
+  font-size: 11.5px;
+}
+
+/* Where the change lands, whole: its folders say as much as its name. */
+.asked .change-head .path {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.asked .plus {
+  color: #a6e3a1;
+  font-variant-numeric: tabular-nums;
+}
+
+.asked .minus {
+  color: #f38ba8;
+  font-variant-numeric: tabular-nums;
+}
+
+.asked .how {
+  color: #f9e2af;
+}
+
+.asked .diff {
+  color: #9399b2;
+  font: 10.5px/1.45 ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: pre-wrap;
+}
+
+.asked .diff .add {
+  color: #a6e3a1;
+}
+
+.asked .diff .del {
+  color: #f38ba8;
+}
+
+.asked .diff .hunk {
+  color: #89b4fa;
+}
+
+/* A form: each field with what it is for. */
+.asked .field {
+  display: flex;
+  margin-top: 8px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.asked .field .title {
+  color: #bac2de;
+  font-size: 11px;
+}
+
+.asked .field .composer {
+  flex: none;
+}
+
+.asked .said.trouble {
+  margin: 6px 0 0;
+  color: #f38ba8;
+  font-size: 10.5px;
+}
+
+/* The answers, handing it back first. */
+.asked .foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.asked .foot button {
+  height: 24px;
+  padding: 0 11px;
+  border: 1px solid rgb(205 214 244 / 12%);
+  border-radius: 12px;
+  background: rgb(17 17 27 / 70%);
+  color: #cdd6f4;
+  font: inherit;
+  font-size: 11px;
+  cursor: default;
+}
+
+.asked .foot .allow {
+  border-color: rgb(180 190 254 / 40%);
+  color: #b4befe;
+}
+
+.asked .foot .deny {
+  border-color: rgb(243 139 168 / 40%);
+  color: #f38ba8;
+}
+
+.asked .foot button:disabled {
+  opacity: 0.45;
+}

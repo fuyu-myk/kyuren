@@ -4,6 +4,67 @@ import { emitPreview, type Notch } from "@/island/channels";
 const NOTCHED: Notch = { present: true, width: 184, height: 38 };
 const BARE: Notch = { present: false, width: 120, height: 24 };
 
+/// One of each kind of question a coding agent can hold the island with, beside a plain permission.
+const PREVIEWED_ASKS = [
+  {
+    id: "agent-choice",
+    harness: "claude",
+    session: "s1",
+    project: "kyuren",
+    tool: "AskUserQuestion",
+    kind: "choice",
+    questions: [
+      { question: "Which store should hold the shelf?", header: "Store", options: [{ label: "SQLite", description: "One file, beside the rest" }, { label: "JSON files", description: "One per item" }], multiSelect: false },
+      { question: "Which checks should run first?", header: "Checks", options: [{ label: "Lint", description: "" }, { label: "Unit tests", description: "" }, { label: "End to end", description: "" }], multiSelect: true },
+    ],
+  },
+  {
+    id: "agent-plan",
+    harness: "claude",
+    session: "s1",
+    project: "kyuren",
+    tool: "ExitPlanMode",
+    kind: "plan",
+    plan: "## Move the shelf onto SQLite\n\n1. Add a table for shelved files, keyed by device and inode.\n2. Read the JSON files once, into it, and keep them as a backup.\n3. Point the shelf's commands at the table.\n4. Test a rename, a move and a file replaced at the same path.",
+  },
+  {
+    id: "agent-edit",
+    harness: "claude",
+    session: "s1",
+    project: "kyuren",
+    tool: "Edit",
+    kind: "edit",
+    path: "apps/desktop/src/island/shelf.ts",
+    fresh: false,
+    whole: false,
+    every: false,
+    diff: [
+      { kind: "@", text: "change 1" },
+      { kind: "-", text: "const LIMIT = 12;" },
+      { kind: "+", text: "const LIMIT = 24;" },
+      { kind: "+", text: "const KEPT_FOR = 7 * 24 * 3_600_000;" },
+    ],
+    added: 2,
+    removed: 1,
+  },
+  {
+    id: "agent-form",
+    harness: "claude",
+    session: "s1",
+    project: "kyuren",
+    tool: "elicitation",
+    kind: "form",
+    server: "tickets",
+    message: "Where should the ticket go?",
+    fields: [
+      { name: "title", title: "Title", about: "What it is about", type: "string", choices: [], required: true },
+      { name: "board", title: "Board", about: "", type: "string", choices: ["Inbox", "Sprint"], required: true },
+      { name: "points", title: "Points", about: "", type: "integer", choices: [], required: false, least: 1, most: 13 },
+      { name: "urgent", title: "Urgent", about: "", type: "boolean", choices: [], required: false },
+    ],
+  },
+] as const;
+
 /// Outside the app: a desktop to see the island against, the notch drawn over it the way the
 /// screen's own notch covers it, and controls for everything the app would send.
 export function Harness({ notch }: { notch: Notch }) {
@@ -65,6 +126,18 @@ export function Harness({ notch }: { notch: Notch }) {
           agent asks
         </button>
         <button type="button" onClick={() => emitPreview("agent:permission-done", { id: "agent-1" })}>agent done</button>
+        {PREVIEWED_ASKS.map((ask) => (
+          <button
+            type="button"
+            key={ask.id}
+            onClick={() => {
+              emitPreview("agent:permission-done", { id: ask.id });
+              emitPreview("agent:permission", { ...ask, at: Date.now(), until: Date.now() + 115_000 });
+            }}
+          >
+            agent {ask.kind}
+          </button>
+        ))}
         <button type="button" onClick={() => emitPreview("presence:notice", {})}>notice</button>
         <button type="button" onClick={() => emitPreview("island:widgets", ["music", "pomodoro", "network", "system"])}>widgets</button>
         <button

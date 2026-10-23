@@ -8,6 +8,7 @@ import "@/island/shelf.css";
 import "@/island/voice.css";
 import "@/island/glance.css";
 import "@/island/coding-detail.css";
+import "@/island/asked.css";
 import "@/island/wings.css";
 
 const root = document.getElementById("island");

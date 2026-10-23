@@ -57,7 +57,7 @@ test("a session whose question is on the island is shown waiting for that permis
   const watch = new CodingWatch({ send: () => {}, listen: () => {} }, home, async () => true, () => asks);
   await watch.refresh();
   assert.deepEqual(watch.list().map((one) => [one.state, one.waitingFor]), [["working", undefined]]);
-  asks = [{ id: "a", harness: "claude", session: "s8", project: "kyuren", tool: "Bash", verb: "run", target: "make", at: 0, until: 1 }];
+  asks = [{ id: "a", harness: "claude", session: "s8", project: "kyuren", tool: "Bash", kind: "permission", verb: "run", target: "make", at: 0, until: 1 }];
   await watch.refresh();
   assert.deepEqual(watch.list().map((one) => [one.state, one.waitingFor]), [["waiting", "permission to run"]]);
 });

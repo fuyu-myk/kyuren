@@ -30,3 +30,12 @@ export function TabIcon({ tab }: { tab: Tab }) {
     </svg>
   );
 }
+
+/// The way back from something opened in place of its list.
+export function BackIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
+      <path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

@@ -562,34 +562,68 @@ session is opened. Only the island may ask for it, only Claude Code's sessions o
 island, opened afresh rather than back where the user was, shows the list, where a session newly
 waiting is.
 
-**Answering from the island.** Claude Code can bring its permission prompts to the island. Switched
-on in settings, the only place it can be, Kyuren copies its relay, a small program of its own, to
-`~/.kyuren/bin` and adds one `PermissionRequest` hook to `~/.claude/settings.json` beside the
-user's own, after keeping a copy of the file in `~/.kyuren/backups`: read whole, changed, its
-indentation, ending and permissions kept exactly, and written whole beside it and moved over it; a
-settings file that is a link is changed where it lives. A file that does not read as JSON, or that
-changes meanwhile, is left as it is, and switching it off takes out only the hook that runs
-Kyuren's relay from where Kyuren put it. Claude Code runs the relay as it is about to ask, and
-holds its own prompt back while the relay waits. The relay hands the request to the core over a
-socket in a folder only this user can open, its length said first and the line kept open while it
-waits, so its ending is Claude Code no longer waiting; with Kyuren not running it gives no answer at
-once, and Claude Code asks as it would without it.
+**Answering from the island.** Claude Code can bring what it asks the user to the island: a
+permission, questions to choose among, a plan to approve, an edit, and a form one of its servers
+asks to have filled in. Switched on in settings, the only place it can be, Kyuren copies its relay,
+a small program of its own, to `~/.kyuren/bin` and adds three hooks to `~/.claude/settings.json`
+beside the user's own: `PermissionRequest`, which a permission, a plan and an edit come by;
+`PreToolUse` for `AskUserQuestion` alone, which questions to choose among come by; and
+`Elicitation`, which a server's form comes by. It keeps a copy of the file in `~/.kyuren/backups`
+first, and the file is read whole, changed, its indentation, ending and permissions kept exactly,
+and written whole beside it and moved over it; a settings file that is a link is changed where it
+lives. A file that does not read as JSON, or that changes meanwhile, is left as it is, and
+switching it off takes out only the hooks that run Kyuren's relay from where Kyuren put them. Hooks
+an earlier Kyuren put are said in settings to want putting again, which switching it off and on
+does: until then only what they brought comes. Claude Code runs the relay as it is about to ask,
+and holds its own prompt back while the relay waits, at most 130 seconds, and the relay itself
+waits at most 120. The relay hands the request to the core over a socket in a folder only this user
+can open, its length said first and the line kept open while it waits, so its ending is Claude Code
+no longer waiting; with Kyuren not running it gives no answer at once, and Claude Code asks as it
+would without it.
 
-Only a question the island can show whole comes to it: a command on one line, short enough to read
-entire, with no character that could make what is shown differ from what would run, and not one
-asking to leave the sandbox; or a file read, an address fetched or a search. An edit's change, a
-file's contents and a plugin's arguments are what matter in theirs, and the island does not show
-them, so Claude Code asks those itself at once, as it does a plan to approve or a choice to make.
-The island opens on the question and says it has it; a question it has not said it has within
-three seconds goes back, since no one may be there to answer. Held, it waits at most 45 seconds:
-allowed or denied there, Claude Code is told so; asked to ask there, or unanswered in time, the
-relay says nothing and Claude Code shows its own prompt. A click within a moment of the questions
-changing, or of the island coming into view, is not taken, since it was aimed at what was there
-before; an answer that arrives after the question went back is said. Meanwhile its session shows as
-waiting for that permission. More than sixteen held at once are handed straight back, a request
-too slow to arrive whole is let go, and with the island's questions page switched off a question
-goes straight back. What a question would run is kept out of the event log. Other harnesses' hooks
-take the same relay, and are added once each can be tried.
+Only a question the island can show whole comes to it, with nothing beside what it shows; anything
+else Claude Code asks itself at once. Nothing shown may hold a character that could make it differ
+from what would happen, a mark drawn as nothing among them. A permission comes as a command on one
+line, short enough to read entire, and not one asking to leave the sandbox; or as a file read, an
+address fetched or a search. An edit comes with all of its change, each line it takes out in red
+and each it puts in in green, and a file written whole as it will be, at most 400 lines and 40,000
+characters of text, every line wrapped rather than cut. Its path must be given whole from the root,
+with no step back or in place, and it is shown whole where the write would land with its links
+followed, a new file in a linked folder included; a link that leads nowhere goes back. A notebook's
+cells and a plugin's arguments are what matter in theirs, and the island does not show them. A plan
+comes as the Markdown it was written in, up to 20,000 characters, unless it also asks for
+permissions, which before Claude Code 2.1.205 approving it would grant unseen: approved, Claude
+Code goes on asking before each edit or accepting them, as chosen, and sent back it goes on
+planning, told the user said so. Questions to choose among come all together, up to four of two to
+four options each, with no question or option repeated and no preview drawn beside an option, and
+the answer goes back as Claude Code's own dialog gives it: each question with the labels picked,
+from those it offered. A form comes in plain fields, up to eight, of words, numbers, a yes or no or
+a choice among words, with the least and most each may be shown and held to; one with a rule the
+island does not check, a format, a pattern or names shown in place of its choices, goes back, as
+does one that reads as asking for a secret, a password, a token, a key, a PIN, a code sent to the
+user or a card, in a field however its name is written or in its message, and a request to open a
+page in the browser, since what is typed on the island passes through Kyuren. Its values go back as
+the server asked for them, each checked on the island and again in the core: a number as a number,
+a choice from those offered, within its bounds, nothing missing that must be filled, nothing over
+2,000 characters and no control character, though anything else the user can type, a wide space or
+an emoji, is theirs to send. An answer that does not fit its question is not given, and the
+question goes back to be asked there.
+
+The island opens on the question and says it has it; a question it has not said it has within three
+seconds goes back, since no one may be there to answer. Held, a permission waits at most 45
+seconds, and a question to be read first, a plan, an edit, questions to choose among or a form, at
+most 115: allowed, answered or denied there, Claude Code is told so; asked to ask there, or
+unanswered in time, the relay says nothing and Claude Code shows its own prompt. A click within a
+moment of the questions changing, or of the island coming into view, is not taken, since it was
+aimed at what was there before, and a question kept open through a fold counts as coming into view
+again; an answer that arrives after the question went back is said. A form typed into gives the
+keyboard back as it goes, however it goes. Meanwhile its session shows as waiting for what it
+asked, a permission, a plan to be approved, answers or a form, without naming what it would touch.
+More than sixteen held at once are handed straight back, a request too slow to arrive whole is let
+go, and with the island's questions page switched off a question goes straight back. What a
+question carries, and what it was answered with, is kept out of the event log, which has only its
+id and how it ended. Other harnesses' hooks take the same relay, and are added once each can be
+tried.
 
 **Shelf.** The shelf holds files on their way somewhere, the way a desk holds a pile. Anything
 carried onto the notch opens the island on the shelf at once, without the hover's wait, and

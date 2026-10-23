@@ -55,14 +55,14 @@ test("a permission question is held until it is answered on the island, and the 
   await until(() => hooks.pending().length === 1);
   const [held] = hooks.pending();
   assert.equal(hooks.seen(held?.id ?? ""), true, "the island says it has it");
-  assert.deepEqual([held?.verb, held?.target, held?.project], ["run", "make", "kyuren"]);
+  assert.deepEqual(held?.kind === "permission" ? [held.verb, held.target, held.project] : [], ["run", "make", "kyuren"]);
   assert.ok(sent.some((one) => one.event === "coding.permission" && one.data?.id === held?.id));
 
-  assert.equal(hooks.answer(held?.id ?? "", "allow"), true);
+  assert.equal(hooks.answer(held?.id ?? "", { decision: "allow" }), true);
   assert.deepEqual(JSON.parse(await asked.answer).hookSpecificOutput.decision, { behavior: "allow" });
   assert.equal(hooks.pending().length, 0);
   assert.ok(sent.some((one) => one.event === "coding.permission.done" && one.data?.decision === "allow"));
-  assert.equal(hooks.answer(held?.id ?? "", "deny"), false, "answered once");
+  assert.equal(hooks.answer(held?.id ?? "", { decision: "deny" }), false, "answered once");
   await hooks.stop();
 });
 
@@ -152,5 +152,93 @@ test("only so many questions are held at once, and one too slow to say itself is
   assert.equal(await relay(hooks.path, { ...PERMISSION, size: 2 } as typeof PERMISSION, BASH).answer, "", "a header that is not one");
   first.leave();
   second.leave();
+  await hooks.stop();
+});
+
+const CHOOSING = { harness: "claude", event: "PreToolUse", parent: 1, wait: 50 };
+const QUESTIONS = [
+  { question: "Which framework?", header: "Framework", options: [{ label: "React", description: "Components" }, { label: "Vue", description: "Progressive" }], multiSelect: false },
+];
+const ASKING = { session_id: "s1", cwd: "/Users/someone/Code/kyuren", tool_name: "AskUserQuestion", tool_input: { questions: QUESTIONS } };
+
+test("questions to choose among come by the hook before the tool, and what is picked goes back with them as asked", async () => {
+  const { transport } = told();
+  const path = socketPath();
+  const hooks = new HookListener(transport, path);
+  await hooks.start();
+  const asked = relay(path, CHOOSING, ASKING);
+  await until(() => hooks.pending().length === 1);
+  const [held] = hooks.pending();
+  assert.equal(held?.kind, "choice");
+  assert.equal(hooks.answer(held?.id ?? "", { decision: "allow", picked: { "Which framework?": ["Vue"] } }), true);
+  const said = JSON.parse(await asked.answer).hookSpecificOutput;
+  assert.deepEqual([said.hookEventName, said.permissionDecision], ["PreToolUse", "allow"]);
+  assert.deepEqual(said.updatedInput, { questions: QUESTIONS, answers: { "Which framework?": "Vue" } });
+  await hooks.stop();
+});
+
+test("an answer that does not fit its question is not given, and Claude Code asks it itself at once", async () => {
+  const { transport, sent } = told();
+  const path = socketPath();
+  const hooks = new HookListener(transport, path);
+  await hooks.start();
+  const asked = relay(path, CHOOSING, ASKING);
+  await until(() => hooks.pending().length === 1);
+  const [held] = hooks.pending();
+  assert.equal(hooks.seen(held?.id ?? ""), true, "the island says it has it");
+  assert.equal(hooks.answer(held?.id ?? "", { decision: "allow", picked: { "Which framework?": ["Angular"] } }), false, "not one of its options");
+  assert.equal(hooks.pending().length, 0, "let go at once, not left held where the island no longer shows it");
+  assert.equal(await asked.answer, "", "nothing said, so Claude Code shows its own dialog");
+  assert.ok(sent.some((one) => one.event === "coding.permission.done" && one.data?.id === held?.id && one.data?.decision === "ask"));
+  await hooks.stop();
+});
+
+test("the hook before any other tool is let go at once, holding nothing", async () => {
+  const { transport } = told();
+  const path = socketPath();
+  const hooks = new HookListener(transport, path);
+  await hooks.start();
+  assert.equal(await relay(path, CHOOSING, BASH).answer, "");
+  assert.equal(hooks.pending().length, 0);
+  await hooks.stop();
+});
+
+test("a plan is held longer than a permission, since it is to be read first", async () => {
+  const { transport } = told();
+  const path = socketPath();
+  const hooks = new HookListener(transport, path, { askFor: 1_000, readFor: 5_000 });
+  await hooks.start();
+  const plan = { ...BASH, tool_name: "ExitPlanMode", tool_input: { plan: "## Refactor\n1. Extract the parser." } };
+  const asked = [relay(path, PERMISSION, BASH), relay(path, PERMISSION, plan)];
+  await until(() => hooks.pending().length === 2);
+  const held = Object.fromEntries(hooks.pending().map((one) => [one.kind, one.until - one.at]));
+  assert.deepEqual(held, { permission: 1_000, plan: 5_000 });
+  await hooks.stop();
+  for (const one of asked) assert.equal(await one.answer, "", "handed back when Kyuren stops");
+});
+
+test("a form from a server is answered with its values, or declined", async () => {
+  const { transport } = told();
+  const path = socketPath();
+  const hooks = new HookListener(transport, path);
+  await hooks.start();
+  const event = { harness: "claude", event: "Elicitation", parent: 1, wait: 50 };
+  const form = {
+    session_id: "s1",
+    cwd: "/Users/someone/Code/kyuren",
+    hook_event_name: "Elicitation",
+    mcp_server_name: "tickets",
+    message: "Which board should the ticket go on?",
+    mode: "form",
+    requested_schema: { type: "object", properties: { board: { type: "string", enum: ["Inbox", "Sprint"] } }, required: ["board"] },
+  };
+  const first = relay(path, event, form);
+  await until(() => hooks.pending().length === 1);
+  assert.equal(hooks.answer(hooks.pending()[0]?.id ?? "", { decision: "allow", content: { board: "Sprint" } }), true);
+  assert.deepEqual(JSON.parse(await first.answer).hookSpecificOutput, { hookEventName: "Elicitation", action: "accept", content: { board: "Sprint" } });
+  const second = relay(path, event, form);
+  await until(() => hooks.pending().length === 1);
+  assert.equal(hooks.answer(hooks.pending()[0]?.id ?? "", { decision: "deny" }), true);
+  assert.deepEqual(JSON.parse(await second.answer).hookSpecificOutput, { hookEventName: "Elicitation", action: "decline" });
   await hooks.stop();
 });

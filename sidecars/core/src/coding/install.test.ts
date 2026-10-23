@@ -3,7 +3,7 @@ import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { claudeCommand, claudeHookState, hasClaudeHook, quoted, setClaudeHook, withClaudeHook, withoutClaudeHook } from "#coding/install.ts";
+import { claudeCommand, claudeHookState, hasClaudeHook, hookSocket, quoted, setClaudeHook, withClaudeHook, withoutClaudeHook } from "#coding/install.ts";
 
 const RELAY = "/Users/someone/.kyuren/bin/kyuren-hook";
 const SOCKET = "/Users/someone/.kyuren/hooks/kyuren.sock";
@@ -32,18 +32,23 @@ function places(): { claude: string; kyuren: string; relay: string } {
 }
 
 test("the hook is said as one command, its paths quoted whatever is in them", () => {
-  assert.equal(COMMAND, "'/Users/someone/.kyuren/bin/kyuren-hook' claude PermissionRequest --wait 50 --socket '/Users/someone/.kyuren/hooks/kyuren.sock'");
+  assert.equal(COMMAND, "'/Users/someone/.kyuren/bin/kyuren-hook' claude PermissionRequest --wait 120 --socket '/Users/someone/.kyuren/hooks/kyuren.sock'");
   assert.equal(quoted("/Users/o'brien/x"), "'/Users/o'\\''brien/x'");
 });
 
-test("Kyuren's hook is added beside the user's own, and nothing else of theirs is touched", () => {
+test("Kyuren's hooks are added beside the user's own, and nothing else of theirs is touched", () => {
   const before = theirs();
   const after = withClaudeHook(before, RELAY, SOCKET);
+  const hook = (event: string) => ({ type: "command", command: claudeCommand(RELAY, SOCKET, event), timeout: 130, statusMessage: "Asking on Kyuren's island" });
   assert.deepEqual(Object.keys(after), Object.keys(before), "in the same order");
-  assert.deepEqual((after.hooks as Record<string, unknown>).PreToolUse, (before.hooks as Record<string, unknown>).PreToolUse);
-  assert.deepEqual((after.hooks as Record<string, unknown[]>).PermissionRequest, [
-    { hooks: [{ type: "command", command: COMMAND, timeout: 60, statusMessage: "Asking on Kyuren's island" }] },
-  ]);
+  const hooks = after.hooks as Record<string, unknown[]>;
+  assert.deepEqual(hooks.PermissionRequest, [{ hooks: [hook("PermissionRequest")] }], "permissions, and the plans and edits that come the same way");
+  assert.deepEqual(
+    hooks.PreToolUse,
+    [...((before.hooks as Record<string, unknown[]>).PreToolUse ?? []), { matcher: "AskUserQuestion", hooks: [hook("PreToolUse")] }],
+    "questions to choose among, after the user's own hook, and run for that tool alone",
+  );
+  assert.deepEqual(hooks.Elicitation, [{ hooks: [hook("Elicitation")] }], "forms from Claude Code's servers");
   assert.ok(hasClaudeHook(after, RELAY) && !hasClaudeHook(before, RELAY));
   assert.deepEqual(withClaudeHook(after, RELAY, SOCKET), after, "added once, however often it is asked for");
   assert.deepEqual(before, theirs(), "and the settings given are not changed in place");
@@ -123,4 +128,15 @@ test("switches flipped together are made one after another, the last one standin
   const states = await Promise.all([true, false, true].map((on) => setClaudeHook({ claudeHome: claude, kyurenHome: kyuren, relay, on })));
   assert.ok(states.every((one) => one.trouble === undefined), JSON.stringify(states));
   assert.deepEqual(await claudeHookState({ claudeHome: claude, kyurenHome: kyuren }), { present: true, on: true });
+});
+
+test("hooks an earlier Kyuren put are still on, but said to want putting again, which switching on does", async () => {
+  const { claude, kyuren, relay } = places();
+  const file = join(claude, "settings.json");
+  const command = `${quoted(join(kyuren, "bin", "kyuren-hook"))} claude PermissionRequest --wait 50 --socket ${quoted(hookSocket(kyuren))}`;
+  writeFileSync(file, JSON.stringify({ hooks: { PermissionRequest: [{ hooks: [{ type: "command", command, timeout: 60 }] }] } }));
+  assert.deepEqual(await claudeHookState({ claudeHome: claude, kyurenHome: kyuren }), { present: true, on: true, stale: true });
+  assert.deepEqual(await setClaudeHook({ claudeHome: claude, kyurenHome: kyuren, relay, on: true }), { present: true, on: true });
+  assert.deepEqual(await claudeHookState({ claudeHome: claude, kyurenHome: kyuren }), { present: true, on: true });
+  assert.equal(JSON.parse(readFileSync(file, "utf8")).hooks.PermissionRequest.length, 1, "the earlier one replaced, not kept beside");
 });

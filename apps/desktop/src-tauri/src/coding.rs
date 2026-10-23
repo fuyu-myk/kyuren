@@ -90,12 +90,45 @@ pub async fn coding_seen(app: AppHandle, window: tauri::Window, id: String) -> R
 /// The user's answer to a coding agent's question: allow, deny, or ask, which hands it back to the
 /// agent's own prompt.
 #[tauri::command]
-pub async fn coding_answer(app: AppHandle, window: tauri::Window, id: String, decision: String) -> Result<Value, String> {
+pub async fn coding_answer(
+    app: AppHandle,
+    window: tauri::Window,
+    id: String,
+    decision: String,
+    picked: Option<Value>,
+    mode: Option<String>,
+    content: Option<Value>,
+) -> Result<Value, String> {
     only_from(&window, crate::island::LABEL)?;
-    if !matches!(decision.as_str(), "allow" | "deny" | "ask") {
+    let answer = answer_of(id, &decision, picked, mode, content)?;
+    core(&app)?.request("coding.answer", answer, PING_TIMEOUT).await.map_err(|failure| failure.to_string())
+}
+
+/// The most an answer may carry: a few labels picked, or a short form's values.
+const ANSWER_MOST: usize = 32 << 10;
+
+/// An answer as the core is asked to give it. Whether what was picked or filled in fits the
+/// question is the core's to judge, against the question it holds; here it is only an answer at all,
+/// and small.
+fn answer_of(id: String, decision: &str, picked: Option<Value>, mode: Option<String>, content: Option<Value>) -> Result<Value, String> {
+    if !matches!(decision, "allow" | "deny" | "ask") {
         return Err(format!("{decision} is not an answer"));
     }
-    core(&app)?.request("coding.answer", json!({ "id": id, "decision": decision }), PING_TIMEOUT).await.map_err(|failure| failure.to_string())
+    let mut answer = json!({ "id": id, "decision": decision });
+    if let Some(mode) = mode {
+        if !matches!(mode.as_str(), "acceptEdits" | "default") {
+            return Err(format!("{mode} is not a mode a plan goes on in"));
+        }
+        answer["mode"] = json!(mode);
+    }
+    for (key, value) in [("picked", picked), ("content", content)] {
+        let Some(value) = value else { continue };
+        if !value.is_object() || value.to_string().len() > ANSWER_MOST {
+            return Err(format!("what was {} is not an answer", if key == "picked" { "picked" } else { "filled in" }));
+        }
+        answer[key] = value;
+    }
+    Ok(answer)
 }
 
 /// Whether Claude Code's permission prompts come to the island.
@@ -127,4 +160,32 @@ pub fn on_ask(app: &AppHandle, data: &Value) {
             let _ = core.request("coding.answer", json!({ "id": id, "decision": "ask" }), PING_TIMEOUT).await;
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_answer_carries_what_was_picked_the_mode_or_a_forms_values() {
+        let picked = json!({ "Which framework?": ["Vue"] });
+        assert_eq!(
+            answer_of("a".into(), "allow", Some(picked.clone()), None, None).expect("an answer"),
+            json!({ "id": "a", "decision": "allow", "picked": picked })
+        );
+        assert_eq!(
+            answer_of("p".into(), "allow", None, Some("acceptEdits".into()), None).expect("an answer"),
+            json!({ "id": "p", "decision": "allow", "mode": "acceptEdits" })
+        );
+        assert_eq!(answer_of("q".into(), "ask", None, None, None).expect("an answer"), json!({ "id": "q", "decision": "ask" }));
+    }
+
+    #[test]
+    fn what_is_no_answer_is_refused_before_it_reaches_the_core() {
+        assert!(answer_of("a".into(), "maybe", None, None, None).is_err());
+        assert!(answer_of("a".into(), "allow", None, Some("bypassPermissions".into()), None).is_err(), "no mode beyond the two a plan is approved in");
+        assert!(answer_of("a".into(), "allow", Some(json!(["Vue"])), None, None).is_err(), "picks are by question");
+        let long = json!({ "title": "x".repeat(ANSWER_MOST) });
+        assert!(answer_of("a".into(), "allow", None, None, Some(long)).is_err());
+    }
 }

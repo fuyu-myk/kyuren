@@ -7,14 +7,16 @@ type Settings = Record<string, unknown>;
 
 /// Whether a harness is here, whether Kyuren's hook is in its settings, and what went wrong if
 /// putting it there or taking it out did not happen.
-export type HookState = { present: boolean; on: boolean; trouble?: string };
+/// Whether Kyuren's hooks are in Claude Code's settings, and whether an earlier Kyuren put them there,
+/// which leaves some of what it brings now at Claude Code's own prompts until they are put again.
+export type HookState = { present: boolean; on: boolean; stale?: true; trouble?: string };
 
 /// The relay's name in Kyuren's own folder.
 const RELAY = "kyuren-hook";
-/// The relay waits a little longer than the island holds a question, so Kyuren always answers
-/// first, and Claude Code's own limit on the hook is a little longer again.
-const WAIT = 50;
-const TIMEOUT = 60;
+/// The relay waits as long as it will for any question, and Kyuren holds each kind for its own time
+/// within that, so it always answers first. Claude Code's own limit on the hook is a little longer.
+const WAIT = 120;
+const TIMEOUT = 130;
 /// What Claude Code shows under its spinner while the question is on the island.
 const SAYS = "Asking on Kyuren's island";
 
@@ -29,9 +31,18 @@ export function quoted(path: string): string {
   return `'${path.replaceAll("'", "'\\''")}'`;
 }
 
-export function claudeCommand(relay: string, socket: string): string {
-  return `${quoted(relay)} claude PermissionRequest --wait ${WAIT} --socket ${quoted(socket)}`;
+export function claudeCommand(relay: string, socket: string, event = "PermissionRequest"): string {
+  return `${quoted(relay)} claude ${event} --wait ${WAIT} --socket ${quoted(socket)}`;
 }
+
+/// Kyuren's hooks: the one Claude Code runs before it asks a permission, which plans and edits come
+/// by too; the one before it asks the user to choose, scoped to that tool so no other call waits on
+/// it; and the one its servers' forms run.
+const OURS: ReadonlyArray<{ event: string; matcher?: string }> = [
+  { event: "PermissionRequest" },
+  { event: "PreToolUse", matcher: "AskUserQuestion" },
+  { event: "Elicitation" },
+];
 
 /// Kyuren's own hook is the one that runs its relay from where it put it, and nothing else: a hook
 /// of the user's that only mentions the relay is theirs.
@@ -58,12 +69,36 @@ export function hasClaudeHook(settings: Settings, relay: string): boolean {
   );
 }
 
-/// The settings with Kyuren's permission hook in them, once, after the user's own.
+/// Whether each of Kyuren's hooks is there as it would put it now.
+function current(settings: Settings, relay: string, socket: string): boolean {
+  const hooks = settings.hooks;
+  if (!isObject(hooks)) return false;
+  return OURS.every(({ event, matcher }) => {
+    const groups = hooks[event];
+    const command = claudeCommand(relay, socket, event);
+    return (
+      Array.isArray(groups) &&
+      groups.some(
+        (group) =>
+          isObject(group) &&
+          group.matcher === matcher &&
+          Array.isArray(group.hooks) &&
+          group.hooks.some((hook) => isObject(hook) && hook.command === command && hook.timeout === TIMEOUT),
+      )
+    );
+  });
+}
+
+/// The settings with Kyuren's hooks in them, each once, after the user's own.
 export function withClaudeHook(settings: Settings, relay: string, socket: string): Settings {
-  const hook = { hooks: [{ type: "command", command: claudeCommand(relay, socket), timeout: TIMEOUT, statusMessage: SAYS }] };
   const hooks = isObject(settings.hooks) ? settings.hooks : {};
-  const groups = Array.isArray(hooks.PermissionRequest) ? cleaned(hooks.PermissionRequest, relay) : [];
-  return { ...settings, hooks: { ...hooks, PermissionRequest: [...groups, hook] } };
+  const next: Settings = { ...hooks };
+  for (const { event, matcher } of OURS) {
+    const hook = { ...(matcher ? { matcher } : {}), hooks: [{ type: "command", command: claudeCommand(relay, socket, event), timeout: TIMEOUT, statusMessage: SAYS }] };
+    const groups = Array.isArray(hooks[event]) ? cleaned(hooks[event], relay) : [];
+    next[event] = [...groups, hook];
+  }
+  return { ...settings, hooks: next };
 }
 
 /// The settings as they were before Kyuren's hook went in: an event or a hooks section that only
@@ -177,7 +212,9 @@ export async function claudeHookState(options: { claudeHome: string; kyurenHome:
   if (text === undefined) return { present: true, on: false };
   try {
     const parsed: unknown = JSON.parse(text);
-    return { present: true, on: isObject(parsed) && hasClaudeHook(parsed, placedRelay(options.kyurenHome)) };
+    const relay = placedRelay(options.kyurenHome);
+    if (!isObject(parsed) || !hasClaudeHook(parsed, relay)) return { present: true, on: false };
+    return current(parsed, relay, hookSocket(options.kyurenHome)) ? { present: true, on: true } : { present: true, on: true, stale: true };
   } catch {
     return { present: true, on: false, trouble: UNREADABLE };
   }

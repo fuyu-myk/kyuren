@@ -1,7 +1,8 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Decision } from "#coding/asked.ts";
+import { z } from "zod";
+import type { Answer } from "#coding/asked.ts";
 import type { HookListener } from "#coding/hooks.ts";
 import { claudeHookState, setClaudeHook } from "#coding/install.ts";
 import { SessionDetails } from "#coding/transcript.ts";
@@ -9,7 +10,14 @@ import type { CodingWatch } from "#coding/watch.ts";
 
 /// Where the relay is built: beside the core, in the workspace it runs from.
 const BUILT = fileURLToPath(new URL("../../../hook/target/release/kyuren-hook", import.meta.url));
-const DECISIONS: ReadonlySet<unknown> = new Set<Decision>(["allow", "deny", "ask"]);
+/// An answer as the island gives it. Whether it fits the question it answers is the listener's to
+/// judge; this is only what an answer can be at all.
+const ANSWER = z.object({
+  decision: z.enum(["allow", "deny", "ask"]),
+  picked: z.record(z.string().max(400), z.array(z.string().max(120)).max(4)).optional(),
+  mode: z.enum(["acceptEdits", "default"]).optional(),
+  content: z.record(z.string().max(64), z.union([z.string().max(2_000), z.number(), z.boolean()])).optional(),
+});
 
 function idOf(params: Record<string, unknown>): string {
   if (typeof params.id !== "string") throw new Error("say which question");
@@ -47,8 +55,13 @@ export function codingHandlers(watch: CodingWatch, hooks: HookListener, kyurenHo
     /// An answer given on the island; not answered when the agent stopped waiting for it first.
     "coding.answer": async (params: Record<string, unknown>) => {
       const id = idOf(params);
-      if (!DECISIONS.has(params.decision)) throw new Error("an answer is allow, deny or ask");
-      return { answered: hooks.answer(id, params.decision as Decision) };
+      const answer = ANSWER.safeParse(params);
+      if (!answer.success) {
+        // The island has let the question go, so held here it could only wait out its time.
+        hooks.answer(id, { decision: "ask" });
+        return { answered: false };
+      }
+      return { answered: hooks.answer(id, answer.data satisfies Answer) };
     },
     "coding.hooks": async () => ({ claude: await claudeHookState({ claudeHome, kyurenHome }), listening: hooks.listening() }),
     /// Puts the permission hook into Claude Code's settings, or takes it out. Switched on, the line

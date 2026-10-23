@@ -3,7 +3,7 @@ import { readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fromActivity, IDLE_FOR, type Trail } from "#coding/activity.ts";
-import type { Ask } from "#coding/asked.ts";
+import { waitingFor, type Ask } from "#coding/asked.ts";
 import { processAlive } from "#coding/alive.ts";
 import { claudeSessions, type Alive } from "#coding/claude.ts";
 import { ordered, type Coding } from "#coding/session.ts";
@@ -107,7 +107,7 @@ export class CodingWatch {
     const sessions = ordered(
       found.map((one) => {
         const ask = asking.get(one.id);
-        return ask ? { ...one, state: "waiting" as const, waitingFor: `permission to ${ask.verb}` } : one;
+        return ask ? { ...one, state: "waiting" as const, waitingFor: waitingFor(ask) } : one;
       }),
     );
     this.sessions = sessions;

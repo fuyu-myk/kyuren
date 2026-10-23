@@ -24,9 +24,15 @@ export async function on<T>(name: string, handler: (payload: T) => void): Promis
   return () => preview.removeEventListener(name, listener);
 }
 
+/// What the page asked of the host while previewed outside the app, for the preview's own tests.
+export const previewed: Array<{ name: string; args?: Record<string, unknown> }> = [];
+
 /// A host command, or nothing outside the app.
 export async function command<T>(name: string, args?: Record<string, unknown>): Promise<T | undefined> {
-  if (!insideTauri()) return undefined;
+  if (!insideTauri()) {
+    previewed.push({ name, args });
+    return undefined;
+  }
   return invoke<T>(name, args);
 }
 

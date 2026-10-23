@@ -3,12 +3,17 @@ import { chmod, mkdir, unlink } from "node:fs/promises";
 import { connect, createServer, type Server, type Socket } from "node:net";
 import { dirname } from "node:path";
 import { z } from "zod";
-import { claudeAnswer, claudeAsk, type Ask, type Decision } from "#coding/asked.ts";
+import { claudeAnswer, claudeAsk, claudePlanAnswer, type Answer, type Ask, type Kind, type Wait } from "#coding/asked.ts";
+import { claudeChoice, claudeChoiceAnswer } from "#coding/choices.ts";
+import { claudeForm, claudeFormAnswer } from "#coding/forms.ts";
 import type { Transport } from "#transport.ts";
 
 /// How long a question waits on the island before Claude Code asks it itself. Claude Code holds its
 /// own prompt back while a hook decides, so this is the longest anyone at the terminal waits.
 export const ASK_FOR = 45_000;
+/// Questions to choose among, a plan, an edit or a form take reading first, so they wait longer,
+/// within what the relay will wait for.
+export const READ_FOR = 115_000;
 /// Answered this long before the relay stops listening, so the answer always reaches it.
 const MARGIN = 3_000;
 /// A question the island has not said it has, by now, is one nobody can answer there: the island
@@ -30,9 +35,10 @@ const HEADER = z.object({
   size: z.number().int().min(0).max(MOST),
 });
 
-type Held = { ask: Ask; socket: Socket; timers: NodeJS.Timeout[]; seen: boolean };
+/// A question held, with the request it came in, which some answers carry back.
+type Held = { ask: Ask; request: unknown; socket: Socket; timers: NodeJS.Timeout[]; seen: boolean };
 
-type Options = { askFor?: number; seenWithin?: number; mostHeld?: number; saying?: number; changed?: () => void };
+type Options = { askFor?: number; readFor?: number; seenWithin?: number; mostHeld?: number; saying?: number; changed?: () => void };
 
 function parsed(text: string): unknown {
   try {
@@ -60,6 +66,7 @@ export class HookListener {
   readonly path: string;
   private readonly transport: Transport;
   private readonly askFor: number;
+  private readonly readFor: number;
   private readonly seenWithin: number;
   private readonly mostHeld: number;
   private readonly saying: number;
@@ -71,6 +78,7 @@ export class HookListener {
     this.transport = transport;
     this.path = path;
     this.askFor = options.askFor ?? ASK_FOR;
+    this.readFor = options.readFor ?? READ_FOR;
     this.seenWithin = options.seenWithin ?? SEEN_WITHIN;
     this.mostHeld = options.mostHeld ?? MOST_HELD;
     this.saying = options.saying ?? SAYING;
@@ -107,7 +115,7 @@ export class HookListener {
 
   /// Hands every held question back, so no agent is left waiting on a Kyuren that has gone.
   async stop(): Promise<void> {
-    for (const id of [...this.held.keys()]) this.answer(id, "ask");
+    for (const id of [...this.held.keys()]) this.answer(id, { decision: "ask" });
     const server = this.server;
     this.server = undefined;
     if (!server) return;
@@ -127,15 +135,45 @@ export class HookListener {
     return true;
   }
 
-  answer(id: string, decision: Decision): boolean {
+  /// Answers a held question. An answer that does not fit it, a pick that was not offered or a form
+  /// filled in wrongly, is not given, and the question goes back for Claude Code to ask itself: the
+  /// island has let it go, so held here it could only wait out its time.
+  answer(id: string, answer: Answer): boolean {
     const held = this.held.get(id);
     if (!held) return false;
-    held.socket.end(claudeAnswer(decision));
-    this.release(id, decision);
+    const reply = this.reply(held, answer);
+    if (reply === undefined) {
+      held.socket.end("");
+      this.release(id, "ask");
+      return false;
+    }
+    held.socket.end(reply);
+    this.release(id, answer.decision);
     return true;
   }
 
-  private release(id: string, decision: Decision | "gone"): void {
+  /// What Claude Code is told, by the hook the question came through.
+  private reply(held: Held, answer: Answer): string | undefined {
+    const { ask } = held;
+    if (ask.kind === "choice") return claudeChoiceAnswer(held.request, ask, answer);
+    if (ask.kind === "form") return claudeFormAnswer(ask, answer);
+    if (ask.kind === "plan") return claudePlanAnswer(answer);
+    return claudeAnswer(answer.decision);
+  }
+
+  /// Claude Code's question, by the hook it came through: a permission, a plan or an edit by the
+  /// one it runs before asking, questions to choose among by the one before any tool, and a form by
+  /// the one its servers' requests run.
+  private asked(header: z.infer<typeof HEADER>, request: unknown, wait: Wait): Ask | undefined {
+    if (header.harness !== "claude") return undefined;
+    const id = randomUUID();
+    if (header.event === "PermissionRequest") return claudeAsk(request, id, Date.now(), wait);
+    if (header.event === "PreToolUse") return claudeChoice(request, id, Date.now(), wait);
+    if (header.event === "Elicitation") return claudeForm(request, id, Date.now(), wait);
+    return undefined;
+  }
+
+  private release(id: string, decision: Answer["decision"] | "gone"): void {
     const held = this.held.get(id);
     if (!held) return;
     for (const timer of held.timers) clearTimeout(timer);
@@ -181,21 +219,23 @@ export class HookListener {
   }
 
   private heard(socket: Socket, header: z.infer<typeof HEADER>, payload: string): void {
-    const wait = Math.max(0, Math.min(this.askFor, header.wait * 1000 - MARGIN));
-    const asking = header.harness === "claude" && header.event === "PermissionRequest" && wait > 0;
+    const most = header.wait * 1000 - MARGIN;
     const room = this.held.size < this.mostHeld;
-    const ask = asking && room ? claudeAsk(parsed(payload), randomUUID(), Date.now(), wait) : undefined;
+    const wait = (kind: Kind) => Math.max(0, Math.min(kind === "permission" ? this.askFor : this.readFor, most));
+    const request = parsed(payload);
+    const ask = most > 0 && room ? this.asked(header, request, wait) : undefined;
     if (!ask) {
       socket.end();
       return;
     }
+    const held = ask.until - ask.at;
     const timers = [
-      setTimeout(() => this.answer(ask.id, "ask"), wait),
+      setTimeout(() => this.answer(ask.id, { decision: "ask" }), held),
       setTimeout(() => {
-        if (!this.held.get(ask.id)?.seen) this.answer(ask.id, "ask");
-      }, Math.min(this.seenWithin, wait)),
+        if (!this.held.get(ask.id)?.seen) this.answer(ask.id, { decision: "ask" });
+      }, Math.min(this.seenWithin, held)),
     ];
-    this.held.set(ask.id, { ask, socket, timers, seen: false });
+    this.held.set(ask.id, { ask, request, socket, timers, seen: false });
     const gone = () => {
       socket.destroy();
       this.release(ask.id, "gone");

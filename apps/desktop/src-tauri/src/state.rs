@@ -118,11 +118,11 @@ fn log_event(sidecar: &str, name: &str, data: &Value) {
     }
 }
 
-/// What of an event the log keeps: all of it, except a coding agent's question, which carries the
-/// command the agent would run, and how a turn went, read from the session's own transcript: both
-/// are the agent's to keep, not this log's. Nor what one of Kyuren's own questions would carry,
-/// which may be the user's notes, nor what a turn says, which may be their day: that is the
-/// conversation's to keep.
+/// What of an event the log keeps: all of it, except a coding agent's question, which carries what
+/// the agent would run, change or plan, or a form, and how a turn went, read from the session's own
+/// transcript: both are the agent's to keep, not this log's. Nor what one of Kyuren's own questions
+/// would carry, which may be the user's notes, nor what a turn says, which may be their day: that is
+/// the conversation's to keep.
 fn logged<'a>(name: &str, data: &'a Value) -> std::borrow::Cow<'a, Value> {
     match name {
         "coding.permission" => std::borrow::Cow::Owned(json!({ "id": data.get("id") })),

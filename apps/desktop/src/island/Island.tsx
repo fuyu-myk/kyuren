@@ -6,7 +6,7 @@ import { drawFace } from "@/island/drawFace";
 import { atRest, FACE, stepFace } from "@/island/face";
 import { INITIAL, next, TABS, type Event, type Island as State, type Mode, type Tab } from "@/island/fsm";
 import type { Clock, Playing, Snapshot } from "@/island/glance";
-import { waitingBesides, type AgentAsk, type Decision } from "@/island/asks";
+import { waitingBesides, type AgentAsk, type Decision, type Extra } from "@/island/asks";
 import { toldOf, type Finished } from "@/island/done";
 import { Harness } from "@/island/Harness";
 import { TabIcon, TITLES } from "@/island/icons";
@@ -518,10 +518,10 @@ export function Island() {
 
   // An answer that cannot be delivered leaves the agent to ask in its own window when its wait ends,
   // and one that arrives after the agent stopped waiting is said, not taken as given.
-  const answerAsk = (id: string, decision: Decision) => {
+  const answerAsk = (id: string, decision: Decision, extra?: Extra) => {
     setAsks((was) => was.filter((one) => one.id !== id));
     dispatch({ type: "answered", id });
-    void command<{ answered: boolean }>("coding_answer", { id, decision })
+    void command<{ answered: boolean }>("coding_answer", { id, decision, ...extra })
       .then((got) => {
         if (got && !got.answered && decision !== "ask") setAskNote("That one had already gone back, to be asked in its own window.");
       })
@@ -658,6 +658,8 @@ export function Island() {
             onAnswer={(id, allow) => void answer(id, allow)}
             onAsk={answerAsk}
             onReview={() => void command("island_reveal")}
+            onReach={() => void command("island_focus", { on: true })}
+            onLeave={() => void command("island_focus", { on: false })}
           />
         ) : null}
         {state.tab === "work" ? <Work steps={steps} /> : null}

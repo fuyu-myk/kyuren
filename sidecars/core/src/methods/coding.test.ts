@@ -11,3 +11,12 @@ test("where a session runs is told only of a session the watch knows to be runni
   assert.deepEqual(await where({ session: "s2" }), { pid: null }, "a session merely named");
   assert.deepEqual(await where({ session: 4242 }), { pid: null });
 });
+
+test("an answer that is no answer at all hands its question back, as one that does not fit would", async () => {
+  const given: Array<[string, unknown]> = [];
+  const hooks = { answer: (id: string, answer: unknown) => (given.push([id, answer]), true) } as unknown as HookListener;
+  const answer = codingHandlers({} as CodingWatch, hooks, "/nowhere/kyuren", "/nowhere/home")["coding.answer"];
+  assert.deepEqual(await answer({ id: "q1", decision: "allow", content: { title: "x".repeat(2_001) } }), { answered: false });
+  assert.deepEqual(given, [["q1", { decision: "ask" }]]);
+  assert.deepEqual(await answer({ id: "q2", decision: "allow" }), { answered: true });
+});

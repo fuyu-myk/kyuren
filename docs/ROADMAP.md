@@ -473,7 +473,8 @@ cursor is. A hover opens it, and the cursor leaving, a press outside it or anoth
 forward folds it; a question, a notice or a summons holds it out only until the cursor has been to
 it. Its tabs, each one switchable off and arranged by dragging in settings: voice and answers, with
 the icosahedron and a composer; the questions waiting on the user, Kyuren's own and Claude Code's,
-which the relay brings; work in progress; the coding agents running on the Mac, a Claude Code
+which the relay brings: its permissions, questions to choose among, plans, edits and its servers'
+forms, each opened whole and answered there; work in progress; the coding agents running on the Mac, a Claude Code
 session's steps opening whole; a glance of widgets; shortcuts that run playbooks; a shelf of files
 on their way somewhere; and notices. Each window may call only the commands its own code calls, and
 the reader none at all.
@@ -488,11 +489,14 @@ the reader none at all.
    let go of answered questions, On the built app; not yet seen since.*
 3. Outside what the island draws, a click reaches what is beneath it, the menu bar included.
    *Tested, `src-tauri/src/island.rs`; not yet seen.*
-4. A Claude Code permission prompt shown whole is answered on the island and Claude Code does as
-   answered; one the island has not taken within three seconds, or has not answered in time, goes
-   back to Claude Code's own prompt. *Recorded for allow, The Claude Code relay, live. Which
-   questions are shown whole is tested, `coding/asked.test.ts`, and handing one back, on timings
-   of the test's own, `coding/hooks.test.ts`.*
+4. A Claude Code permission prompt, questions to choose among, a plan, an edit or a server's form,
+   shown whole, is answered on the island and Claude Code does as answered; one the island has not
+   taken within three seconds, has not answered in time, or was given an answer that does not fit
+   it, goes back to Claude Code's own prompt. *Recorded for allow on a permission, The Claude Code
+   relay, live; the other kinds not yet seen. Which questions are shown whole is tested,
+   `coding/asked.test.ts`, `coding/choices.test.ts` and `coding/forms.test.ts`; what goes back for
+   each, and handing one back, on timings of the test's own, `coding/hooks.test.ts`; answering each
+   on the island, `e2e/island.spec.ts`.*
 5. Each window may call exactly the commands its own code calls, and the reader none. *Recorded
    in part, On the built app: nothing failed for want of a permission. That each may call exactly
    its own, and the reader none, is tested, `src/windows.test.ts`.*

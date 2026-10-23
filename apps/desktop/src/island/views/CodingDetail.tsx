@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { type Detail, type Step, type StepDetail, type TestRun } from "@/island/steps";
 import { DOT, doing, harnessName, type Session } from "@/island/views/Coding";
+import { BackIcon } from "@/island/icons";
 import { CodingStep, StepList } from "@/island/views/CodingStep";
 
 /// Reads one step, of the session or of an agent it handed work to, with all it printed if `whole`:
@@ -33,14 +34,6 @@ function counted(tests: TestRun): string {
 
 function titleOf(one: Step): string {
   return `${one.verb} ${one.target}`;
-}
-
-function BackIcon() {
-  return (
-    <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true">
-      <path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
 }
 
 /// One step opened, read again while it is still going.
@@ -158,7 +151,10 @@ export function CodingDetail({ session, detail, onBack, onReveal, load, live }: 
                     setTrail([]);
                   }}
                 >
-                  <span className="path">{one.path}</span>
+                  {/* Cut from its start, it is still read left to right: a leading dot stays where it is. */}
+                  <span className="path">
+                    <bdi dir="ltr">{one.path}</bdi>
+                  </span>
                   <span className="plus">+{one.added}</span>
                   <span className="minus">−{one.removed}</span>
                 </button>
