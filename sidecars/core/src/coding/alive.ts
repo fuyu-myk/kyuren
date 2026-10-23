@@ -4,11 +4,12 @@ import type { Alive } from "#coding/claude.ts";
 
 const run = promisify(execFile);
 
-/// When a process began, written as the session files write it: ps's start time, in UTC.
+/// When a process began, written as the session files write it: ps's start time, in UTC and in the
+/// plain locale, since in the user's own a date may put the day before the month and never match.
 async function startOf(pid: number): Promise<string | undefined> {
   try {
     const { stdout } = await run("/bin/ps", ["-o", "lstart=", "-p", String(pid)], {
-      env: { ...process.env, TZ: "UTC" },
+      env: { ...process.env, TZ: "UTC", LC_ALL: "C" },
       timeout: 2_000,
     });
     return stdout.trim() || undefined;
