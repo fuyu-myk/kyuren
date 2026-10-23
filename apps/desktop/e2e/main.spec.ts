@@ -129,3 +129,22 @@ test("a playbook run by a slash is stopped by the name the window gave it", asyn
   expect(stopped?.args.id).toBe(invoked?.args.id);
   await expect(page.getByText("stopped before it finished")).toHaveCount(0);
 });
+
+test("a question being waited on is still there, and still stoppable, after going to another pane and back", async ({ page }) => {
+  const rail = page.locator(".rail");
+  await page.locator(".composer textarea").fill("look into why the build fails");
+  await page.getByRole("button", { name: "send" }).click();
+  await expect(page.getByRole("button", { name: "stop" })).toBeVisible();
+
+  await rail.getByRole("button", { name: "research" }).click();
+  await expect(page.getByRole("button", { name: "send" })).toBeVisible();
+  await rail.getByRole("button", { name: "chat" }).click();
+
+  await expect(page.getByText("look into why the build fails")).toBeVisible();
+  const stop = page.getByRole("button", { name: "stop" });
+  await expect(stop).toBeVisible();
+  await stop.click();
+  await expect(page.getByRole("button", { name: "send" })).toBeVisible();
+  const [asked] = await calledWith(page, "ask");
+  expect((await calledWith(page, "stop_turn")).map((one) => one.args)).toEqual([{ id: asked?.args.id }]);
+});

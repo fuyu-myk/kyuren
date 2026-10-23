@@ -262,7 +262,8 @@ comms and calendar, knowledge and memory, development and projects, and research
 a consolidating surface listing every session across every pane by recency, able to invoke anything
 any pane can, and a slash command in any pane does the same. One session store, each session
 belonging to its pane. Session persistence and resumption, each conversation keeping the route
-chosen for it.
+chosen for it. A pane once opened keeps its conversation while another is shown, a turn still being
+answered and its stop included.
 
 **Gate.**
 1. A session started in a pane appears in the hub and can be resumed from either surface with full

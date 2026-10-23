@@ -445,3 +445,8 @@ body {
 .view {
   min-height: 0;
 }
+
+.place {
+  height: 100%;
+  min-height: 0;
+}

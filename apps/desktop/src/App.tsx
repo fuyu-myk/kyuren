@@ -10,6 +10,9 @@ type Where = Pane | "system";
 /// permission over the top of all of it.
 export function App() {
   const [where, setWhere] = useState<Where>("chat");
+  // A place once visited stays as it was while another is shown, a question still being waited on
+  // with its stop included.
+  const [visited, setVisited] = useState<Pane[]>(["chat"]);
   const [questions, setQuestions] = useState<PermissionRequest[]>([]);
   const [trouble, setTrouble] = useState<string>();
 
@@ -31,7 +34,10 @@ export function App() {
     return () => void pending.then((unlisten) => unlisten());
   }, []);
 
-  const go = useCallback((place: Where) => setWhere(place), []);
+  const go = useCallback((place: Where) => {
+    setWhere(place);
+    if (place !== "system") setVisited((was) => (was.includes(place) ? was : [...was, place]));
+  }, []);
 
   const answer = (id: string, allow: boolean) => {
     setQuestions((was) => was.filter((one) => one.id !== id));
@@ -64,7 +70,12 @@ export function App() {
       </nav>
 
       <section className="view">
-        {where === "system" ? <System /> : <Place key={where} pane={where} />}
+        {where === "system" ? <System /> : null}
+        {visited.map((pane) => (
+          <div key={pane} className="place" hidden={where !== pane}>
+            <Place pane={pane} shown={where === pane} />
+          </div>
+        ))}
       </section>
 
       {asking ? (

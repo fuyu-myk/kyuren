@@ -33,6 +33,8 @@ import {
 
 type PlaceProps = {
   pane: Pane;
+  /// Whether this place is the one on screen. It stays as it was while another is shown.
+  shown: boolean;
 };
 
 /// What was said, and for an answer, what it reached for on the way.
@@ -69,7 +71,7 @@ function stoodIn(turns: Turn[]): Stood | undefined {
   return undefined;
 }
 
-export function Place({ pane }: PlaceProps) {
+export function Place({ pane, shown }: PlaceProps) {
   const about = paneNamed(pane);
   const [known, setKnown] = useState<Capability[]>([]);
   const [canRun, setCanRun] = useState<Asked[]>([]);
@@ -98,9 +100,10 @@ export function Place({ pane }: PlaceProps) {
     }
   }, [pane]);
 
+  // Read again each time it comes back, since a conversation may have begun elsewhere meanwhile.
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (shown) void load();
+  }, [shown, load]);
 
   useEffect(() => {
     void capabilities().then(setKnown).catch(() => setKnown([]));
@@ -365,14 +368,14 @@ export function Place({ pane }: PlaceProps) {
             </ul>
           </section>
 
-          {pane === "knowledge" ? (
+          {pane === "knowledge" && shown ? (
             <section>
               <h3>what Kyuren has forged</h3>
               <Forge />
             </section>
           ) : null}
 
-          {pane === "development" ? (
+          {pane === "development" && shown ? (
             <section>
               <h3>where everything stands</h3>
               <Board onAsk={(about) => void send(`Where did I stop on ${about.name}?`)} />
