@@ -27,6 +27,12 @@ const VIA: Record<string, string> = {
   cli: "a terminal",
 };
 
+/// Whether a session runs in the Claude app, which stops its process between uses and keeps it, and
+/// answers its prompts in its own window.
+export function inApp(one: Coding): boolean {
+  return one.harness === "claude" && one.via === VIA["claude-desktop"];
+}
+
 /// The harness's own helpers, which keep the same kind of file but are no one's session.
 const HELPERS = new Set(["daemon", "daemon-worker", "spare"]);
 

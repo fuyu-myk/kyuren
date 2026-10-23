@@ -242,3 +242,19 @@ test("a form from a server is answered with its values, or declined", async () =
   assert.deepEqual(JSON.parse(await second.answer).hookSpecificOutput, { hookEventName: "Elicitation", action: "decline" });
   await hooks.stop();
 });
+
+test("a plan from a session in the Claude app is left to the app, which approves plans and keeps the mode itself", async () => {
+  const { transport } = told();
+  const path = socketPath();
+  const hooks = new HookListener(transport, path, { inApp: (session) => session === "s-app", seenWithin: 60_000 });
+  await hooks.start();
+  const plan = { ...BASH, tool_name: "ExitPlanMode", tool_input: { plan: "## Refactor\n1. Extract the parser." } };
+  const fromApp = relay(path, PERMISSION, { ...plan, session_id: "s-app" }).answer;
+  const told1 = await Promise.race([fromApp, new Promise((resolve) => setTimeout(() => resolve("still held"), 1_000))]);
+  assert.equal(told1, "", "nothing said at once, so the app shows its own");
+  const fromTerminal = relay(path, PERMISSION, { ...plan, session_id: "s-term" });
+  await until(() => hooks.pending().length === 1);
+  assert.equal(hooks.pending()[0]?.kind, "plan", "from a terminal it comes to the island");
+  await hooks.stop();
+  assert.equal(await fromTerminal.answer, "");
+});

@@ -67,8 +67,8 @@ const scheduler = new Scheduler(transport, root, scheduledStarter(sharedGate(), 
 for (const [method, handler] of Object.entries(ambientHandlers(ambient, scheduler))) {
   dispatcher.register(method, handler);
 }
-const hooks = new HookListener(transport, hookSocket(root), { changed: () => coding.nudge() });
-const coding = new CodingWatch(transport, homedir(), processAlive(), () => hooks.pending());
+const hooks = new HookListener(transport, hookSocket(root), { changed: () => coding.nudge(), inApp: (session) => coding.inApp(session) });
+const coding: CodingWatch = new CodingWatch(transport, homedir(), processAlive(), () => hooks.pending(), Date.now, join(root, "coding", "kept.json"));
 for (const [method, handler] of Object.entries(codingHandlers(coding, hooks, root))) {
   dispatcher.register(method, handler);
 }
@@ -80,7 +80,7 @@ for (const [method, handler] of Object.entries(mediaHandlers())) {
 if (!process.env.KYUREN_DRIVEN) {
   ambient.start();
   scheduler.start();
-  coding.start();
+  void coding.start();
   // Without the line open, a hook finds no one and its agent asks in its own way, as without Kyuren.
   hooks.start().catch((failure: unknown) => transport.send({ event: "coding.hooks.failed", data: { reason: String(failure) } }));
 }

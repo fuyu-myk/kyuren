@@ -1,15 +1,16 @@
 import { watch, type FSWatcher } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fromActivity, IDLE_FOR, type Trail } from "#coding/activity.ts";
 import { waitingFor, type Ask } from "#coding/asked.ts";
 import { processAlive } from "#coding/alive.ts";
-import { claudeSessions, type Alive } from "#coding/claude.ts";
+import { claudeSessions, inApp as isAppSession, type Alive } from "#coding/claude.ts";
 import { ordered, type Coding } from "#coding/session.ts";
 import { Turns } from "#coding/turns.ts";
 import { folderOf } from "#coding/where.ts";
 import type { Transport } from "#transport.ts";
+import { z } from "zod";
 
 /// How often states are looked at again without anything having been written, so a session that
 /// stops writing is seen to go idle, and how long writes are let settle before the island is told.
@@ -17,6 +18,25 @@ const SWEEP = 5_000;
 const SETTLE = 250;
 /// A project folder that could not be read back is tried again after this, not given up on.
 const RETRY = 5 * 60_000;
+/// How long a session of the Claude app is kept, resting, after it was last used.
+const KEPT_FOR = 24 * 60 * 60_000;
+/// How often a kept session's last use moving on is written down, when nothing else changed.
+const SAVE_EVERY = 60_000;
+
+/// The Claude app's sessions as written down between runs: only what the list shows of them.
+const KEPT = z
+  .array(
+    z.object({
+      id: z.string().min(1).max(200),
+      harness: z.literal("claude"),
+      project: z.string().max(400),
+      title: z.string().max(400).optional(),
+      started: z.number().optional(),
+      active: z.number(),
+      via: z.string().max(100).optional(),
+    }),
+  )
+  .max(500);
 
 /// The harnesses known only by their files being written to. Claude Code is here for sessions its
 /// own record does not cover, from versions that keep none.
@@ -54,6 +74,12 @@ export class CodingWatch {
   /// Every session the record has shown since watching began. Its file is gone once it ends, and
   /// its transcript, written to at the end, must not bring it back.
   private readonly recorded = new Set<string>();
+  /// The Claude app's sessions seen running. The app stops a session's process between uses and
+  /// keeps the session, so each stays, resting, until a day passes without its being used.
+  private readonly kept = new Map<string, Coding>();
+  private readonly keptIn: string | undefined;
+  private keptChanged = false;
+  private keptSaved = 0;
   /// What is watched, by folder: harnesses installed later, or a watcher that failed, are taken up
   /// again on the next sweep.
   private readonly watchers = new Map<string, FSWatcher>();
@@ -62,8 +88,16 @@ export class CodingWatch {
   private sessions: Coding[] = [];
   private sent = "";
 
-  constructor(transport: Transport, home: string = homedir(), alive: Alive = processAlive(), asks: () => Ask[] = () => [], clock: () => number = Date.now) {
+  constructor(
+    transport: Transport,
+    home: string = homedir(),
+    alive: Alive = processAlive(),
+    asks: () => Ask[] = () => [],
+    clock: () => number = Date.now,
+    keptIn?: string,
+  ) {
     this.transport = transport;
+    this.keptIn = keptIn;
     this.alive = alive;
     this.asks = asks;
     this.clock = clock;
@@ -72,8 +106,9 @@ export class CodingWatch {
     this.registry = join(home, ".claude", "sessions");
   }
 
-  start(): void {
+  async start(): Promise<void> {
     this.stop();
+    await this.load();
     this.followAll();
     this.timer = setInterval(() => {
       this.followAll();
@@ -94,16 +129,22 @@ export class CodingWatch {
     return this.sessions;
   }
 
+  /// Whether a session runs in the Claude app, as its record says.
+  inApp(session: string): boolean {
+    return this.sessions.some((one) => one.id === session && isAppSession(one));
+  }
+
   async refresh(): Promise<void> {
     const now = this.clock();
     for (const [path, at] of this.recent) if (now - at > IDLE_FOR) this.recent.delete(path);
     const recorded = await claudeSessions(this.registry, this.alive);
     for (const one of recorded) this.recorded.add(one.id);
+    const resting = this.resting(recorded, now);
     await this.learnProjects();
     // A session whose question is held on the island waits on the user, whatever its own record
     // says while the question is held from its prompt.
     const asking = new Map(this.asks().map((ask) => [ask.session, ask]));
-    const found = [...recorded, ...fromActivity(this.trails, this.recent, now, this.projects, this.recorded)];
+    const found = [...recorded, ...resting, ...fromActivity(this.trails, this.recent, now, this.projects, this.recorded)];
     const sessions = ordered(
       found.map((one) => {
         const ask = asking.get(one.id);
@@ -118,6 +159,67 @@ export class CodingWatch {
       this.transport.send({ event: "coding.sessions", data: { sessions } });
     }
     for (const one of ended) this.transport.send({ event: "coding.done", data: one });
+  }
+
+  /// The Claude app's sessions not running now but used within the day, resting; the rest let go.
+  private resting(running: Coding[], now: number): Coding[] {
+    for (const one of running.filter(isAppSession)) {
+      const was = this.kept.get(one.id);
+      if (!was || was.title !== one.title) this.keptChanged = true;
+      this.kept.set(one.id, one);
+    }
+    const ids = new Set(running.map((one) => one.id));
+    const resting: Coding[] = [];
+    for (const [id, one] of this.kept) {
+      if (ids.has(id)) continue;
+      if (now - one.active > KEPT_FOR) {
+        this.kept.delete(id);
+        this.keptChanged = true;
+        continue;
+      }
+      resting.push({ id, harness: one.harness, project: one.project, ...(one.title ? { title: one.title } : {}), ...(one.started ? { started: one.started } : {}), state: "idle", active: one.active, ...(one.via ? { via: one.via } : {}) });
+    }
+    if (this.keptChanged || now - this.keptSaved >= SAVE_EVERY) void this.save(now);
+    return resting;
+  }
+
+  /// The kept sessions written down, so a restart of Kyuren keeps them too. One that could not be
+  /// written is still kept while Kyuren runs, and written with the next change.
+  private async save(now: number): Promise<void> {
+    if (!this.keptIn) return;
+    this.keptChanged = false;
+    this.keptSaved = now;
+    const kept = [...this.kept.values()].map(({ id, harness, project, title, started, active, via }) => ({ id, harness, project, title, started, active, via }));
+    const temporary = `${this.keptIn}.${process.pid}.tmp`;
+    try {
+      await mkdir(dirname(this.keptIn), { recursive: true });
+      await writeFile(temporary, JSON.stringify(kept), { mode: 0o600 });
+      await rename(temporary, this.keptIn);
+    } catch {
+      this.keptChanged = true;
+    }
+  }
+
+  /// The sessions kept before a restart, those still within their day; a file that does not read
+  /// as one is begun again from what is seen.
+  private async load(): Promise<void> {
+    if (!this.keptIn) return;
+    const text = await readFile(this.keptIn, "utf8").catch(() => undefined);
+    if (text === undefined) return;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      return;
+    }
+    const kept = KEPT.safeParse(parsed);
+    if (!kept.success) return;
+    const now = this.clock();
+    for (const one of kept.data) {
+      if (now - one.active > KEPT_FOR) continue;
+      this.kept.set(one.id, { ...one, state: "idle" });
+      this.recorded.add(one.id);
+    }
   }
 
   /// Something changed that the sessions are shown with, such as a question held or let go.

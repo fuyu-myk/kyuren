@@ -514,53 +514,60 @@ services' own image hosts and handed to the island as images, since its pages lo
 the web.
 
 **Coding agents.** The coding tab lists every session of a coding agent running on this Mac,
-however long it has been idle, scrolling past what fits, what waits on the user first: the project, the session's own title, whether it is working, waiting
-(and for what) or idle, which harness, and where it was started. The core watches what each
-harness leaves on disk, and reads what was said in a session only once the user opens it, or,
-for its counts alone, the turn a Claude Code session has just finished. Claude Code keeps one small
-file per running session under `~/.claude/sessions`, saying whether it is busy, idle or waiting
-and for what; a file is believed only while its process is alive and began when the file says
-it did, since process numbers are reused. A turn ended with a command still running behind it is
-working, as Claude Code shows it, and the harness's own helper processes are not sessions. Harnesses that keep no such record, Codex, Gemini,
-Antigravity and pi, and Claude Code versions before it, are known only by their session files
-being written to: lately written is working, less lately idle, long ago not shown. Claude Code's
-own transcripts count only while they are being written, and never for a session its record has
-shown, since the record says when a session ends and a transcript written at the end does not. Their paths
-are taken from the harnesses' documentation and were not run here. An agent newly waiting on the
-user glances out of the notch like a notice, counts in the waiting sign, and makes its tab the
-one a hover opens. A Claude Code session that comes back to idle after working at least half a
-minute glances out too, the peek widening to tell it in a line either side of the notch: whose it
-was, then how its tests went, green or red, and how many files it changed, or how long it worked
-when there is nothing to count; its row says the same for ten minutes. Only that turn is read for
-it, from where the session's transcript stood while it was idle, and only its counts are told;
-the event log keeps the session's id alone. Knowing when Cursor, Hermes or OpenCode waits needs hooks installed in each
-harness's own configuration, which Kyuren does only with the user's consent.
+however long it has been idle, scrolling past what fits, what waits on the user first: the project,
+the session's own title, whether it is working, waiting (and for what) or idle, which harness, and
+where it was started. The core watches what each harness leaves on disk, and reads what was said in
+a session only once the user opens it, or, for its counts alone, the turn a Claude Code session has
+just finished. Claude Code keeps one small file per running session under `~/.claude/sessions`,
+saying whether it is busy, idle or waiting and for what; a file is believed only while its process
+is alive and began when the file says it did, since process numbers are reused. Its start is read
+in the plain locale, as the file writes it, since in the user's own a date may put the day before
+the month, and then no file would ever be believed. The Claude app stops a session's process
+between uses and keeps the session, so a session of the app once seen running stays in the list,
+idle, until a day passes without its being used, written down in `~/.kyuren/coding/kept.json` so
+that a restart of Kyuren keeps it too; a session from a terminal or an editor ends with its
+process. A turn ended with a command still running behind it is working, as Claude Code shows it,
+and the harness's own helper processes are not sessions. Harnesses that keep no such record, Codex,
+Gemini, Antigravity and pi, and Claude Code versions before it, are known only by their session
+files being written to: lately written is working, less lately idle, long ago not shown. Claude
+Code's own transcripts count only while they are being written, and never for a session its record
+has shown, since the record says when a session ends and a transcript written at the end does not.
+Their paths are taken from the harnesses' documentation and were not run here. An agent newly
+waiting on the user glances out of the notch like a notice, counts in the waiting sign, and makes
+its tab the one a hover opens. A Claude Code session that comes back to idle after working at least
+half a minute glances out too, the peek widening to tell it in a line either side of the notch:
+whose it was, then how its tests went, green or red, and how many files it changed, or how long it
+worked when there is nothing to count; its row says the same for ten minutes. Only that turn is
+read for it, from where the session's transcript stood while it was idle, and only its counts are
+told; the event log keeps the session's id alone. Knowing when Cursor, Hermes or OpenCode waits
+needs hooks installed in each harness's own configuration, which Kyuren does only with the user's
+consent.
 
 A Claude Code session opened from the list shows what it is doing: the task it was last given, its
 branch, how its tests last went, counted from what the command that ran them printed, a failed run
 included, the files it has changed with the lines put in and taken out, its own edits and what its
-commands were seen to change alike, and beside them every step it has taken, newest first, with
-how each went. A step opens to what it did: a command whole, however long, and the end of what it
+commands were seen to change alike, and beside them every step it has taken, newest first, with how
+each went. A step opens to what it did: a command whole, however long, and the end of what it
 printed, all of it on asking, with how it ended and any files it changed, or, left running in the
 background, only that it went on there until the harness says how it ended; an edit's change; the
 lines a read read; and for work handed to an agent, what the agent was asked and its own steps,
-found by the step that started it while it is still working, each of which opens the same way.
-The test result opens the run that gave it, and a file the steps that changed it. At the head of
-its steps is what the agent itself said last, the question it waits on or how it summed up, three
-lines and the rest on a click; its line is found as the transcript is read, without reading what
-it says, and read alone when it is shown. A button brings forward the app the session runs in,
-Claude's desktop app or an editor, found by climbing from the session's own process, which the
-core gives only for a session it knows to be running, to the nearest app above it, and opened
-through Launch Services as its icon in the Dock would be, since an app not in front cannot bring
-another forward. Claude's documented links start a session but cannot open one already running,
-so the app comes forward, not the session within it. This alone
-reads a session's transcript: the open session's only, the one written last where a renamed
-project left two, read whole once and then only for what is added to it, a megabyte at a time;
-each look sends only the steps added or finished since, and a step's own lines are read from where
-they lie when it is opened. Nothing read is written anywhere, and what was read goes as another
-session is opened. Only the island may ask for it, only Claude Code's sessions open, and the
-island, opened afresh rather than back where the user was, shows the list, where a session newly
-waiting is.
+found by the step that started it while it is still working, each of which opens the same way. The
+test result opens the run that gave it, and a file the steps that changed it. At the head of its
+steps is what the agent itself said last, the question it waits on or how it summed up, three lines
+and the rest on a click; its line is found as the transcript is read, without reading what it says,
+and read alone when it is shown. A button brings forward the app the session runs in, Claude's
+desktop app or an editor, found by climbing from the session's own process, which the core gives
+only for a session it knows to be running, to the nearest app above it, or the Claude app itself
+for one of its sessions resting without a process, and opened through Launch Services as its icon
+in the Dock would be, since an app not in front cannot bring another forward. Claude's documented
+links start a session but cannot open one already running, so the app comes forward, not the
+session within it. This alone reads a session's transcript: the open session's only, the one
+written last where a renamed project left two, read whole once and then only for what is added to
+it, a megabyte at a time; each look sends only the steps added or finished since, and a step's own
+lines are read from where they lie when it is opened. Nothing read is written anywhere, and what
+was read goes as another session is opened. Only the island may ask for it, only Claude Code's
+sessions open, and the island, opened afresh rather than back where the user was, shows the list,
+where a session newly waiting is.
 
 **Answering from the island.** Claude Code can bring what it asks the user to the island: a
 permission, questions to choose among, a plan to approve, an edit, and a form one of its servers
@@ -591,6 +598,8 @@ characters of text, every line wrapped rather than cut. Its path must be given w
 with no step back or in place, and it is shown whole where the write would land with its links
 followed, a new file in a linked folder included; a link that leads nowhere goes back. A notebook's
 cells and a plugin's arguments are what matter in theirs, and the island does not show them. A plan
+from a session in the Claude app goes to the app's own window: the app approves a plan and keeps
+the mode itself, and hears nothing of one approved on the island, as was seen when one was. A plan
 comes as the Markdown it was written in, each link with where it leads said beside it, up to 20,000
 characters, unless it also asks for permissions, which before Claude Code 2.1.205 approving it
 would grant unseen: approved, Claude Code goes on asking before each edit or accepting them, as

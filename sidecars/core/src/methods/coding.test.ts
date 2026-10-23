@@ -20,3 +20,9 @@ test("an answer that is no answer at all hands its question back, as one that do
   assert.deepEqual(given, [["q1", { decision: "ask" }]]);
   assert.deepEqual(await answer({ id: "q2", decision: "allow" }), { answered: true });
 });
+
+test("a Claude app session resting between uses has no process, and is said to be in the app instead", async () => {
+  const watch = { list: () => [{ id: "s2", harness: "claude", project: "kyuren", state: "idle", active: 0, via: "the desktop app" }] } as unknown as CodingWatch;
+  const where = codingHandlers(watch, {} as HookListener, "/nowhere/kyuren", "/nowhere/home")["coding.where"];
+  assert.deepEqual(await where({ session: "s2" }), { pid: null, app: "claude" });
+});

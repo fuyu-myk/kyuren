@@ -90,3 +90,45 @@ test("a turn that ends after working a while is told of once, with how it went",
   const told = sent.filter((message) => (message as { event?: string }).event === "coding.done").map((message) => (message as { data: unknown }).data);
   assert.deepEqual(told, [{ session: "s9", project: "kyuren", worked: MIN_TURN, outcome: { tests: null, files: 1 } }]);
 });
+
+test("a session of the Claude app stays, resting, after the app stops its process, until a day passes unused, and through a restart", async () => {
+  const home = await mkdtemp(join(tmpdir(), "kyuren-home-"));
+  const registry = join(home, ".claude", "sessions");
+  const kept = join(home, ".kyuren", "coding", "kept.json");
+  await mkdir(registry, { recursive: true });
+  let now = Date.UTC(2026, 9, 23, 9, 0);
+  const entry = (pid: number, sessionId: string, entrypoint: string) => ({ pid, sessionId, cwd: "/x/kyuren", entrypoint, status: "idle", statusUpdatedAt: now });
+  await writeFile(join(registry, "901.json"), JSON.stringify(entry(901, "app", "claude-desktop")));
+  await writeFile(join(registry, "902.json"), JSON.stringify(entry(902, "term", "cli")));
+  let running = new Set([901, 902]);
+  const quiet = { send: () => {}, listen: () => {} };
+  const watch = new CodingWatch(quiet, home, async (pid) => running.has(pid), () => [], () => now, kept);
+  await watch.refresh();
+  assert.deepEqual(watch.list().map((one) => one.id).sort(), ["app", "term"]);
+
+  running = new Set();
+  now += 60 * 60_000;
+  await watch.refresh();
+  assert.deepEqual(watch.list().map((one) => [one.id, one.state, one.via, one.pid]), [["app", "idle", "the desktop app", undefined]], "the terminal's session ended with its process");
+
+  const restarted = new CodingWatch(quiet, home, async () => false, () => [], () => now, kept);
+  await restarted.start();
+  restarted.stop();
+  await restarted.refresh();
+  assert.deepEqual(restarted.list().map((one) => one.id), ["app"], "kept through a restart");
+
+  now += 24 * 60 * 60_000;
+  await restarted.refresh();
+  assert.deepEqual(restarted.list(), [], "a day without use, and it goes");
+});
+
+test("whether a session runs in the Claude app is told by its record", async () => {
+  const home = await mkdtemp(join(tmpdir(), "kyuren-home-"));
+  const registry = join(home, ".claude", "sessions");
+  await mkdir(registry, { recursive: true });
+  await writeFile(join(registry, "911.json"), JSON.stringify({ pid: 911, sessionId: "app", cwd: "/x/kyuren", entrypoint: "claude-desktop", status: "busy" }));
+  await writeFile(join(registry, "912.json"), JSON.stringify({ pid: 912, sessionId: "code", cwd: "/x/kyuren", entrypoint: "claude-vscode", status: "busy" }));
+  const watch = new CodingWatch({ send: () => {}, listen: () => {} }, home, async () => true);
+  await watch.refresh();
+  assert.deepEqual([watch.inApp("app"), watch.inApp("code"), watch.inApp("unknown")], [true, false, false]);
+});

@@ -46,12 +46,20 @@ fn app_at(pid: i32) -> Option<(String, String)> {
 pub fn reveal(pid: i32) -> Result<String, String> {
     let app = hosting(pid, parent_of, |at| app_at(at).is_some()).ok_or("the app the session runs in was not found")?;
     let (name, bundle) = app_at(app).ok_or("the app the session runs in has closed")?;
+    bring_forward(&name, &bundle)
+}
+
+/// The Claude app, which keeps a session resting between uses without a process of its own.
+pub const CLAUDE: (&str, &str) = ("Claude", "com.anthropic.claudefordesktop");
+
+/// Brings forward an app by how Launch Services knows it, opening it if it is not running.
+pub fn bring_forward(name: &str, bundle: &str) -> Result<String, String> {
     if !bundle.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-') {
         return Err(format!("{name} cannot be brought forward by name"));
     }
-    let opened = std::process::Command::new("/usr/bin/open").arg("-b").arg(&bundle).status().map_err(|failure| failure.to_string())?;
+    let opened = std::process::Command::new("/usr/bin/open").arg("-b").arg(bundle).status().map_err(|failure| failure.to_string())?;
     if opened.success() {
-        Ok(name)
+        Ok(name.to_string())
     } else {
         Err(format!("{name} could not be brought forward"))
     }

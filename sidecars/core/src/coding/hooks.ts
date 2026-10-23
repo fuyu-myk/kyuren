@@ -38,7 +38,16 @@ const HEADER = z.object({
 /// A question held, with the request it came in, which some answers carry back.
 type Held = { ask: Ask; request: unknown; socket: Socket; timers: NodeJS.Timeout[]; seen: boolean };
 
-type Options = { askFor?: number; readFor?: number; seenWithin?: number; mostHeld?: number; saying?: number; changed?: () => void };
+type Options = {
+  askFor?: number;
+  readFor?: number;
+  seenWithin?: number;
+  mostHeld?: number;
+  saying?: number;
+  changed?: () => void;
+  /// Whether a session runs in the Claude app.
+  inApp?: (session: string) => boolean;
+};
 
 function parsed(text: string): unknown {
   try {
@@ -71,6 +80,7 @@ export class HookListener {
   private readonly mostHeld: number;
   private readonly saying: number;
   private readonly changed: () => void;
+  private readonly inApp: (session: string) => boolean;
   private readonly held = new Map<string, Held>();
   private server: Server | undefined;
 
@@ -83,6 +93,7 @@ export class HookListener {
     this.mostHeld = options.mostHeld ?? MOST_HELD;
     this.saying = options.saying ?? SAYING;
     this.changed = options.changed ?? (() => {});
+    this.inApp = options.inApp ?? (() => false);
   }
 
   /// Listens in a folder of its own that only this user can look into, so the line is never open
@@ -167,7 +178,12 @@ export class HookListener {
   private asked(header: z.infer<typeof HEADER>, request: unknown, wait: Wait): Ask | undefined {
     if (header.harness !== "claude") return undefined;
     const id = randomUUID();
-    if (header.event === "PermissionRequest") return claudeAsk(request, id, Date.now(), wait);
+    if (header.event === "PermissionRequest") {
+      const ask = claudeAsk(request, id, Date.now(), wait);
+      // The Claude app approves a plan in its own window and keeps the mode itself, and hears
+      // nothing of one approved here, so its plans are approved there.
+      return ask?.kind === "plan" && this.inApp(ask.session) ? undefined : ask;
+    }
     if (header.event === "PreToolUse") return claudeChoice(request, id, Date.now(), wait);
     if (header.event === "Elicitation") return claudeForm(request, id, Date.now(), wait);
     return undefined;

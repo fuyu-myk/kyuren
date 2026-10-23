@@ -70,8 +70,14 @@ pub async fn coding_step(
 pub async fn coding_reveal(app: AppHandle, window: tauri::Window, session: String) -> Result<String, String> {
     only_from(&window, crate::island::LABEL)?;
     let found = core(&app)?.request("coding.where", json!({ "session": session }), PING_TIMEOUT).await.map_err(|failure| failure.to_string())?;
-    let pid = found.get("pid").and_then(Value::as_i64).and_then(|pid| i32::try_from(pid).ok()).ok_or("that session is not running")?;
-    tauri::async_runtime::spawn_blocking(move || crate::hosting::reveal(pid)).await.map_err(|failure| failure.to_string())?
+    if let Some(pid) = found.get("pid").and_then(Value::as_i64).and_then(|pid| i32::try_from(pid).ok()) {
+        return tauri::async_runtime::spawn_blocking(move || crate::hosting::reveal(pid)).await.map_err(|failure| failure.to_string())?;
+    }
+    if found.get("app").and_then(Value::as_str) != Some("claude") {
+        return Err("that session is not running".into());
+    }
+    let (name, bundle) = crate::hosting::CLAUDE;
+    tauri::async_runtime::spawn_blocking(move || crate::hosting::bring_forward(name, bundle)).await.map_err(|failure| failure.to_string())?
 }
 
 /// The questions coding agents are waiting on the island for, for an island that has just loaded.
