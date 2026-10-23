@@ -19,7 +19,9 @@ export type Tool<A> = {
   /// What running this call would actually do. Declared before the call runs, so the gate judges
   /// the effect rather than trusting the tool's name.
   describe: (args: A) => Action;
-  run: (args: A, signal: AbortSignal) => Promise<unknown>;
+  /// Given the call's own asking, so a question the tool puts while it runs is the call's. Without
+  /// it there is nobody to ask, and a question is a refusal.
+  run: (args: A, signal: AbortSignal, ask?: Ask) => Promise<unknown>;
   /// What it hands back is from the user's notes, whatever it read them through.
   notes?: true;
 };
@@ -71,7 +73,7 @@ export async function invoke<A>(
   }
 
   try {
-    const value = await tool.run(args, signal);
+    const value = await tool.run(args, signal, ask);
     if (exposure && notes) exposure.held = true;
     return { ok: true, value };
   } catch (cause) {

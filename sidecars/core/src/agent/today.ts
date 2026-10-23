@@ -1,10 +1,11 @@
 import { z } from "zod";
-import type { Ask, Tool } from "#agent/tool.ts";
+import type { Tool } from "#agent/tool.ts";
 import { asFacts, digest } from "#brief/digest.ts";
 import { asSpeech, type Scope } from "#brief/speech.ts";
 import { writeNote } from "#brief/vault.ts";
 import { gather } from "#connect/read.ts";
 import { spanAround, type Source } from "#connect/source.ts";
+import type { Action } from "#permission/action.ts";
 import type { Gate } from "#permission/gate.ts";
 
 export const todaySchema = z.object({
@@ -25,7 +26,6 @@ export function todayTool(
   back: number,
   forward: number,
   gate: Gate,
-  ask: Ask,
   vault: string,
 ): Tool<z.infer<typeof todaySchema>> {
   return {
@@ -36,8 +36,9 @@ export function todayTool(
       + "their day, what is due, what is coming up, or a morning brief.",
     describe: () => ({ tool: "today", effect: "read", target: "the day" }),
     notes: true,
-    run: async (args, signal) => {
-      const gathered = await gather(sources, spanAround(new Date(), back, forward), gate, (action, why) => ask(action, why, signal));
+    run: async (args, signal, ask) => {
+      const asking = ask ? (action: Action, why?: string) => ask(action, why, signal) : undefined;
+      const gathered = await gather(sources, spanAround(new Date(), back, forward), gate, asking);
       const summary = digest(gathered);
 
       // The day is written down as it is read. A brief that only spoke would leave nothing to look

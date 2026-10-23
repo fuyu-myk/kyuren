@@ -339,7 +339,7 @@ export async function run(options: Run): Promise<Transcript> {
         exposure,
       ),
       today: adapt(
-        todayTool(SOURCES, BACK_DAYS, FORWARD_DAYS, options.gate, options.ask, options.vault),
+        todayTool(SOURCES, BACK_DAYS, FORWARD_DAYS, options.gate, options.vault),
         todaySchema,
         options.gate,
         options.ask,
