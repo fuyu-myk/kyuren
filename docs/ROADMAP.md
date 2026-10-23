@@ -93,9 +93,9 @@ listening and the reply's while speaking; partial transcripts stream to the UI a
    onset. *Failed, First partial after speech start: a median of 573 ms from when voice activity
    reports speech, nearer 830 ms from onset.*
 2. Time to first audio out is measured and recorded. Budget: under 300 ms from the first token.
-   *Failed, Speaking a reply as it arrives: about a second from the first word to the first sound,
-   half of it waiting for the first sentence to finish and half synthesising it. The reply is now
-   said as it arrives rather than once it is whole.*
+   *Failed, First sound with the opening said at its first pause: 0.76 to 1.49 s from the first
+   word to the first sound on four warm turns, a quarter to two fifths of it waiting for the
+   opening's first pause and the rest synthesising it while the model goes on writing.*
 3. Speaking over a reply stops it, and the hotkey does too, with the queued audio discarded.
    *Recorded for the hotkey, Behaviour verified by running. Speaking over not yet seen.*
 4. Playing audio through speakers while the microphone is live does not cause self-transcription.
@@ -502,7 +502,7 @@ the reader none at all.
 | Risk | Stage | Mitigation |
 | --- | --- | --- |
 | Permission grants lost on every rebuild | 0 | Stable signing identity before any permission-touching code. Gate check 0.3. |
-| Neural Engine latency figures are vendor-reported and unconfirmed | 2 | Measured in gate 2.1, and the first partial missed its budget. Apple `SpeechAnalyzer` is the fallback, not yet tried. Gate 2.2 fails for another reason: about a second from the first word to the first sound, half of it the first sentence finishing and half synthesising it. |
+| Neural Engine latency figures are vendor-reported and unconfirmed | 2 | Measured in gate 2.1, and the first partial missed its budget. Apple `SpeechAnalyzer` is the fallback, not yet tried. Gate 2.2 fails too: 0.76 to 1.49 s from the first word to the first sound, most of it synthesising the opening while the model goes on writing. |
 | Building the agent loop instead of adopting one | 3 | Gate checks 3.3 through 3.5 target exactly the parts a framework would have supplied. |
 | Local model quality gap makes hybrid routing a downgrade | 3 | Measured in gate 3.6: hard requests go to the cloud whenever it is set up. Policy is data-driven, and routing thresholds move with the evidence. |
 | Force simulation collapses at scale | 6 | Gate 6.4 sets the bar at one thousand nodes. |

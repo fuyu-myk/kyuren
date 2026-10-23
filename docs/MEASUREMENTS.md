@@ -901,3 +901,21 @@ sooner than one quiet step, so it is not used. Half a second is: anything heard 
 goes on, before any of its reply, is joined to that turn's question, so a pause long enough to end
 an utterance carries the question on instead of answering half of it. A quarter of a second would
 be sooner again by as much and split at shorter hesitations; that is left to be tried by speaking.
+
+## First sound with the opening said at its first pause
+
+2026-10-22, the core and the voice driven over stdio as the app drives them, played aloud, the voice
+warmed first. Five questions judged known, but for the last, which was judged moderate.
+
+| | first word | opening said | first sound | first word to first sound |
+| --- | --- | --- | --- | --- |
+| what is photosynthesis, the model loading | 8892 ms | 10243 ms | 12203 ms | 3311 ms |
+| why is the sky blue | 1726 ms | 2026 ms | 2488 ms | 762 ms |
+| describe the water cycle | 1619 ms | 1903 ms | 2803 ms | 1184 ms |
+| how do vaccines work | 1385 ms | 1960 ms | 2761 ms | 1376 ms |
+| who painted the mona lisa | 3256 ms | 3596 ms | 4744 ms | 1488 ms |
+
+On the four warm turns, a quarter to two fifths of the time from the first word to the first sound
+was waiting for the opening's first pause, and the rest synthesising it: 0.46 to 1.15 s while the
+model went on writing, against 0.17 to 0.72 s wall clock for openings of 31 to 126 characters
+synthesised the same afternoon with nothing else running.
