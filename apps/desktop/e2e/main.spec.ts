@@ -10,6 +10,8 @@ function standIn(): void {
   const listening = new Map<string, number[]>();
   const called: Called[] = [];
   const waiting: Array<() => void> = [];
+  const failed = { path: "/runs/research.md", startedAt: "2026-10-20T09:00:00Z", outcome: "failed" };
+  const books = [{ name: "research", approved: true, pending: false, when: "a question to research", inputs: [] as unknown[], recent: [failed] }];
   let next = 1;
   Object.assign(window, {
     __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener: (_event: string, id: number) => callbacks.delete(id) },
@@ -32,10 +34,7 @@ function standIn(): void {
         }
         called.push({ cmd, args });
         if (cmd === "resolve_permission") return { matched: true, pending: 0 };
-        if (cmd === "playbooks_list") {
-          const failed = { path: "/runs/research.md", startedAt: "2026-10-20T09:00:00Z", outcome: "failed" };
-          return { playbooks: [{ name: "research", approved: true, pending: false, when: "a question to research", inputs: [], recent: [failed] }] };
-        }
+        if (cmd === "playbooks_list") return { playbooks: books };
         if (cmd === "playbook_read") {
           const book = { name: "research", when: "a question to research", version: 1, author: "claude", approved: "2026-10-01", steps: ["Search the web."], proof: [], notes: [] };
           return { name: "research", approved: book, pending: undefined, diff: "" };
@@ -56,6 +55,7 @@ function standIn(): void {
         for (const id of listening.get(event) ?? []) callbacks.get(id)?.({ event, id, payload });
       },
       called: (cmd: string) => called.filter((one) => one.cmd === cmd),
+      approve: (name: string) => books.push({ name, approved: true, pending: false, when: `a ${name}`, inputs: [], recent: [] }),
     },
   });
 }
@@ -64,6 +64,7 @@ type StandIn = {
   listens: (event: string) => number;
   emit: (event: string, payload: unknown) => void;
   called: (cmd: string) => Called[];
+  approve: (name: string) => void;
 };
 
 async function emit(page: Page, name: string, payload: unknown): Promise<void> {
@@ -165,4 +166,33 @@ test("a repair being waited on can be stopped by the name it was given, and ends
   expect(String(repaired?.args.id)).toMatch(/^repair:/);
   expect((await calledWith(page, "stop_turn")).map((one) => one.args)).toEqual([{ id: repaired?.args.id }]);
   await expect(page.getByText("stopped before it finished")).toHaveCount(0);
+});
+
+test("a playbook approved while another page was shown is offered by a slash on coming back", async ({ page }) => {
+  const rail = page.locator(".rail");
+  await rail.getByRole("button", { name: "system" }).click();
+  await page.evaluate(() => (window as unknown as { standIn: StandIn }).standIn.approve("weekly"));
+  await rail.getByRole("button", { name: "chat" }).click();
+  await page.locator(".composer textarea").fill("/weekly the last seven days");
+  await page.getByRole("button", { name: "send" }).click();
+  await expect(page.getByRole("button", { name: "stop" })).toBeVisible();
+  const [invoked] = await calledWith(page, "playbook_invoke");
+  expect(invoked?.args.name).toBe("weekly");
+  await expect(page.getByText("nothing is called /weekly")).toHaveCount(0);
+});
+
+test("a repair begun before leaving the page is still being waited on, and stoppable, on coming back", async ({ page }) => {
+  const rail = page.locator(".rail");
+  const books = page.locator("section").filter({ has: page.locator("h3", { hasText: /^playbooks$/ }) });
+  await rail.getByRole("button", { name: "system" }).click();
+  await books.getByRole("button", { name: "research", exact: true }).click();
+  await books.getByRole("button", { name: "repair from the last run" }).click();
+  await rail.getByRole("button", { name: "chat" }).click();
+  await rail.getByRole("button", { name: "system" }).click();
+  await books.getByRole("button", { name: "research", exact: true }).click();
+  await books.getByRole("button", { name: "stop repairing" }).click();
+  await expect(books.getByRole("button", { name: "repair from the last run" })).toBeVisible();
+  const [repaired] = await calledWith(page, "playbook_repair");
+  expect((await calledWith(page, "playbook_repair")).length, "not begun a second time").toBe(1);
+  expect((await calledWith(page, "stop_turn")).map((one) => one.args)).toEqual([{ id: repaired?.args.id }]);
 });

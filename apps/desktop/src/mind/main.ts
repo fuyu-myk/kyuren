@@ -281,8 +281,23 @@ function view(layer: Layer | undefined): void {
   drawLayers();
 }
 
+/// Capabilities run from here and still running, by name, so a reading drawn again for one finds
+/// it running and stoppable.
+const runs = new Map<string, { id: string; stopped: boolean }>();
+/// The run button on the reading shown, and whose it is.
+let runButton: { label: string; button: HTMLButtonElement } | undefined;
+
+/// A run is over: what it came to is said on the reading, if that is still the one shown.
+function ranOut(label: string, said: string): void {
+  runs.delete(label);
+  if (runButton?.label !== label) return;
+  runButton.button.textContent = said;
+  runButton.button.disabled = true;
+}
+
 function focus(id: string | undefined): void {
   mind.focused = id;
+  runButton = undefined;
   const about = id ? mind.describe(id) : undefined;
 
   if (!about) {
@@ -311,26 +326,24 @@ function focus(id: string | undefined): void {
   // A capability that needs to be given something to work on cannot be asked for by itself, so it
   // is read rather than offered.
   if (about.kind === "tool" && canRun.includes(about.label)) {
+    const label = about.label;
     const run = document.createElement("button");
-    run.textContent = "run this";
+    run.textContent = runs.has(label) ? "stop" : "run this";
+    runButton = { label, button: run };
     // While it runs, the button stops it, by the name it was started under.
-    let running: { id: string; stopped: boolean } | undefined;
     run.onclick = () => {
-      if (running) {
-        running = { ...running, stopped: true };
-        void stopTurn(running.id);
+      const going = runs.get(label);
+      if (going) {
+        runs.set(label, { ...going, stopped: true });
+        void stopTurn(going.id);
         return;
       }
       const id = `mind:${crypto.randomUUID()}`;
-      running = { id, stopped: false };
+      runs.set(label, { id, stopped: false });
       run.textContent = "stop";
-      void runCapability(about.label, id)
-        .then((said) => { run.textContent = said ? said.slice(0, 160) : "done"; })
-        .catch((failure: unknown) => { run.textContent = running?.stopped ? "stopped" : String(failure).slice(0, 120); })
-        .finally(() => {
-          running = undefined;
-          run.disabled = true;
-        });
+      void runCapability(label, id)
+        .then((said) => ranOut(label, said ? said.slice(0, 160) : "done"))
+        .catch((failure: unknown) => ranOut(label, runs.get(label)?.stopped ? "stopped" : String(failure).slice(0, 120)));
     };
     reading.append(run);
   }

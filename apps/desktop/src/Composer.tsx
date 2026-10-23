@@ -9,11 +9,13 @@ type ComposerProps = {
   onStop?: () => void;
   /// What a slash may be followed by. With any given, typing a slash opens the menu.
   commands?: Command[];
+  /// Whether the page it sits on is the one on screen. A bar out of sight has no height to measure.
+  shown?: boolean;
 };
 
 /// The bar at the bottom of every page. It grows upwards as it fills, stops growing once it would
 /// take over the page, and scrolls from then on.
-export function Composer({ placeholder, busy, onSend, onStop, commands }: ComposerProps) {
+export function Composer({ placeholder, busy, onSend, onStop, commands, shown = true }: ComposerProps) {
   const [text, setText] = useState("");
   const [scrolling, setScrolling] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -24,7 +26,8 @@ export function Composer({ placeholder, busy, onSend, onStop, commands }: Compos
   // Measured from nothing each time, or it could only ever grow.
   const grow = useCallback(() => {
     const here = box.current;
-    if (!here) return;
+    // Out of sight it measures as nothing, and would be left that small once shown again.
+    if (!here || here.offsetParent === null) return;
     here.style.height = "auto";
     here.style.height = `${here.scrollHeight}px`;
   }, []);
@@ -35,7 +38,7 @@ export function Composer({ placeholder, busy, onSend, onStop, commands }: Compos
     // decide how tall a line is have landed, and a bar measured then keeps the wrong size.
     const again = requestAnimationFrame(grow);
     return () => cancelAnimationFrame(again);
-  }, [text, grow]);
+  }, [text, grow, shown]);
 
   useEffect(() => {
     window.addEventListener("resize", grow);

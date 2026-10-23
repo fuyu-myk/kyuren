@@ -89,6 +89,10 @@ export function Place({ pane, shown }: PlaceProps) {
   // The turn being waited on, by the name it was started under, so it can be stopped. One that was
   // stopped ends as stopped, not as trouble.
   const waiting = useRef<{ id: string; stopped: boolean } | undefined>(undefined);
+  // The conversation open here, as it stands when the place comes back.
+  const opened = useRef<Session | undefined>(undefined);
+  opened.current = open;
+  const [returns, setReturns] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -100,15 +104,24 @@ export function Place({ pane, shown }: PlaceProps) {
     }
   }, [pane]);
 
-  // Read again each time it comes back, since a conversation may have begun elsewhere meanwhile.
+  // Read again each time it comes back: conversations begun or forgotten elsewhere, playbooks
+  // approved, notes researched and a route chosen meanwhile.
   useEffect(() => {
-    if (shown) void load();
-  }, [shown, load]);
-
-  useEffect(() => {
+    if (!shown) return;
+    void load();
     void capabilities().then(setKnown).catch(() => setKnown([]));
     void askable().then(setCanRun).catch(() => setCanRun([]));
-  }, []);
+    setReturns((count) => count + 1);
+    const here = opened.current;
+    if (!here) {
+      setChoice(kept());
+      return;
+    }
+    // A conversation forgotten elsewhere is gone here too, rather than failing the next question.
+    void readSession(here.id).catch(() => {
+      if (!waiting.current) leave();
+    });
+  }, [shown, load]);
 
   // A slash offers the approved playbooks and whatever can be run as it stands.
   useEffect(() => {
@@ -302,6 +315,7 @@ export function Place({ pane, shown }: PlaceProps) {
             onSend={(saying) => void send(saying)}
             onStop={stop}
             commands={commands}
+            shown={shown}
           />
           <Standing choice={choice} onChoose={choose} last={last} />
         </div>
@@ -382,7 +396,7 @@ export function Place({ pane, shown }: PlaceProps) {
             </section>
           ) : null}
 
-          {pane === "research" ? <Research refresh={produced} /> : null}
+          {pane === "research" ? <Research refresh={produced + returns} /> : null}
 
           <section>
             <h3>past conversations</h3>
