@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
 import { resolvePermission, type PermissionRequest } from "@/agent";
 import type { Firing } from "@/ambient";
 import { command, insideTauri, on, onCarried, type Notch, type Voice as Speaking } from "@/island/channels";
@@ -7,6 +7,7 @@ import { atRest, FACE, stepFace } from "@/island/face";
 import { INITIAL, next, TABS, type Event, type Island as State, type Mode, type Tab } from "@/island/fsm";
 import type { Clock, Playing, Snapshot } from "@/island/glance";
 import { waitingBesides, type AgentAsk, type Decision, type Extra } from "@/island/asks";
+import { PageBoundary } from "@/island/boundaries";
 import { toldOf, type Finished } from "@/island/done";
 import { Harness } from "@/island/Harness";
 import { TabIcon, TITLES } from "@/island/icons";
@@ -122,6 +123,7 @@ export function Island() {
   const sent = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const energy = useRef(0);
   const running = useRef(false);
+  const gone = useRef(false);
   const shortcutTurn = useRef<{ id: string; stopped: boolean } | undefined>(undefined);
   /// Counts the times a summons started the conversation over, so an answer to a question typed
   /// before one lands nowhere rather than in the conversation that replaced it.
@@ -134,6 +136,10 @@ export function Island() {
     running.current = true;
     let last = performance.now();
     const frame = (at: number) => {
+      if (gone.current) {
+        running.current = false;
+        return;
+      }
       const dt = Math.min(0.05, (at - last) / 1000);
       last = at;
       const { state: s, notch: n, voice: v } = now.current;
@@ -176,6 +182,15 @@ export function Island() {
       requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
+  }, []);
+
+  // Gone, as when a failure takes the island down, the loop sends the host no more of a shape that
+  // is no longer drawn: said as it goes, before the failure is answered, not after the next paint.
+  useLayoutEffect(() => {
+    gone.current = false;
+    return () => {
+      gone.current = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -637,122 +652,125 @@ export function Island() {
         className={open ? "content shown" : "content"}
         style={{ left: left + 18, top: notch.height + 8, width: OPEN_WIDTH - 36, height: OPEN_HEIGHT - notch.height - 20 }}
       >
-        {state.tab === "voice" ? (
-          <Voice
-            chatting={state.chatting}
-            bubbles={thread.bubbles}
-            voice={voice}
-            asking={asking}
-            onAsk={(prompt) => void askIt(prompt)}
-            onReach={() => void command("island_focus", { on: true })}
-            onLeave={() => void command("island_focus", { on: false })}
-          />
-        ) : null}
-        {state.tab === "permissions" ? (
-          <Permissions
-            alerts={alerts}
-            asks={asks}
-            pending={pending}
-            shown={open}
-            note={askNote}
-            onAnswer={(id, allow) => void answer(id, allow)}
-            onAsk={answerAsk}
-            onReview={() => void command("island_reveal")}
-            onReach={() => void command("island_focus", { on: true })}
-            onLeave={() => void command("island_focus", { on: false })}
-          />
-        ) : null}
-        {state.tab === "work" ? <Work steps={steps} /> : null}
-        {state.tab === "coding" && watching ? (
-          <CodingDetail
-            session={coding.find((one) => one.id === watching.id) ?? watching}
-            detail={detail}
-            onBack={() => {
-              dispatch({ type: "stay" });
-              setWatching(null);
-            }}
-            onReveal={() => command<string>("coding_reveal", { session: watching.id }).then(() => undefined)}
-            load={loadStep}
-            live={state.mode === "open"}
-          />
-        ) : null}
-        {state.tab === "coding" && !watching ? (
-          <Coding
-            sessions={coding}
-            finished={finished}
-            onOpen={(one) => {
-              dispatch({ type: "stay" });
-              setDetail(undefined);
-              setWatching(one);
-            }}
-          />
-        ) : null}
-        {state.tab === "glance" ? (
-          <Glance
-            widgets={widgets}
-            snapshot={snapshot}
-            timer={{
-              clock,
-              start: () => void command<Clock>("pomodoro_start").then((kept) => kept && setClock(kept)),
-              pause: () => void command<Clock>("pomodoro_pause").then((kept) => kept && setClock(kept)),
-              reset: () => void command<Clock>("pomodoro_reset").then((kept) => kept && setClock(kept)),
-              period: (period) => void command<Clock>("pomodoro_period", { period }).then((kept) => kept && setClock(kept)),
-            }}
-            player={{
-              playing,
-              art: playing?.track && art?.track === playing.track ? art.art : null,
-              trouble,
-              control: (action, value) => {
-                setTrouble(null);
-                void command("music_control", { action, value }).catch((failure) => setTrouble(String(failure)));
-              },
-              // A level the player took clears what went wrong before; one slid past is not worth a
-              // warning, since the next replaces it, so only the level let go on can raise one.
-              volume: (level, settled) =>
-                command("music_control", { action: "volume", value: level, settle: settled }).then(
-                  () => setTrouble(null),
-                  (failure) => {
-                    if (settled) setTrouble(String(failure));
-                  },
-                ),
-              ask: () => {
-                setTrouble(null);
-                void command("music_introduce").catch((failure) => setTrouble(String(failure)));
-              },
-            }}
-          />
-        ) : null}
-        {state.tab === "shelf" ? (
-          <Shelf
-            items={shelf}
-            carrying={carrying}
-            keeping={keeping}
-            trouble={shelfTrouble}
-            onDrag={(id, copying) => {
-              setShelfTrouble(null);
-              void command("shelf_drag", { id, copying }).catch((failure) => setShelfTrouble(String(failure)));
-            }}
-            onRemove={(id) =>
-              void command<Shelved[]>("shelf_remove", { id })
-                .then((items) => items && setShelf(items))
-                .catch((failure) => setShelfTrouble(String(failure)))
-            }
-            onReveal={(id) => void command("shelf_reveal", { id }).catch((failure) => setShelfTrouble(String(failure)))}
-          />
-        ) : null}
-        {state.tab === "shortcuts" ? (
-          <Shortcuts
-            books={chosen(shortcuts, books)}
-            running={runningShortcut}
-            ran={ran}
-            trouble={runTrouble}
-            onRun={(name, text) => void runShortcut(name, text)}
-            onStop={stopShortcut}
-            onReach={() => void command("island_focus", { on: true })}
-            onLeave={() => void command("island_focus", { on: false })}
-          />
-        ) : null}
-        {state.tab === "notices" ? <Notices notices={notices} /> : null}
+        {/* A session's detail that failed is left for the list, which only it led back to. */}
+        <PageBoundary key={state.tab} onRetry={state.tab === "coding" ? () => setWatching(null) : undefined}>
+          {state.tab === "voice" ? (
+            <Voice
+              chatting={state.chatting}
+              bubbles={thread.bubbles}
+              voice={voice}
+              asking={asking}
+              onAsk={(prompt) => void askIt(prompt)}
+              onReach={() => void command("island_focus", { on: true })}
+              onLeave={() => void command("island_focus", { on: false })}
+            />
+          ) : null}
+          {state.tab === "permissions" ? (
+            <Permissions
+              alerts={alerts}
+              asks={asks}
+              pending={pending}
+              shown={open}
+              note={askNote}
+              onAnswer={(id, allow) => void answer(id, allow)}
+              onAsk={answerAsk}
+              onReview={() => void command("island_reveal")}
+              onReach={() => void command("island_focus", { on: true })}
+              onLeave={() => void command("island_focus", { on: false })}
+            />
+          ) : null}
+          {state.tab === "work" ? <Work steps={steps} /> : null}
+          {state.tab === "coding" && watching ? (
+            <CodingDetail
+              session={coding.find((one) => one.id === watching.id) ?? watching}
+              detail={detail}
+              onBack={() => {
+                dispatch({ type: "stay" });
+                setWatching(null);
+              }}
+              onReveal={() => command<string>("coding_reveal", { session: watching.id }).then(() => undefined)}
+              load={loadStep}
+              live={state.mode === "open"}
+            />
+          ) : null}
+          {state.tab === "coding" && !watching ? (
+            <Coding
+              sessions={coding}
+              finished={finished}
+              onOpen={(one) => {
+                dispatch({ type: "stay" });
+                setDetail(undefined);
+                setWatching(one);
+              }}
+            />
+          ) : null}
+          {state.tab === "glance" ? (
+            <Glance
+              widgets={widgets}
+              snapshot={snapshot}
+              timer={{
+                clock,
+                start: () => void command<Clock>("pomodoro_start").then((kept) => kept && setClock(kept)),
+                pause: () => void command<Clock>("pomodoro_pause").then((kept) => kept && setClock(kept)),
+                reset: () => void command<Clock>("pomodoro_reset").then((kept) => kept && setClock(kept)),
+                period: (period) => void command<Clock>("pomodoro_period", { period }).then((kept) => kept && setClock(kept)),
+              }}
+              player={{
+                playing,
+                art: playing?.track && art?.track === playing.track ? art.art : null,
+                trouble,
+                control: (action, value) => {
+                  setTrouble(null);
+                  void command("music_control", { action, value }).catch((failure) => setTrouble(String(failure)));
+                },
+                // A level the player took clears what went wrong before; one slid past is not worth a
+                // warning, since the next replaces it, so only the level let go on can raise one.
+                volume: (level, settled) =>
+                  command("music_control", { action: "volume", value: level, settle: settled }).then(
+                    () => setTrouble(null),
+                    (failure) => {
+                      if (settled) setTrouble(String(failure));
+                    },
+                  ),
+                ask: () => {
+                  setTrouble(null);
+                  void command("music_introduce").catch((failure) => setTrouble(String(failure)));
+                },
+              }}
+            />
+          ) : null}
+          {state.tab === "shelf" ? (
+            <Shelf
+              items={shelf}
+              carrying={carrying}
+              keeping={keeping}
+              trouble={shelfTrouble}
+              onDrag={(id, copying) => {
+                setShelfTrouble(null);
+                void command("shelf_drag", { id, copying }).catch((failure) => setShelfTrouble(String(failure)));
+              }}
+              onRemove={(id) =>
+                void command<Shelved[]>("shelf_remove", { id })
+                  .then((items) => items && setShelf(items))
+                  .catch((failure) => setShelfTrouble(String(failure)))
+              }
+              onReveal={(id) => void command("shelf_reveal", { id }).catch((failure) => setShelfTrouble(String(failure)))}
+            />
+          ) : null}
+          {state.tab === "shortcuts" ? (
+            <Shortcuts
+              books={chosen(shortcuts, books)}
+              running={runningShortcut}
+              ran={ran}
+              trouble={runTrouble}
+              onRun={(name, text) => void runShortcut(name, text)}
+              onStop={stopShortcut}
+              onReach={() => void command("island_focus", { on: true })}
+              onLeave={() => void command("island_focus", { on: false })}
+            />
+          ) : null}
+          {state.tab === "notices" ? <Notices notices={notices} /> : null}
+        </PageBoundary>
       </div>
 
       {insideTauri() ? null : <Harness notch={notch} />}

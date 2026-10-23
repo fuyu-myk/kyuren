@@ -43,7 +43,8 @@
   text-overflow: ellipsis;
 }
 
-.row button {
+.row button,
+.view.failed button {
   height: 24px;
   padding: 0 11px;
   border: 1px solid rgb(205 214 244 / 12%);
@@ -153,4 +154,17 @@
   margin: auto 0;
   color: #7f849c;
   text-align: center;
+}
+
+/* A page that failed to draw: what happened, and trying it again, together at the middle. */
+.view.failed {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.view.failed .empty {
+  margin: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }

@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { IslandBoundary } from "@/island/boundaries";
 import { Island } from "@/island/Island";
 import "@/island/island.css";
 import "@/island/lists.css";
@@ -18,6 +19,8 @@ if (!root) {
 
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
-    <Island />
+    <IslandBoundary>
+      <Island />
+    </IslandBoundary>
   </React.StrictMode>,
 );

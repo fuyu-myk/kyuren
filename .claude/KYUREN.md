@@ -659,6 +659,15 @@ them; one that needs more answers than that is for the chat, and says so. One ru
 as a conversation in the chat page like a slash command, and what it came to shows under the keys.
 A run that ends while the island is folded is what its next open shows.
 
+**A failure on the island.** A page that fails to draw says so in its place, with what went wrong
+and a way to try it again, while the island around it, its tabs and every other page go on; a
+coding session's detail tried again goes back to the list, since only it led there. The island
+failing as a whole would leave nothing drawn, so the host is told at once that it is gone, keeping
+no part of the screen to catch clicks for it, and no keyboard or summons, the microphone with it.
+A short notice under the notch says so, and the island starts again a second later, twice as long
+after each failure soon after another, up to a minute; started again, it takes up the questions
+still held, and the loop that drew what failed sends nothing more.
+
 The behaviour was shaped after Louis Raillé's coucou, a notch island published under MIT, whose
 specification and feel it follows. No source is copied, and its character and artwork, which are
 reserved, are not used.

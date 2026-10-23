@@ -365,3 +365,33 @@ test("a question kept open through a fold takes no click as the island comes bac
   await approve.click();
   expect(await commanded(page, "coding_answer")).toEqual([{ id: "agent-plan", decision: "allow", mode: "acceptEdits" }]);
 });
+
+test("a page that fails to draw says so in its place, the island and its other pages go on, and it is tried again when asked", async ({ page }) => {
+  await opened(page);
+  await emit(page, "agent:permission", { id: "bad", harness: "claude", session: "s1", project: "kyuren", tool: "AskUserQuestion", kind: "choice", questions: null, at: Date.now(), until: Date.now() + 60_000 });
+  await page.locator(".tabs .tab[title='waiting on you']").click();
+  const failed = page.locator(".content .view.failed");
+  await expect(failed.locator(".empty")).toContainText("This page could not be shown:");
+  await page.locator(".tabs .tab[title='coding']").click();
+  await expect(page.locator(".content .view.coding")).toBeVisible();
+  await page.locator(".tabs .tab[title='waiting on you']").click();
+  await expect(failed).toBeVisible();
+  await emit(page, "agent:permission-done", { id: "bad" });
+  await failed.getByRole("button", { name: "try again" }).click();
+  await expect(page.locator(".content .view.list .empty")).toHaveText("Nothing is waiting on you.");
+});
+
+test("an island that fails as a whole lets go of the screen and the keyboard, says so, and starts again", async ({ page }) => {
+  await opened(page);
+  await emit(page, "orb:state", { not: "a state" });
+  await expect(page.locator(".island-failed")).toHaveText("The island ran into a problem and is starting again.");
+  await expect(page.locator(".panel")).toHaveCount(0);
+  const last = async (name: string) => (await commanded(page, name)).at(-1);
+  expect(await last("island_rect"), "no part of the screen kept to catch clicks").toEqual({ x: 0, y: 0, width: 0, height: 0 });
+  expect(await last("island_mode")).toEqual({ shown: false });
+  expect(await last("island_focus")).toEqual({ on: false });
+  expect((await commanded(page, "island_dismiss")).length, "a summons ended, with its microphone").toBeGreaterThan(0);
+  await expect(page.locator(".panel")).toBeVisible({ timeout: 5_000 });
+  await expect(page.locator(".island-failed")).toHaveCount(0);
+  await opened(page);
+});

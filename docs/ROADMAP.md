@@ -474,10 +474,11 @@ forward folds it; a question, a notice or a summons holds it out only until the 
 it. Its tabs, each one switchable off and arranged by dragging in settings: voice and answers, with
 the icosahedron and a composer; the questions waiting on the user, Kyuren's own and Claude Code's,
 which the relay brings: its permissions, questions to choose among, plans, edits and its servers'
-forms, each opened whole and answered there; work in progress; the coding agents running on the Mac, a Claude Code
-session's steps opening whole; a glance of widgets; shortcuts that run playbooks; a shelf of files
-on their way somewhere; and notices. Each window may call only the commands its own code calls, and
-the reader none at all.
+forms, each opened whole and answered there; work in progress; the coding agents running on the
+Mac, a Claude Code session's steps opening whole; a glance of widgets; shortcuts that run
+playbooks; a shelf of files on their way somewhere; and notices. A page that fails to draw says so
+in its place, and the island failing as a whole lets go of the screen and starts again. Each window
+may call only the commands its own code calls, and the reader none at all.
 
 **Gate.**
 1. A hover held on the notch opens the island on its tabs; the cursor leaving, a press outside it,
@@ -493,10 +494,10 @@ the reader none at all.
    shown whole, is answered on the island and Claude Code does as answered; one the island has not
    taken within three seconds, has not answered in time, or was given an answer that does not fit
    it, goes back to Claude Code's own prompt. *Recorded for allow on a permission and for a
-   multiple-choice question, The Claude Code relay, live; a plan, an edit and a form not yet seen. Which questions are shown whole is tested,
-   `coding/asked.test.ts`, `coding/choices.test.ts` and `coding/forms.test.ts`; what goes back for
-   each, and handing one back, on timings of the test's own, `coding/hooks.test.ts`; answering each
-   on the island, `e2e/island.spec.ts`.*
+   multiple-choice question, The Claude Code relay, live; a plan, an edit and a form not yet seen.
+   Which questions are shown whole is tested, `coding/asked.test.ts`, `coding/choices.test.ts` and
+   `coding/forms.test.ts`; what goes back for each, and handing one back, on timings of the test's
+   own, `coding/hooks.test.ts`; answering each on the island, `e2e/island.spec.ts`.*
 5. Each window may call exactly the commands its own code calls, and the reader none. *Recorded
    in part, On the built app: nothing failed for want of a permission. That each may call exactly
    its own, and the reader none, is tested, `src/windows.test.ts`.*
