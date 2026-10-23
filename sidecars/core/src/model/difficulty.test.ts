@@ -37,11 +37,27 @@ test("code with an explanation is hard", async () => {
   );
 });
 
+test("typed, general knowledge is known, to be answered without reasoning first", async () => {
+  assert.equal(await difficultyOf("What is the greenhouse effect?"), "known");
+  assert.equal(await difficultyOf("Why do we have leap years?"), "known");
+});
+
+test("typed, a question needing a look is neither known nor trivial, so a tool is reached for", async () => {
+  for (const asked of ["Is the gym open on Sunday?", "Which emails need a reply?", "Save this article to the reading list."]) {
+    const decided = await difficultyOf(asked);
+    assert.ok(decided !== "known" && decided !== "trivial", `${asked} was ${decided}`);
+  }
+});
+
+test("asked aloud as the transcript writes it, with capitals and a question mark, general knowledge is still known", async () => {
+  assert.equal(await spokenDifficultyOf("What is photosynthesis?"), "known");
+});
+
 test("an unreadable answer settles in the middle rather than the top", async () => {
   // Nonsense the router has no example for. Whatever it says, it must be one of the three, and a
   // failure must never land on the tier that costs the most.
   const decided = await difficultyOf("~~~ %%% ???");
-  assert.ok(["trivial", "moderate", "hard"].includes(decided));
+  assert.ok(["trivial", "known", "moderate", "hard"].includes(decided));
 });
 
 test("asked aloud, general knowledge is known, to be answered without reasoning first", async () => {

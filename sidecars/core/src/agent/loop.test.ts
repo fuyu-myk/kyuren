@@ -318,7 +318,7 @@ test("a spoken turn stopped part way says nothing more, and still says it is ove
   assert.deepEqual(aloud(told), [{ event: "agent.say.end", data: { id: "voice:2" } }]);
 });
 
-test("a spoken question judged known is put to the model without reasoning, and a typed one as before", async () => {
+test("a question judged known is put to the model without reasoning, spoken or typed", async () => {
   const handlers = await speakingHandlers([]);
   const answer = "Photosynthesis is how plants turn light into sugar.";
 
@@ -333,9 +333,14 @@ test("a spoken question judged known is put to the model without reasoning, and 
   assert.doesNotMatch(bodies[2] ?? "", /reasoning_effort/, "known only once no encyclopedia would fall short");
 
   bodies.length = 0;
-  replies.push(judged("known"), saying(answer));
-  await handlers["agent.run"]({ prompt: "what is photosynthesis", id: "chat:known", sensitive: true });
-  assert.doesNotMatch(bodies[1] ?? "", /reasoning_effort/, "the typed judge has no word for it, and reasons");
+  replies.push(judged("moderate"), judged("known"), judged("yes"), saying(answer));
+  await handlers["agent.run"]({ prompt: "What is photosynthesis?", id: "chat:known", sensitive: true });
+  assert.match(bodies[3] ?? "", /"reasoning_effort":"none"/, "typed, judged hard or not by the typed judge first");
+
+  bodies.length = 0;
+  replies.push(judged("hard"), saying(answer));
+  await handlers["agent.run"]({ prompt: "Plan my week around these deadlines.", id: "chat:hard", sensitive: true });
+  assert.equal(bodies.length, 2, "hard to the typed judge, nothing more is asked of the judges");
 });
 
 /// Drafting a skill speaks for itself. Each test drafts its own, since a name once drafted is taken.

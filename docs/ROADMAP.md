@@ -114,7 +114,7 @@ the fallback and costs no application size; it has not been tried.
 
 **Builds.** The TypeScript core: Vercel AI SDK 7 as substrate, provider registrations for Ollama
 and for the cloud provider, the routing policy from KYUREN.md section 5 with three routes, a judge
-of how hard a request is and of whether a question asked aloud is one the model already knows, and
+of how hard a request is and of whether a question is one the model already knows, and
 a route the user may choose for a conversation. The agent loop with
 streaming and tool dispatch, a turn waited on until it ends and stoppable from where it was started,
 and a model that says nothing for five minutes while no tool runs taken as stalled. The permission

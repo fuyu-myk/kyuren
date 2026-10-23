@@ -218,15 +218,17 @@ requests in about four seconds; the large local model four of ten in about a min
 one two of ten. So hard goes to the cloud whenever a key is present, and the large model is the
 fallback when sensitivity or being offline forbids it, released two minutes after it answers.
 
-How hard a request is gets judged first, by the resident small model in about a fifth of a second,
-and that sets how much a local model reasons as well as where hard requests go. A greeting is
-answered without reasoning, and so is a spoken question the model can answer from what it already
-knows: reasoning there took up to a minute and improved nothing. Anything about the user's life or
-about the present reasons, because a model that does not reason does not reach for a tool. So a
-spoken question counts as known only when the judge says so and, asked again, agrees that an
-encyclopedia printed last year could answer it, and never when it names the user's own things or
-the present (`docs/MEASUREMENTS.md`, A spoken question the model already knows). Typed questions
-have no such tier.
+How hard a request is gets judged first, by the resident small model in a fifth of a second for each
+judging, and that sets how much a local model reasons as well as where hard requests go. A greeting
+is answered without reasoning, and so is a question the model can answer from what it already knows:
+reasoning there took up to a minute and improved nothing. Anything about the user's life or about
+the present reasons, because a model that does not reason does not reach for a tool. So a question
+counts as known only when the judge says so and, asked again, agrees that an encyclopedia printed
+last year could answer it, never when it names the user's own things or the present, and both see it
+written plainly, without capitals or a closing mark (`docs/MEASUREMENTS.md`, A spoken question the
+model already knows, and A typed question the model already knows). A typed question is judged hard
+by the judge it always was, so the known tier sends nothing more to the cloud, and is trivial only
+where both judges agree.
 
 The cloud is Claude Opus 5.5, asked for high effort on every request, since its default is a
 level lower than the one the routing was first measured at. A request it declines is retried by

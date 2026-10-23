@@ -32,7 +32,8 @@ should I drop this course given my other commitments -> hard
 Request: `;
 
 /// For a question asked aloud, where waiting is felt most: what the model knows is split from what
-/// needs a look, which still reasons, since only a model that reasons reaches for a tool.
+/// needs a look, which still reasons, since only a model that reasons reaches for a tool. A typed
+/// question is judged by it too, in the words it was measured with.
 const SPOKEN = `You are a router for questions asked out loud. Reply with exactly one of these four words and nothing else: trivial, known, look, hard.
 
 trivial = a greeting, thanks, goodbye, or small talk.
@@ -83,6 +84,13 @@ Question: `;
 /// known it would be answered from nothing, so the judge is overruled where these words appear.
 const LOOKED_UP = /\b(my|mine|myself|today|tonight|tomorrow|yesterday|news|latest|weather)\b/i;
 
+/// The request as the judges' examples are written. A typed question or a transcript carries
+/// capitals and a closing mark, and shown those the small model took general questions for ones
+/// needing a look. See MEASUREMENTS.
+function plain(prompt: string): string {
+  return prompt.trim().toLowerCase().replace(/[.?!]+$/, "");
+}
+
 function readWord(said: string): Difficulty | undefined {
   const word = said.trim().toLowerCase().replace(/[^a-z]/g, "");
   return word === "trivial" || word === "moderate" || word === "hard" ? word : undefined;
@@ -99,12 +107,24 @@ async function judged(asking: string, prompt: string): Promise<string> {
   return decided.text;
 }
 
-/// Judging the request costs a fifth of a second on the model that is already resident. Guessing
-/// wrong low costs a worse answer; guessing wrong high costs the user ten seconds of waiting, so
-/// an unreadable answer settles on the middle rather than the top.
+/// Whether a printed encyclopedia could answer it, asked once a judge has called it known.
+async function encyclopedic(prompt: string): Promise<boolean> {
+  const said = await judged(ENCYCLOPEDIA, plain(prompt));
+  return said.trim().toLowerCase().replace(/[^a-z]/g, "") === "yes";
+}
+
+/// A typed request. What is hard is judged as it always was, so no more goes to the cloud; what is
+/// known as a spoken question's is; and trivial, which is answered without a tool, only where both
+/// judges agree, since the typed judge alone took a request needing a look for small talk. Each
+/// judging costs a fifth of a second on the resident model. An unreadable answer settles on the
+/// middle rather than the top: wrong low costs a worse answer, wrong high ten seconds of waiting.
 export async function difficultyOf(prompt: string): Promise<Difficulty> {
   try {
-    return readWord(await judged(ASK, prompt)) ?? "moderate";
+    const typed = readWord(await judged(ASK, prompt)) ?? "moderate";
+    if (typed === "hard") return "hard";
+    const spoken = readSpoken(await judged(SPOKEN, plain(prompt)), prompt);
+    if (spoken === "known") return (await encyclopedic(prompt)) ? "known" : "moderate";
+    return typed === "trivial" && spoken === "trivial" ? "trivial" : "moderate";
   } catch {
     return "moderate";
   }
@@ -121,10 +141,9 @@ export function readSpoken(said: string, asked: string): Difficulty {
 
 export async function spokenDifficultyOf(prompt: string): Promise<Difficulty> {
   try {
-    const tier = readSpoken(await judged(SPOKEN, prompt), prompt);
+    const tier = readSpoken(await judged(SPOKEN, plain(prompt)), prompt);
     if (tier !== "known") return tier;
-    const printed = (await judged(ENCYCLOPEDIA, prompt)).trim().toLowerCase().replace(/[^a-z]/g, "");
-    return printed === "yes" ? "known" : "moderate";
+    return (await encyclopedic(prompt)) ? "known" : "moderate";
   } catch {
     return "moderate";
   }

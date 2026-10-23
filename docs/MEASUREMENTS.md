@@ -919,3 +919,35 @@ On the four warm turns, a quarter to two fifths of the time from the first word 
 was waiting for the opening's first pause, and the rest synthesising it: 0.46 to 1.15 s while the
 model went on writing, against 0.17 to 0.72 s wall clock for openings of 31 to 126 characters
 synthesised the same afternoon with nothing else running.
+
+## A typed question the model already knows
+
+2026-10-22, qwen3.5:2b judging. Typed questions, sixteen each of general knowledge, of what needs a
+look and of hard work, in two sets, the second written before either was judged, and the spoken
+sets typed in.
+
+The typed judge took fifteen and sixteen of the general questions as needing reasoning and none as
+known, and took two in the second set needing a look, "What did Tom say in the group chat?" and
+"Save this article to the reading list", for small talk, which is answered without a tool. The spoken judge used alone kept five general questions of sixteen on the fast path as
+typed and seven written plainly, without capitals or a closing mark, which is how its examples are
+written; it also called more of them hard, five of sixteen general questions and three or four
+needing a look, which would have sent them to the cloud. Typed examples added to its prompts kept
+more general questions but let three of the spoken questions needing a look through, so they were
+not used.
+
+What is used: the typed judge decides what is hard as it always did; the spoken judge and the
+encyclopedia question, shown the request plainly, decide what is known; and trivial needs both.
+
+| | general, known | needing a look, taken as known or trivial | hard, to the cloud |
+| --- | --- | --- | --- |
+| first typed set | 6 of 16 | 0 of 16 | 11 of 16, as before |
+| second typed set | 9 of 16 | 0 of 16 | 9 of 16, as before |
+| the spoken sets, typed in | 27 of 32 | 0 of 34 | |
+
+Judging takes 0.22 s for what is hard, about 0.5 s otherwise and 0.65 s for what is known. Through
+the core, two typed questions judged known gave their first word in 1.29 and 1.31 s; one judged as
+needing reasoning, "How do bees make honey?", took 7.57 s.
+
+Spoken transcripts carry capitals and a question mark too, and are now judged written plainly as
+well: transcribed so, the spoken sets kept 27 of 32 general questions known and took none of 34
+needing a look as known.
