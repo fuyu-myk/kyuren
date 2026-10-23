@@ -15,6 +15,7 @@
     "allow-run-capability",
     "allow-show-mind",
     "allow-start-vision",
+    "allow-stop-turn",
     "allow-stop-vision"
   ]
 }

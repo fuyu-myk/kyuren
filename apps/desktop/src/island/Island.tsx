@@ -122,6 +122,7 @@ export function Island() {
   const sent = useRef({ x: 0, y: 0, width: 0, height: 0 });
   const energy = useRef(0);
   const running = useRef(false);
+  const shortcutTurn = useRef<{ id: string; stopped: boolean } | undefined>(undefined);
   /// Counts the times a summons started the conversation over, so an answer to a question typed
   /// before one lands nowhere rather than in the conversation that replaced it.
   const era = useRef(0);
@@ -479,19 +480,30 @@ export function Island() {
   }, [state.mode]);
 
   // A run can take minutes; one that ends while the island is folded is news for the next open.
+  // Started under a name of its own, it is stopped by that name, and by nothing else.
   const runShortcut = async (name: string, text: string) => {
+    const id = `island:${crypto.randomUUID()}`;
+    shortcutTurn.current = { id, stopped: false };
     setRunningShortcut(name);
     setRan(null);
     setRunTrouble(null);
     try {
-      const done = await command<Invoked>("playbook_invoke", { name, text, pane: "chat" });
+      const done = await command<Invoked>("playbook_invoke", { name, text, pane: "chat", id });
       if (done) setRan({ name, outcome: done.outcome, answer: done.answer });
     } catch (failure) {
-      setRunTrouble(String(failure));
+      if (!shortcutTurn.current?.stopped) setRunTrouble(String(failure));
     } finally {
+      shortcutTurn.current = undefined;
       setRunningShortcut(null);
       if (now.current.state.mode === "hidden") dispatch({ type: "lately", tab: "shortcuts" });
     }
+  };
+
+  const stopShortcut = () => {
+    const turn = shortcutTurn.current;
+    if (!turn) return;
+    shortcutTurn.current = { ...turn, stopped: true };
+    void command("stop_turn", { id: turn.id }).catch((failure) => setRunTrouble(String(failure)));
   };
 
   useEffect(() => {
@@ -733,6 +745,7 @@ export function Island() {
             ran={ran}
             trouble={runTrouble}
             onRun={(name, text) => void runShortcut(name, text)}
+            onStop={stopShortcut}
             onReach={() => void command("island_focus", { on: true })}
             onLeave={() => void command("island_focus", { on: false })}
           />

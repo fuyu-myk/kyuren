@@ -74,17 +74,26 @@ export function playbookHandlers(gate: Gate, ask: Ask, vault: string, watch?: ()
       runs: runs.recent(nameIn(params), 20),
     }),
 
-    "playbook.repair": async (params: Record<string, unknown>) =>
-      repairPlaybook({
-        books,
-        log: runs,
-        name: nameIn(params),
-        run: typeof params.run === "string" ? params.run : undefined,
-        vault,
-        gate,
-        ask,
-        perform: run,
-      }),
+    "playbook.repair": async (params: Record<string, unknown>) => {
+      // Started under a name of the window's, it can be stopped by that name.
+      const id = typeof params.id === "string" ? params.id : undefined;
+      const controller = id !== undefined ? turns?.begin(id) : undefined;
+      try {
+        return await repairPlaybook({
+          books,
+          log: runs,
+          name: nameIn(params),
+          run: typeof params.run === "string" ? params.run : undefined,
+          vault,
+          gate,
+          ask,
+          perform: run,
+          signal: controller?.signal,
+        });
+      } finally {
+        if (id !== undefined && controller) turns?.end(id, controller);
+      }
+    },
 
     /// A slash command: the playbook by name and the words after it. Kept as a conversation in
     /// the pane it was typed in, so a page's past is its own and a run can be read back later.

@@ -58,10 +58,11 @@ export function toggleMind(): Promise<void> {
   return invoke<void>("show_mind");
 }
 
-export async function runCapability(tool: string): Promise<string> {
+export async function runCapability(tool: string, id: string): Promise<string> {
   const answer = await invoke<{ spoken?: string; text?: string }>("run_capability", {
     tool,
     pane: null,
+    id,
   });
   return answer.spoken ?? answer.text ?? "";
 }

@@ -4,7 +4,7 @@ type Called = { cmd: string; args: Record<string, unknown> };
 
 /// The main window has no preview harness, so Tauri's own channel is stood in for the way its
 /// mocks stand in for it: an event goes to whoever listens, and every command called is kept. A
-/// question or a playbook run is answered only by a stop, as a long one would be.
+/// question, a playbook run or a repair is answered only by a stop, as a long one would be.
 function standIn(): void {
   const callbacks = new Map<number, (data: unknown) => void>();
   const listening = new Map<string, number[]>();
@@ -33,9 +33,14 @@ function standIn(): void {
         called.push({ cmd, args });
         if (cmd === "resolve_permission") return { matched: true, pending: 0 };
         if (cmd === "playbooks_list") {
-          return { playbooks: [{ name: "research", approved: true, pending: false, when: "a question to research", inputs: [], recent: [] }] };
+          const failed = { path: "/runs/research.md", startedAt: "2026-10-20T09:00:00Z", outcome: "failed" };
+          return { playbooks: [{ name: "research", approved: true, pending: false, when: "a question to research", inputs: [], recent: [failed] }] };
         }
-        if (cmd === "ask" || cmd === "playbook_invoke") {
+        if (cmd === "playbook_read") {
+          const book = { name: "research", when: "a question to research", version: 1, author: "claude", approved: "2026-10-01", steps: ["Search the web."], proof: [], notes: [] };
+          return { name: "research", approved: book, pending: undefined, diff: "" };
+        }
+        if (cmd === "ask" || cmd === "playbook_invoke" || cmd === "playbook_repair") {
           return new Promise((_, refuse) => waiting.push(() => refuse("stopped before it finished")));
         }
         if (cmd === "stop_turn") {
@@ -147,4 +152,17 @@ test("a question being waited on is still there, and still stoppable, after goin
   await expect(page.getByRole("button", { name: "send" })).toBeVisible();
   const [asked] = await calledWith(page, "ask");
   expect((await calledWith(page, "stop_turn")).map((one) => one.args)).toEqual([{ id: asked?.args.id }]);
+});
+
+test("a repair being waited on can be stopped by the name it was given, and ends as stopped rather than as trouble", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "system" }).click();
+  const books = page.locator("section").filter({ has: page.locator("h3", { hasText: /^playbooks$/ }) });
+  await books.getByRole("button", { name: "research", exact: true }).click();
+  await books.getByRole("button", { name: "repair from the last run" }).click();
+  await books.getByRole("button", { name: "stop repairing" }).click();
+  await expect(books.getByRole("button", { name: "repair from the last run" })).toBeVisible();
+  const [repaired] = await calledWith(page, "playbook_repair");
+  expect(String(repaired?.args.id)).toMatch(/^repair:/);
+  expect((await calledWith(page, "stop_turn")).map((one) => one.args)).toEqual([{ id: repaired?.args.id }]);
+  await expect(page.getByText("stopped before it finished")).toHaveCount(0);
 });

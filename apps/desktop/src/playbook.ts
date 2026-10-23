@@ -54,8 +54,8 @@ export function playbookRuns(name: string): Promise<Recent[]> {
 
 export type Repaired = { name: string; pending: boolean; diff: string; said: string };
 
-export function repairPlaybook(name: string): Promise<Repaired> {
-  return invoke<Repaired>("playbook_repair", { name });
+export function repairPlaybook(name: string, id?: string): Promise<Repaired> {
+  return invoke<Repaired>("playbook_repair", { name, id: id ?? null });
 }
 
 export type ProofResult = { item: string; passed: boolean | undefined; why: string };

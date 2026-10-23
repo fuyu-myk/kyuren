@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { islandShortcuts, setIslandShortcuts } from "@/notch";
 import { approvePlaybook, listPlaybooks, readPlaybook, rejectPlaybook, repairPlaybook, type Listed, type Read } from "@/playbook";
+import { stopTurn } from "@/stopping";
 
 type Props = { onTrouble: (message: string) => void };
 
@@ -14,6 +15,9 @@ export function Playbooks({ onTrouble }: Props) {
   const [listed, setListed] = useState<Listed[]>();
   const [open, setOpen] = useState<Read>();
   const [busy, setBusy] = useState<string>();
+  // The repair being waited on, by the name it was started under, so it can be stopped. One that
+  // was stopped ends as stopped, not as trouble.
+  const repairing = useRef<{ id: string; stopped: boolean } | undefined>(undefined);
   /// The approved playbooks the notch offers as shortcuts.
   const [onNotch, setOnNotch] = useState<string[]>([]);
 
@@ -61,17 +65,27 @@ export function Playbooks({ onTrouble }: Props) {
   };
 
   const repair = async (name: string) => {
+    const id = `repair:${crypto.randomUUID()}`;
+    repairing.current = { id, stopped: false };
     setBusy(name);
     try {
-      const repaired = await repairPlaybook(name);
+      const repaired = await repairPlaybook(name, id);
       if (!repaired.pending) onTrouble(`no repair was proposed: ${repaired.said.slice(0, 200)}`);
       await read();
       if (repaired.pending) setOpen(await readPlaybook(name));
     } catch (failure) {
-      onTrouble(String(failure));
+      if (!repairing.current?.stopped) onTrouble(String(failure));
     } finally {
+      repairing.current = undefined;
       setBusy(undefined);
     }
+  };
+
+  const stopRepairing = () => {
+    const turn = repairing.current;
+    if (!turn) return;
+    repairing.current = { ...turn, stopped: true };
+    void stopTurn(turn.id).catch((failure) => onTrouble(String(failure)));
   };
 
   const pendingCount = listed?.filter((one) => one.pending).length ?? 0;
@@ -144,8 +158,8 @@ export function Playbooks({ onTrouble }: Props) {
           ) : (
             <div className="actions">
               {lastFailed(open.name) ? (
-                <button type="button" onClick={() => void repair(open.name)} disabled={busy === open.name}>
-                  {busy === open.name ? "repairing" : "repair from the last run"}
+                <button type="button" onClick={() => (busy === open.name ? stopRepairing() : void repair(open.name))}>
+                  {busy === open.name ? "stop repairing" : "repair from the last run"}
                 </button>
               ) : null}
               <button type="button" className="ghost" onClick={() => setOpen(undefined)}>

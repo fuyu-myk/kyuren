@@ -55,11 +55,11 @@ pub async fn playbook_runs(app: AppHandle, name: String) -> Result<Value, String
 }
 
 /// A repair reads the failed run and proposes an edit that waits like any other; it may take a
-/// while, since the cloud model reads the whole log.
+/// while, since the cloud model reads the whole log. Given a name, it can be stopped by that name.
 #[tauri::command]
-pub async fn playbook_repair(app: AppHandle, name: String) -> Result<Value, String> {
+pub async fn playbook_repair(app: AppHandle, name: String, id: Option<String>) -> Result<Value, String> {
     core(&app)?
-        .request_untimed("playbook.repair", json!({ "name": name }))
+        .request_untimed("playbook.repair", json!({ "name": name, "id": id }))
         .await
         .map_err(|failure| failure.to_string())
 }

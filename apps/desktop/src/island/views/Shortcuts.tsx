@@ -12,6 +12,8 @@ type Props = {
   ran: Ran | null;
   trouble: string | null;
   onRun: (name: string, text: string) => void;
+  /// Stops the shortcut running now.
+  onStop: () => void;
   /// The keyboard is wanted, and then no longer.
   onReach: () => void;
   onLeave: () => void;
@@ -19,7 +21,7 @@ type Props = {
 
 /// Playbooks chosen in settings, run from the notch: one that needs nothing runs at a press, one
 /// that needs a word asks for it in a box like the chat's, and what the run came to shows below.
-export function Shortcuts({ books, running, ran, trouble, onRun, onReach, onLeave }: Props) {
+export function Shortcuts({ books, running, ran, trouble, onRun, onStop, onReach, onLeave }: Props) {
   const [asking, setAsking] = useState<Book | null>(null);
   const [typed, setTyped] = useState("");
 
@@ -49,12 +51,12 @@ export function Shortcuts({ books, running, ran, trouble, onRun, onReach, onLeav
                 type="button"
                 key={book.name}
                 className={doing ? "key running" : asking?.name === book.name ? "key asking" : "key"}
-                disabled={running !== null || how === "elsewhere"}
+                disabled={(running !== null && !doing) || how === "elsewhere"}
                 title={how === "elsewhere" ? "needs more than one answer, so it runs from the chat" : book.when}
-                onClick={() => press(book)}
+                onClick={() => (doing ? onStop() : press(book))}
               >
                 <strong>{book.name}</strong>
-                <span>{doing ? "running…" : how === "now" ? "runs at a press" : how === "asks" ? `asks for ${book.inputs[0]?.name ?? "a word"}` : "from the chat"}</span>
+                <span>{doing ? "running, press to stop" : how === "now" ? "runs at a press" : how === "asks" ? `asks for ${book.inputs[0]?.name ?? "a word"}` : "from the chat"}</span>
               </button>
             );
           })}

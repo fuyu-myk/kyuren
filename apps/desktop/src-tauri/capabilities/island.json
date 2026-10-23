@@ -47,6 +47,7 @@
     "allow-shelf-drag",
     "allow-shelf-list",
     "allow-shelf-remove",
-    "allow-shelf-reveal"
+    "allow-shelf-reveal",
+    "allow-stop-turn"
   ]
 }

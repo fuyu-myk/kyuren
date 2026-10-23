@@ -1,6 +1,7 @@
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Presence, smoothstep } from "@/mind/presence";
+import { stopTurn } from "@/stopping";
 import { askable, insideTauri, onHand, onHandLost, onSight, onStep, onStepDone, readGraph, runCapability, startVision, stopVision, toggleMind } from "@/mind/graph";
 import { drawHand } from "@/mind/cursor";
 import { Holding } from "@/mind/hold";
@@ -312,12 +313,24 @@ function focus(id: string | undefined): void {
   if (about.kind === "tool" && canRun.includes(about.label)) {
     const run = document.createElement("button");
     run.textContent = "run this";
+    // While it runs, the button stops it, by the name it was started under.
+    let running: { id: string; stopped: boolean } | undefined;
     run.onclick = () => {
-      run.disabled = true;
-      run.textContent = "running";
-      void runCapability(about.label)
+      if (running) {
+        running = { ...running, stopped: true };
+        void stopTurn(running.id);
+        return;
+      }
+      const id = `mind:${crypto.randomUUID()}`;
+      running = { id, stopped: false };
+      run.textContent = "stop";
+      void runCapability(about.label, id)
         .then((said) => { run.textContent = said ? said.slice(0, 160) : "done"; })
-        .catch((failure: unknown) => { run.textContent = String(failure).slice(0, 120); });
+        .catch((failure: unknown) => { run.textContent = running?.stopped ? "stopped" : String(failure).slice(0, 120); })
+        .finally(() => {
+          running = undefined;
+          run.disabled = true;
+        });
     };
     reading.append(run);
   }
