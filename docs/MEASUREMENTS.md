@@ -808,6 +808,17 @@ from a session at work in this repository, came to the island, and the option pi
 back as its answer, 21 seconds after it was asked; Claude Code went on with it. A plan, an edit and
 a server's form have not been seen.
 
+Later that day, from the same session: an edit allowed on the island was made and another denied
+there was refused, Claude Code told it was denied on Kyuren's island, and a command allowed there
+ran. A plan approved on the island reached Claude Code, which went on, but the app's own plan card
+stayed unapproved and the mode chosen was not taken up, so a plan from a session in the app now
+goes to the app's own window. One did, and while it waited there, nine hours, the coding page
+showed its session waiting, as Claude Code's record said, for a permission prompt. Idle sessions
+had been missing from that page: Kyuren, opened from a terminal set to Singapore's English, read
+when each process began day first and believed no session's record; read in the plain locale, an
+editor's session idle for a day and a half was listed again. A plan from a terminal and a server's
+form have not been seen.
+
 ## On the built app
 
 2026-10-03, by the user, on the app built from this repository.
