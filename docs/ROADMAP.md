@@ -492,8 +492,8 @@ the reader none at all.
 4. A Claude Code permission prompt, questions to choose among, a plan, an edit or a server's form,
    shown whole, is answered on the island and Claude Code does as answered; one the island has not
    taken within three seconds, has not answered in time, or was given an answer that does not fit
-   it, goes back to Claude Code's own prompt. *Recorded for allow on a permission, The Claude Code
-   relay, live; the other kinds not yet seen. Which questions are shown whole is tested,
+   it, goes back to Claude Code's own prompt. *Recorded for allow on a permission and for a
+   multiple-choice question, The Claude Code relay, live; a plan, an edit and a form not yet seen. Which questions are shown whole is tested,
    `coding/asked.test.ts`, `coding/choices.test.ts` and `coding/forms.test.ts`; what goes back for
    each, and handing one back, on timings of the test's own, `coding/hooks.test.ts`; answering each
    on the island, `e2e/island.spec.ts`.*

@@ -803,6 +803,11 @@ Cache writes were about half of that and output, mostly thinking, about a third.
 the island, were allowed there, and Claude Code went on as allowed. A deny, and a question from a
 session at work, have not been seen.
 
+2026-10-23, with the three hooks installed: a multiple-choice question Claude Code asked the user,
+from a session at work in this repository, came to the island, and the option picked there went
+back as its answer, 21 seconds after it was asked; Claude Code went on with it. A plan, an edit and
+a server's form have not been seen.
+
 ## On the built app
 
 2026-10-03, by the user, on the app built from this repository.
