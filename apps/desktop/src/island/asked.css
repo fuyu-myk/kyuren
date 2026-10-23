@@ -129,6 +129,18 @@
   white-space: pre-wrap;
 }
 
+.asked .plan .link {
+  color: #89b4fa;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+  cursor: pointer;
+}
+
+/* Where a link leads, beside what it says: in a plan to approve, the place counts, not the words. */
+.asked .plan .address {
+  color: #7f849c;
+}
+
 .asked .plan h3,
 .asked .plan h4,
 .asked .plan h5,

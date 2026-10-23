@@ -116,7 +116,7 @@ function Choosing({ ask, steady, onAnswer }: Answering<"choice">) {
 
 function Planned({ ask, steady, onAnswer }: Answering<"plan">) {
   // Drawn once, not again with each second counted down.
-  const plan = useMemo(() => <Markdown text={ask.plan} />, [ask.plan]);
+  const plan = useMemo(() => <Markdown text={ask.plan} addresses />, [ask.plan]);
   return (
     <>
       <div className="whole plan">{plan}</div>

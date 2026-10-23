@@ -591,24 +591,24 @@ characters of text, every line wrapped rather than cut. Its path must be given w
 with no step back or in place, and it is shown whole where the write would land with its links
 followed, a new file in a linked folder included; a link that leads nowhere goes back. A notebook's
 cells and a plugin's arguments are what matter in theirs, and the island does not show them. A plan
-comes as the Markdown it was written in, up to 20,000 characters, unless it also asks for
-permissions, which before Claude Code 2.1.205 approving it would grant unseen: approved, Claude
-Code goes on asking before each edit or accepting them, as chosen, and sent back it goes on
-planning, told the user said so. Questions to choose among come all together, up to four of two to
-four options each, with no question or option repeated and no preview drawn beside an option, and
-the answer goes back as Claude Code's own dialog gives it: each question with the labels picked,
-from those it offered. A form comes in plain fields, up to eight, of words, numbers, a yes or no or
-a choice among words, with the least and most each may be shown and held to; one with a rule the
-island does not check, a format, a pattern or names shown in place of its choices, goes back, as
-does one that reads as asking for a secret, a password, a token, a key, a PIN, a code sent to the
-user or a card, in a field however its name is written or in its message, or that spells a word
-with letters of another script drawn like Latin ones, and a request to open a page in the browser,
-since what is typed on the island passes through Kyuren. Its values go back as the server asked for
-them, each checked on the island and again in the core: a number as a number, a choice from those
-offered, within its bounds, nothing missing that must be filled, nothing over 2,000 characters and
-no control character, though anything else the user can type, a wide space or an emoji, is theirs
-to send. An answer that does not fit its question is not given, and the question goes back to be
-asked there.
+comes as the Markdown it was written in, each link with where it leads said beside it, up to 20,000
+characters, unless it also asks for permissions, which before Claude Code 2.1.205 approving it
+would grant unseen: approved, Claude Code goes on asking before each edit or accepting them, as
+chosen, and sent back it goes on planning, told the user said so. Questions to choose among come
+all together, up to four of two to four options each, with no question or option repeated and no
+preview drawn beside an option, and the answer goes back as Claude Code's own dialog gives it: each
+question with the labels picked, from those it offered. A form comes in plain fields, up to eight,
+of words, numbers, a yes or no or a choice among words, with the least and most each may be shown
+and held to; one with a rule the island does not check, a format, a pattern or names shown in place
+of its choices, goes back, as does one that reads as asking for a secret, a password, a token, a
+key, a PIN, a code sent to the user or a card, in a field however its name is written or in its
+message, or that spells a word with letters of another script drawn like Latin ones, and a request
+to open a page in the browser, since what is typed on the island passes through Kyuren. Its values
+go back as the server asked for them, each checked on the island and again in the core: a number as
+a number, a choice from those offered, within its bounds, nothing missing that must be filled,
+nothing over 2,000 characters and no control character, though anything else the user can type, a
+wide space or an emoji, is theirs to send. An answer that does not fit its question is not given,
+and the question goes back to be asked there.
 
 The island opens on the question and says it has it; a question it has not said it has within three
 seconds goes back, since no one may be there to answer. Held, a permission waits at most 45

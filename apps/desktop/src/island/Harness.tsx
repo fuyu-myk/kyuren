@@ -25,7 +25,7 @@ const PREVIEWED_ASKS = [
     project: "kyuren",
     tool: "ExitPlanMode",
     kind: "plan",
-    plan: "## Move the shelf onto SQLite\n\n1. Add a table for shelved files, keyed by device and inode.\n2. Read the JSON files once, into it, and keep them as a backup.\n3. Point the shelf's commands at the table.\n4. Test a rename, a move and a file replaced at the same path.",
+    plan: "## Move the shelf onto SQLite\n\nAs [the shelf's notes](https://example.com/shelf-notes) suggest:\n\n1. Add a table for shelved files, keyed by device and inode.\n2. Read the JSON files once, into it, and keep them as a backup.\n3. Point the shelf's commands at the table.\n4. Test a rename, a move and a file replaced at the same path.",
   },
   {
     id: "agent-edit",

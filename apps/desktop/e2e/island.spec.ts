@@ -248,6 +248,7 @@ test("a plan is read whole on the island, and approved in the mode chosen or sen
   await askOpened(page, "agent plan");
   await expect(page.locator(".asked .plan h4")).toHaveText("Move the shelf onto SQLite");
   await expect(page.locator(".asked .plan ol li")).toHaveCount(4);
+  await expect(page.locator(".asked .plan p")).toHaveText("As the shelf's notes (https://example.com/shelf-notes) suggest:");
   await page.locator(".asked .foot").getByRole("button", { name: "keep planning" }).click();
   await askOpened(page, "agent plan");
   await page.locator(".asked .foot").getByRole("button", { name: "approve, accept edits" }).click();
