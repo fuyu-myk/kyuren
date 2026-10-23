@@ -13,6 +13,11 @@ public final class SpeechStream: @unchecked Sendable {
     /// report is kept and prepended to the utterance.
     static let prerollSamples = Int(sampleRate * 0.75)
     static let utteranceCap = Int(sampleRate * Refiner.windowSeconds)
+    /// Half a second of quiet ends an utterance, where the library waits three quarters: decided a
+    /// quarter of a second at a time, that is two steps rather than three, and an utterance ends
+    /// that much sooner. A pause long enough to end one early is joined to what follows by the
+    /// host. See MEASUREMENTS.
+    static let segmentation = VadSegmentationConfig(minSilenceDuration: 0.5)
 
     private let transport: any Transport
     private let onBargeIn: (@Sendable () -> Bool)?
@@ -143,7 +148,7 @@ public final class SpeechStream: @unchecked Sendable {
                 let chunk = Array(buffered.prefix(Self.chunkSize))
                 buffered.removeFirst(Self.chunkSize)
 
-                guard let result = try? await vad.processStreamingChunk(chunk, state: state) else {
+                guard let result = try? await vad.processStreamingChunk(chunk, state: state, config: Self.segmentation) else {
                     continue
                 }
                 state = result.state

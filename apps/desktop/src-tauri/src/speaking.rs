@@ -44,6 +44,10 @@ pub struct Current {
     count: u64,
     /// The turn being said has not yet ended.
     live: bool,
+    /// What that turn was asked.
+    asked: Option<String>,
+    /// Some of that turn's reply has been heard.
+    answered: bool,
     /// Sentences of that turn sent to the voice and not yet heard out.
     unheard: usize,
     /// The voice is saying something.
@@ -53,12 +57,23 @@ pub struct Current {
 }
 
 impl Current {
+    /// What a new turn is asked. Heard while the turn being said goes on and before any of its reply,
+    /// it carries on that turn's question after a pause rather than asking one of its own.
+    pub fn asking(&self, heard: &str) -> String {
+        match &self.asked {
+            Some(before) if self.live && !self.answered => format!("{before} {heard}"),
+            _ => heard.to_string(),
+        }
+    }
+
     /// A new spoken turn takes over; the one it replaces, if any, is to be stopped.
-    pub fn begin(&mut self) -> (String, Option<String>) {
+    pub fn begin(&mut self, asked: String) -> (String, Option<String>) {
         self.count += 1;
         let id = format!("voice:{}", self.count);
         let previous = self.turn.replace(id.clone());
         self.live = true;
+        self.asked = Some(asked);
+        self.answered = false;
         // Whatever was sounding is hushed as the turn begins.
         self.unheard = 0;
         self.sounding = false;
@@ -103,6 +118,9 @@ impl Current {
     /// The voice has begun saying something, or has finished or been stopped.
     pub fn sounds(&mut self, sounding: bool) {
         self.sounding = sounding;
+        if sounding && self.live {
+            self.answered = true;
+        }
         if !sounding {
             self.unheard = 0;
         }
@@ -168,19 +186,23 @@ fn send(app: &AppHandle, turn: Option<String>, line: Line) {
     }
 }
 
-/// A spoken turn begins under a name of its own: what was being said gives way, and the turn it
-/// replaces is stopped.
-pub fn begin(app: &AppHandle) -> String {
-    let begun = with(app, Current::begin);
+/// A spoken turn begins under a name of its own, for what was heard: what was being said gives
+/// way, and the turn it replaces is stopped. Returns the turn and what it is asked.
+pub fn begin(app: &AppHandle, heard: &str) -> (String, String) {
+    let begun = with(app, |current| {
+        let asked = current.asking(heard);
+        let (turn, previous) = current.begin(asked.clone());
+        (turn, previous, asked)
+    });
     // Without the line to the voice installed nothing is said, though the turn still runs.
-    let Some((turn, previous)) = begun else {
-        return "voice".to_string();
+    let Some((turn, previous, asked)) = begun else {
+        return ("voice".to_string(), heard.to_string());
     };
     send(app, Some(turn.clone()), Line::Hush);
     if let Some(previous) = previous {
         stop(app, previous);
     }
-    turn
+    (turn, asked)
 }
 
 /// A sentence the core says for a spoken turn.
@@ -282,10 +304,10 @@ mod tests {
     #[test]
     fn a_new_spoken_turn_takes_over_and_names_the_one_it_replaces() {
         let mut current = Current::default();
-        let (first, replaced) = current.begin();
+        let (first, replaced) = current.begin("one".into());
         assert_eq!(replaced, None);
         assert!(current.is(&first));
-        let (second, replaced) = current.begin();
+        let (second, replaced) = current.begin("two".into());
         assert_ne!(first, second);
         assert_eq!(replaced.as_deref(), Some(first.as_str()));
         assert!(current.is(&second));
@@ -295,7 +317,7 @@ mod tests {
     #[test]
     fn a_turn_talked_over_says_nothing_more_and_is_stopped_once() {
         let mut current = Current::default();
-        let (turn, _) = current.begin();
+        let (turn, _) = current.begin("asked".into());
         assert_eq!(current.interrupt().as_deref(), Some(turn.as_str()));
         assert!(!current.is(&turn));
         assert_eq!(current.interrupt(), None, "nothing is left to stop");
@@ -305,9 +327,9 @@ mod tests {
     fn only_the_turn_being_said_is_sent_on_and_what_belongs_to_no_turn_always_is() {
         let mut current = Current::default();
         assert!(current.wants(None), "a notice, or a stop, with nothing being said");
-        let (first, _) = current.begin();
+        let (first, _) = current.begin("asked".into());
         assert!(current.wants(Some(&first)));
-        let (second, _) = current.begin();
+        let (second, _) = current.begin("asked".into());
         assert!(!current.wants(Some(&first)), "a replaced turn's lines are dropped");
         assert!(current.wants(Some(&second)));
         current.interrupt();
@@ -319,7 +341,7 @@ mod tests {
     fn a_notice_waits_while_anything_is_said_owed_or_heard() {
         let mut current = Current::default();
         assert!(current.quiet());
-        let (turn, _) = current.begin();
+        let (turn, _) = current.begin("asked".into());
         assert!(!current.quiet(), "a turn under way");
         assert!(current.adds(&turn));
         current.sounds(true);
@@ -336,22 +358,42 @@ mod tests {
     #[test]
     fn a_turn_that_ends_with_its_words_heard_out_says_so_and_one_still_owing_them_does_not() {
         let mut current = Current::default();
-        let (turn, _) = current.begin();
+        let (turn, _) = current.begin("asked".into());
         current.adds(&turn);
         current.sounds(true);
         current.sounds(false);
         assert!(current.live(), "heard out while it goes on, as through a tool");
         assert!(current.settle(&turn));
 
-        let (next, _) = current.begin();
+        let (next, _) = current.begin("asked".into());
         current.adds(&next);
         assert!(!current.settle(&next), "its last sentence is still on its way to the voice");
         assert!(!current.quiet());
-        let (later, _) = current.begin();
+        let (later, _) = current.begin("asked".into());
         assert!(!current.adds(&next), "a replaced turn's words are not counted");
         assert!(!current.settle(&next), "nor is it the one being said when it ends");
         assert!(current.live());
         assert!(current.settle(&later));
+    }
+
+    #[test]
+    fn more_heard_before_any_reply_joins_the_question_and_after_it_is_a_question_of_its_own() {
+        let mut current = Current::default();
+        assert_eq!(current.asking("what is on my calendar"), "what is on my calendar");
+        current.begin("what is on my calendar".into());
+        let asked = current.asking("for tomorrow afternoon");
+        assert_eq!(asked, "what is on my calendar for tomorrow afternoon", "a pause, not a new question");
+        current.begin(asked);
+        assert_eq!(current.asking("and the evening"), "what is on my calendar for tomorrow afternoon and the evening");
+
+        current.sounds(true);
+        assert_eq!(current.asking("thanks"), "thanks", "its reply has begun, so this answers it");
+        let (turn, _) = current.begin("thanks".into());
+        current.settle(&turn);
+        assert_eq!(current.asking("one more thing"), "one more thing", "nor once a turn is over");
+        current.begin("one more thing".into());
+        current.interrupt();
+        assert_eq!(current.asking("never mind"), "never mind", "nor once it is talked over");
     }
 
     #[test]

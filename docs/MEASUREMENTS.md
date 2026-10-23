@@ -877,3 +877,27 @@ the app took 249 to 400 ms of acoustic synthesis, against about 90 ms for a shor
 opening is said at its first comma, semicolon or colon followed by a space, once it is 24
 characters long, and the rest a sentence at a time. Of eight questions asked earlier, three
 paused before their first full stop.
+
+## Ending an utterance
+
+2026-10-22. Questions synthesised by Kokoro, with quiet around them, fed through voice activity and
+the streaming recogniser and timed in audio, and three of them through the speech stream itself in
+real time. Kokoro leaves quiet of its own around each piece, so the shortest pause inside a
+question was 0.72 s.
+
+| what ends an utterance | after the last sound | pauses inside a question it split |
+| --- | --- | --- |
+| 0.75 s of quiet, the library's default | 1.09 to 1.28 s | none of 0.72 to 1.11 s |
+| 0.5 s of quiet | 0.84 to 1.02 s | those of 1.01 s and over |
+| 0.25 s of quiet | 0.58 to 0.77 s | all of them |
+| the recogniser's end of utterance | 0.72 to 1.36 s | all of them |
+
+Through the speech stream, the refined transcript came 1.28 to 1.55 s after the last sound at
+0.75 s, and 1.04 to 1.14 s at 0.5 s.
+
+Voice activity decides 256 ms at a time, so 0.4 and 0.5 s behave alike, and a quarter of a second
+ends after one quiet step. The recogniser's end of utterance fired in every pause and was never
+sooner than one quiet step, so it is not used. Half a second is: anything heard while a spoken turn
+goes on, before any of its reply, is joined to that turn's question, so a pause long enough to end
+an utterance carries the question on instead of answering half of it. A quarter of a second would
+be sooner again by as much and split at shorter hesitations; that is left to be tried by speaking.

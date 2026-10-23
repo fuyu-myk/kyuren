@@ -25,7 +25,7 @@ pub fn on_transcript(app: &AppHandle, text: String) {
     };
     let core = Arc::clone(&state.core);
     let app = app.clone();
-    let turn = crate::speaking::begin(&app);
+    let (turn, text) = crate::speaking::begin(&app, &text);
 
     tauri::async_runtime::spawn(async move {
         let _ = app.emit("orb:state", "thinking");

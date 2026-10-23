@@ -124,7 +124,9 @@ and no good answer anywhere else.
   process being supervised. EventKit reads whatever calendars the Mac already holds, whoever the
   account belongs to, so an account configured once is readable without authorising the service
   behind it a second time.
-- **Voice activity.** Silero VAD.
+- **Voice activity.** Silero VAD. Half a second of quiet ends an utterance. What is heard while a
+  spoken turn goes on, before any of its reply, carries that turn's question on after a pause, and
+  the turn is begun again with the two joined.
 - **Speech to text.** Parakeet streaming via FluidAudio, running on the Neural Engine. Apple's
   `SpeechAnalyzer` and `SpeechTranscriber` are the fallback if FluidAudio disappoints; they cost
   zero application size because the OS manages the models.
