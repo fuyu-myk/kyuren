@@ -601,13 +601,14 @@ from those it offered. A form comes in plain fields, up to eight, of words, numb
 a choice among words, with the least and most each may be shown and held to; one with a rule the
 island does not check, a format, a pattern or names shown in place of its choices, goes back, as
 does one that reads as asking for a secret, a password, a token, a key, a PIN, a code sent to the
-user or a card, in a field however its name is written or in its message, and a request to open a
-page in the browser, since what is typed on the island passes through Kyuren. Its values go back as
-the server asked for them, each checked on the island and again in the core: a number as a number,
-a choice from those offered, within its bounds, nothing missing that must be filled, nothing over
-2,000 characters and no control character, though anything else the user can type, a wide space or
-an emoji, is theirs to send. An answer that does not fit its question is not given, and the
-question goes back to be asked there.
+user or a card, in a field however its name is written or in its message, or that spells a word
+with letters of another script drawn like Latin ones, and a request to open a page in the browser,
+since what is typed on the island passes through Kyuren. Its values go back as the server asked for
+them, each checked on the island and again in the core: a number as a number, a choice from those
+offered, within its bounds, nothing missing that must be filled, nothing over 2,000 characters and
+no control character, though anything else the user can type, a wide space or an emoji, is theirs
+to send. An answer that does not fit its question is not given, and the question goes back to be
+asked there.
 
 The island opens on the question and says it has it; a question it has not said it has within three
 seconds goes back, since no one may be there to answer. Held, a permission waits at most 45

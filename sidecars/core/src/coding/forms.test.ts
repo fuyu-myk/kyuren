@@ -117,3 +117,13 @@ test("values are held to a field's bounds, and anything the user can type is the
   assert.equal(sent({ name: "x".repeat(9) }), false, "longer than the most");
   assert.equal(sent({ name: "a\u0007b" }), false, "a control character");
 });
+
+test("a name spelled with letters that only look Latin, to pass for what it is not, is for Claude Code's own dialog", () => {
+  const field = (name: string, property: Record<string, unknown> = { type: "string" }) => form({ type: "object", properties: { [name]: property } });
+  assert.equal(claudeForm(field("value", { type: "string", title: "Раssword" }), "f", NOW, 1), undefined, "Cyrillic letters inside a Latin word");
+  assert.equal(claudeForm(field("value", { type: "string", title: "API Κey" }), "f", NOW, 1), undefined, "a Greek letter");
+  assert.equal(claudeForm(form(SCHEMA, { message: "Enter your раssword." }), "f", NOW, 1), undefined, "in the message");
+  for (const plain of ["Имя", "Όνομα", "Gitのブランチ名", "Naïve title"]) {
+    assert.ok(claudeForm(field("value", { type: "string", title: plain }), "f", NOW, 1), `${plain}, one script to a word or one with no Latin lookalikes`);
+  }
+});

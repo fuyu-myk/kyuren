@@ -22,6 +22,18 @@ function words(text: string): string {
     .toLowerCase();
 }
 
+/// Letters of the scripts drawn like Latin ones, in a word with Latin letters: "Раssword" spells its
+/// first two in Cyrillic, so that it reads as what a check of its words would not find.
+const LATIN = /\p{Script=Latin}/u;
+const LOOKALIKE = /[\p{Script=Cyrillic}\p{Script=Greek}\p{Script=Armenian}\p{Script=Cherokee}]/u;
+
+function disguised(text: string): boolean {
+  return text
+    .normalize("NFKC")
+    .split(/[^\p{L}\p{M}]+/u)
+    .some((word) => LATIN.test(word) && LOOKALIKE.test(word));
+}
+
 /// What a value typed on the island may not hold: a line break, an escape or another control
 /// character. Anything else the user can type, a wide space or an emoji among them, is theirs.
 const CONTROL = /\p{Cc}/u;
@@ -80,7 +92,8 @@ export function claudeForm(payload: unknown, id: string, now: number, wait: Wait
   });
   const shown = [server, message, ...fields.flatMap((field) => [field.name, field.title, field.about, ...field.choices])];
   if (shown.some((one) => HIDING.test(one))) return undefined;
-  if (SECRET.test(words([message, ...fields.flatMap((field) => [field.name, field.title, field.about])].join(" ")))) return undefined;
+  const asked = [message, ...fields.flatMap((field) => [field.name, field.title, field.about])].join(" ");
+  if (SECRET.test(words(asked)) || disguised(asked)) return undefined;
   return { id, harness: "claude", session, project, tool: "elicitation", at: now, kind: "form", server, message, fields, until: now + waited(wait, "form") };
 }
 
