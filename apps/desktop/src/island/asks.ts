@@ -80,6 +80,17 @@ export function pickedFor(questions: Question[], chosen: Record<string, string[]
   return Object.fromEntries(picked);
 }
 
+/// The next question still without its pick after the one at `from`, coming round to the start;
+/// nothing when every other one has its pick.
+export function nextOpen(questions: Question[], chosen: Record<string, string[]>, from: number): number | undefined {
+  for (let step = 1; step < questions.length; step += 1) {
+    const at = (from + step) % questions.length;
+    const one = questions[at];
+    if (one && pickedFor([one], chosen) === undefined) return at;
+  }
+  return undefined;
+}
+
 /// The choice after one more option is pressed: added or taken away where several may be picked,
 /// in place of the last where one may.
 export function chose(chosen: Record<string, string[]>, question: Question, label: string): Record<string, string[]> {

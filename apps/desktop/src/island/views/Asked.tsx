@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { boundsOf, chose, contentFor, pickedFor, pickedOf, secondsLeft, type AgentAsk, type Decision, type Extra, type Field } from "@/island/asks";
+import { boundsOf, chose, contentFor, nextOpen, pickedFor, pickedOf, secondsLeft, type AgentAsk, type Decision, type Extra, type Field } from "@/island/asks";
 import { BackIcon } from "@/island/icons";
 import { harnessName } from "@/island/views/Coding";
 import { Markdown } from "@/Markdown";
@@ -73,42 +73,68 @@ function Back({ steady, onAnswer }: Pick<Answering<AgentAsk["kind"]>, "steady" |
   );
 }
 
+/// Questions asked together come one at a time, as Claude Code's own picker shows them: the island
+/// has room for one, and a second below the first went unseen while the answer waited on it. Their
+/// topics say which have their pick and go to any; a pick where only one may be goes on to the next.
 function Choosing({ ask, steady, onAnswer }: Answering<"choice">) {
   const [chosen, setChosen] = useState<Record<string, string[]>>({});
+  const [at, setAt] = useState(0);
+  const one = ask.questions[at] ?? ask.questions[0];
+  if (!one) return null;
   const picked = pickedFor(ask.questions, chosen);
+  const next = nextOpen(ask.questions, chosen, at);
+  const pick = (label: string) => {
+    const made = chose(chosen, one, label);
+    setChosen(made);
+    const after = one.multiSelect ? undefined : nextOpen(ask.questions, made, at);
+    if (after !== undefined) setAt(after);
+  };
   return (
     <>
-      <div className="whole">
-        {ask.questions.map((one) => (
-          <div key={one.question} className="question">
-            {one.header ? <span className="topic">{one.header}</span> : null}
-            <p className="asks">{one.question}</p>
-            <div className="options">
-              {one.options.map((option) => {
-                const on = pickedOf(chosen, one).includes(option.label);
-                return (
-                  <button
-                    type="button"
-                    key={option.label}
-                    className={on ? "option on" : "option"}
-                    aria-pressed={on}
-                    onClick={() => setChosen((was) => chose(was, one, option.label))}
-                  >
-                    <strong>{option.label}</strong>
-                    {option.description ? <span>{option.description}</span> : null}
-                  </button>
-                );
-              })}
-            </div>
-            {one.multiSelect ? <span className="hint">as many as apply</span> : null}
+      <div className="whole" key={at}>
+        {ask.questions.length > 1 ? (
+          <div className="steps">
+            {ask.questions.map((each, place) => (
+              <button
+                type="button"
+                key={each.question}
+                className={[place === at ? "on" : "", pickedFor([each], chosen) ? "done" : ""].filter(Boolean).join(" ") || undefined}
+                aria-current={place === at ? "step" : undefined}
+                onClick={() => setAt(place)}
+              >
+                {each.header || `question ${place + 1}`}
+              </button>
+            ))}
           </div>
-        ))}
+        ) : null}
+        <div className="question">
+          {ask.questions.length === 1 && one.header ? <span className="topic">{one.header}</span> : null}
+          <p className="asks">{one.question}</p>
+          <div className="options">
+            {one.options.map((option) => {
+              const on = pickedOf(chosen, one).includes(option.label);
+              return (
+                <button type="button" key={option.label} className={on ? "option on" : "option"} aria-pressed={on} onClick={() => pick(option.label)}>
+                  <strong>{option.label}</strong>
+                  {option.description ? <span>{option.description}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+          {one.multiSelect ? <span className="hint">as many as apply</span> : null}
+        </div>
       </div>
       <div className="foot">
         <Back steady={steady} onAnswer={onAnswer} />
-        <button type="button" className="allow" disabled={!picked} onClick={steady(() => picked && onAnswer("allow", { picked }))}>
-          answer
-        </button>
+        {picked || next === undefined ? (
+          <button type="button" className="allow" disabled={!picked} onClick={steady(() => picked && onAnswer("allow", { picked }))}>
+            answer
+          </button>
+        ) : (
+          <button type="button" className="allow" onClick={() => setAt(next)}>
+            next
+          </button>
+        )}
       </div>
     </>
   );

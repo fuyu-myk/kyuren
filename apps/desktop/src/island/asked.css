@@ -56,8 +56,32 @@
   font-size: 12px;
 }
 
-.asked .question + .question {
-  margin-top: 10px;
+/* Questions asked together: where each stands, and a way to any of them. */
+.asked .steps {
+  display: flex;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.asked .steps button {
+  padding: 1px 9px;
+  border: 1px solid rgb(205 214 244 / 10%);
+  border-radius: 10px;
+  background: none;
+  color: #9399b2;
+  font: inherit;
+  font-size: 10.5px;
+  cursor: default;
+}
+
+.asked .steps button.done {
+  color: #a6e3a1;
+}
+
+.asked .steps button.on {
+  border-color: rgb(180 190 254 / 45%);
+  color: #cdd6f4;
 }
 
 .asked .topic {

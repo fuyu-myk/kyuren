@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { boundsOf, chose, contentFor, pickedFor, pickedOf, secondsLeft, summaryOf, waitingBesides, type AgentAsk, type Field, type Question } from "./asks.ts";
+import { boundsOf, chose, contentFor, nextOpen, pickedFor, pickedOf, secondsLeft, summaryOf, waitingBesides, type AgentAsk, type Field, type Question } from "./asks.ts";
 
 const ask: AgentAsk = { id: "a", harness: "claude", session: "s1", project: "kyuren", tool: "Bash", kind: "permission", verb: "run", target: "make", at: 0, until: 45_000 };
 
@@ -93,4 +93,13 @@ test("words a server could not be sent do not read right: too long, or holding a
   const note: Field = { name: "note", title: "Note", about: "", type: "string", choices: [], required: true };
   assert.deepEqual(contentFor([note], { note: "x".repeat(2_001) }), { missing: [], wrong: ["Note"] });
   assert.deepEqual(contentFor([note], { note: "a\u0007b" }), { missing: [], wrong: ["Note"] });
+});
+
+test("questions asked together are gone through in turn: the next still without its pick, coming round to the start", () => {
+  const third: Question = { ...FRAMEWORK, question: "Which store?" };
+  const all = [FRAMEWORK, CHECKS, third];
+  assert.equal(nextOpen(all, {}, 0), 1);
+  assert.equal(nextOpen(all, chose({}, CHECKS, "Lint"), 0), 2, "an answered one is passed over");
+  assert.equal(nextOpen(all, chose(chose({}, CHECKS, "Lint"), third, "React"), 2), 0, "round to the start");
+  assert.equal(nextOpen(all, chose(chose({}, CHECKS, "Lint"), third, "React"), 0), undefined, "only the one in hand is left");
 });

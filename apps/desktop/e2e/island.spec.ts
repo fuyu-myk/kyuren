@@ -228,16 +228,18 @@ test("a question answered in the main window is gone from the island, which fold
 
 test("a coding agent's questions are answered on the island, each with what was picked for it", async ({ page }) => {
   await askOpened(page, "agent choice");
-  const answer = page.locator(".asked .foot").getByRole("button", { name: "answer" });
+  const foot = page.locator(".asked .foot");
   const option = (label: string) => page.locator(".asked .option", { hasText: label });
-  await expect(answer).toBeDisabled();
+  const step = (topic: string) => page.locator(".asked .steps button", { hasText: topic });
   await option("SQLite").click();
+  await expect(step("Checks")).toHaveAttribute("aria-current", "step");
+  await step("Store").click();
   await option("JSON files").click();
-  await expect(option("SQLite")).toHaveAttribute("aria-pressed", "false");
-  await expect(answer).toBeDisabled();
+  await expect(step("Store")).toHaveClass(/done/);
   await option("Lint").click();
   await option("Unit tests").click();
-  await answer.click();
+  await expect(option("Lint")).toHaveAttribute("aria-pressed", "true");
+  await foot.getByRole("button", { name: "answer" }).click();
   await expect(page.locator(".view.asked")).toHaveCount(0);
   expect(await commanded(page, "coding_answer")).toEqual([
     { id: "agent-choice", decision: "allow", picked: { "Which store should hold the shelf?": ["JSON files"], "Which checks should run first?": ["Lint", "Unit tests"] } },
@@ -412,4 +414,37 @@ test("an idle session's time is read afresh each time the coding page comes back
   await opened(page);
   await expect(page.locator(".view.coding")).toBeVisible();
   await expect(since).toHaveText("2 minutes ago");
+});
+
+test("questions asked together come one at a time, a pick moving on to the next, and are answered once each has its pick", async ({ page }) => {
+  await opened(page);
+  const options = (first: string, second: string) => [{ label: first, description: "A longer word about it, as an agent writes one, so that the question takes room." }, { label: second, description: "And another, as long, to show how little room the island has." }];
+  await emit(page, "agent:permission", {
+    id: "pair",
+    harness: "claude",
+    session: "s1",
+    project: "kyuren",
+    tool: "AskUserQuestion",
+    kind: "choice",
+    questions: [
+      { question: "Which agents should come to the island?", header: "Agents", options: options("None yet", "Copilot"), multiSelect: false },
+      { question: "Should the island speak up when CI fails?", header: "CI", options: options("Board only", "Glance too"), multiSelect: false },
+    ],
+    at: Date.now(),
+    until: Date.now() + 60_000,
+  });
+  await page.locator(".tabs .tab[title='waiting on you']").click();
+  await page.locator(".row.ask").getByRole("button", { name: "open" }).click();
+  await page.waitForTimeout(500);
+  const foot = page.locator(".asked .foot");
+  await expect(page.locator(".asked .steps button")).toHaveText(["Agents", "CI"]);
+  await expect(foot.getByRole("button", { name: "next" })).toBeVisible();
+  await page.locator(".asked .option", { hasText: "None yet" }).click();
+  await expect(page.locator(".asked .asks")).toHaveText("Should the island speak up when CI fails?");
+  await expect(foot.getByRole("button", { name: "answer" })).toBeDisabled();
+  await page.locator(".asked .option", { hasText: "Board only" }).click();
+  await foot.getByRole("button", { name: "answer" }).click();
+  expect(await commanded(page, "coding_answer")).toEqual([
+    { id: "pair", decision: "allow", picked: { "Which agents should come to the island?": ["None yet"], "Should the island speak up when CI fails?": ["Board only"] } },
+  ]);
 });
