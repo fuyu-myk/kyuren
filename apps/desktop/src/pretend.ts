@@ -189,7 +189,29 @@ export const pretend = {
   projects(): Project[] {
     const day = 86_400_000;
     return [
-      { name: "kyuren", path: "~/Documents/Coding/kyuren", branch: "main", upstream: "origin/main", ahead: 0, behind: 0, dirty: 1, lastAt: Date.now() - 2 * 3_600_000, lastSaid: "ask before letting go of a conversation" },
+      {
+        name: "kyuren",
+        path: "~/Documents/Coding/kyuren",
+        branch: "main",
+        upstream: "origin/main",
+        ahead: 0,
+        behind: 0,
+        dirty: 1,
+        lastAt: Date.now() - 2 * 3_600_000,
+        lastSaid: "ask before letting go of a conversation",
+        github: {
+          repo: "someone/kyuren",
+          branch: "main",
+          main: "failing",
+          count: 4,
+          pulls: [
+            { number: 41, title: "Keep the shelf in SQLite", url: "https://github.com/someone/kyuren/pull/41", draft: false, checks: "passing" },
+            { number: 40, title: "Try the wake word in a car", url: "https://github.com/someone/kyuren/pull/40", draft: true, checks: "pending" },
+            { number: 38, title: "Hover after the Mac wakes", url: "https://github.com/someone/kyuren/pull/38", draft: false, checks: "failing" },
+            { number: 37, title: "Older work", url: "https://github.com/someone/kyuren/pull/37", draft: false, checks: "none" },
+          ],
+        },
+      },
       { name: "lantern-browser", path: "~/Documents/Coding/lantern-browser", branch: "main", upstream: "origin/main", ahead: 18, behind: 0, dirty: 29, lastAt: Date.now() - 8 * day, lastSaid: "tidy the toolbar's focus order" },
       { name: "tidepool", path: "~/Documents/Coding/tidepool", branch: "main", ahead: 7, behind: 0, dirty: 0, lastAt: Date.now() - 12 * day, lastSaid: "bump to 0.3.0" },
       { name: "orchard", path: "~/Documents/Coding/orchard", branch: "main", upstream: "origin/main", ahead: 0, behind: 0, dirty: 10, lastAt: Date.now() - 48 * day, lastSaid: "fix the cache warm-up" },

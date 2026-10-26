@@ -1,3 +1,5 @@
+import type { GitHub } from "#projects/github.ts";
+
 export type Project = {
   name: string;
   path: string;
@@ -10,6 +12,8 @@ export type Project = {
   dirty: number;
   lastAt?: number;
   lastSaid?: string;
+  /// Where it stands on GitHub, once that has been read.
+  github?: GitHub;
 };
 
 export type Standing = Pick<Project, "branch" | "upstream" | "ahead" | "behind" | "dirty">;

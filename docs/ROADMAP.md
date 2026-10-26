@@ -283,13 +283,15 @@ unpushed commits, refreshed on a timer and when the window comes forward. Superv
 sessions, Claude Code in read-only plan mode, spawned into the correct repository and awaited for
 up to ten minutes. Where a project stood when work stopped, answered on demand from its README, its
 working tree and its last commits. Coding agents running anywhere on the Mac are followed on the
-island. Not built: open pull requests and continuous integration status on the board, and a record
-of what was decided.
+island. For a repository on GitHub, its open pull requests on the board, with how their checks
+stand, and the main branch's checks, read from GitHub in the background. Not built: a record of
+what was decided.
 
 **Gate.**
 1. The board reflects real state across every repository under the coding directory, refreshed
-   without a manual trigger. *Not yet seen; pull requests and continuous integration are not
-   built.*
+   without a manual trigger. *Not yet seen. Reading pull requests and checks from GitHub, and
+   showing them, is tested, `projects/github.test.ts` and `e2e/main.spec.ts`, and GitHub was asked
+   live of three repositories.*
 2. A spawned coding session runs in the right repository and its result is reported back into the
    pane. *Not yet seen. Finding the repository and reading the report are tested,
    `projects/recall.test.ts` and `projects/spawn.test.ts`.*

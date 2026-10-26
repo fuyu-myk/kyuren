@@ -166,6 +166,13 @@ export async function forgetSkill(id: string): Promise<void> {
   await invoke("skill_forget", { id });
 }
 
+/// How a commit's checks stand on GitHub, as GitHub rolls them up.
+export type Checks = "passing" | "failing" | "pending" | "none";
+export type Pull = { number: number; title: string; url: string; draft: boolean; checks: Checks };
+/// A repository on GitHub: its open pull requests, the last updated first, how many there are in
+/// all, and how the checks on its main branch's newest commit stand.
+export type GitHub = { repo: string; branch?: string; main: Checks; count: number; pulls: Pull[] };
+
 export type Project = {
   name: string;
   path: string;
@@ -176,6 +183,7 @@ export type Project = {
   dirty: number;
   lastAt?: number;
   lastSaid?: string;
+  github?: GitHub;
 };
 
 /// Where every project stands. Asked for whenever the pane is looked at and on a timer, which the

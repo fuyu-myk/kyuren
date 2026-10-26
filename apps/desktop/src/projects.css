@@ -102,3 +102,88 @@
 .project .alone {
   color: var(--overlay1);
 }
+
+/* How the main branch's checks stand on GitHub, beside how the branch stands here. */
+.project .ci.passing {
+  color: var(--up);
+}
+
+.project .ci.failing {
+  color: var(--down);
+}
+
+.project .ci.pending {
+  color: var(--yellow);
+}
+
+/* A project's open pull requests, under it, each opening on GitHub. */
+.board .pulls {
+  display: grid;
+  gap: 0.05rem;
+  margin: -0.25rem 0 0.35rem;
+  padding: 0 0.7rem 0 1.3rem;
+  list-style: none;
+}
+
+.pull {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.12rem 0;
+  font: inherit;
+  font-size: 0.74rem;
+  text-align: left;
+  color: var(--subtext0);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.pull:hover {
+  color: var(--ink);
+}
+
+.pull .number {
+  color: var(--overlay1);
+  font-variant-numeric: tabular-nums;
+}
+
+.pull .title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pull .draft {
+  font-style: normal;
+  color: var(--overlay1);
+}
+
+.pull .checks {
+  flex: none;
+  align-self: center;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--pending);
+}
+
+.pull .checks.passing {
+  background: var(--up);
+}
+
+.pull .checks.failing {
+  background: var(--down);
+}
+
+.pull .checks.pending {
+  background: var(--yellow);
+}
+
+.board .others {
+  padding: 0.1rem 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
