@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { toldOf, type Finished } from "@/island/done";
 import { ago } from "@/when";
 
@@ -50,14 +50,24 @@ const opens = (one: Session): boolean => one.harness === "claude";
 
 /// The coding agents running on this Mac: what waits on you first, then what is working. A click
 /// on one opens what it is doing.
-type Props = { sessions: Session[]; finished: Record<string, Finished & { at: number }>; onOpen: (one: Session) => void };
+type Props = {
+  sessions: Session[];
+  finished: Record<string, Finished & { at: number }>;
+  /// The island is open and grown, so the list can be seen.
+  shown: boolean;
+  onOpen: (one: Session) => void;
+};
 
-export function Coding({ sessions, finished, onOpen }: Props) {
+export function Coding({ sessions, finished, shown, onOpen }: Props) {
   const [now, setNow] = useState(Date.now());
-  useEffect(() => {
+  // The clock is read again each time the list comes into view, before it is drawn, and kept going
+  // only while it is in view: folded, the island's timers are not to be trusted to have run.
+  useLayoutEffect(() => {
+    if (!shown) return;
+    setNow(Date.now());
     const ticking = setInterval(() => setNow(Date.now()), 15_000);
     return () => clearInterval(ticking);
-  }, []);
+  }, [shown]);
 
   return (
     <div className="view list coding">

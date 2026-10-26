@@ -396,3 +396,20 @@ test("an island that fails as a whole lets go of the screen and the keyboard, sa
   await expect(page.locator(".island-failed")).toHaveCount(0);
   await opened(page);
 });
+
+test("an idle session's time is read afresh each time the coding page comes back into view", async ({ page }) => {
+  const start = Date.parse("2026-10-26T09:00:00Z");
+  await page.clock.install({ time: start });
+  await page.goto("/island.html");
+  await opened(page);
+  await page.locator(".tabs .tab[title='coding']").click();
+  await emit(page, "coding:sessions", { sessions: [{ id: "s1", harness: "claude", project: "kyuren", state: "idle", active: start - 30_000 }] });
+  const since = page.locator(".view.coding .row .since");
+  await expect(since).toHaveText("just now");
+  await folded(page);
+  // Folded, the island's own clock may not have kept going; the time moves on without it ticking.
+  await page.clock.setSystemTime(start + 100_000);
+  await opened(page);
+  await expect(page.locator(".view.coding")).toBeVisible();
+  await expect(since).toHaveText("2 minutes ago");
+});

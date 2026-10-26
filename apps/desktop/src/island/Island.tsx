@@ -697,6 +697,7 @@ export function Island() {
             <Coding
               sessions={coding}
               finished={finished}
+              shown={open}
               onOpen={(one) => {
                 dispatch({ type: "stay" });
                 setDetail(undefined);

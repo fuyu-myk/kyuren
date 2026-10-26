@@ -515,33 +515,34 @@ the web.
 
 **Coding agents.** The coding tab lists every session of a coding agent running on this Mac,
 however long it has been idle, scrolling past what fits, what waits on the user first: the project,
-the session's own title, whether it is working, waiting (and for what) or idle, which harness, and
-where it was started. The core watches what each harness leaves on disk, and reads what was said in
-a session only once the user opens it, or, for its counts alone, the turn a Claude Code session has
-just finished. Claude Code keeps one small file per running session under `~/.claude/sessions`,
-saying whether it is busy, idle or waiting and for what; a file is believed only while its process
-is alive and began when the file says it did, since process numbers are reused. Its start is read
-in the plain locale, as the file writes it, since in the user's own a date may put the day before
-the month, and then no file would ever be believed. The Claude app stops a session's process
-between uses and keeps the session, so a session of the app once seen running stays in the list,
-idle, until a day passes without its being used, written down in `~/.kyuren/coding/kept.json` so
-that a restart of Kyuren keeps it too; a session from a terminal or an editor ends with its
-process. A turn ended with a command still running behind it is working, as Claude Code shows it,
-and the harness's own helper processes are not sessions. Harnesses that keep no such record, Codex,
-Gemini, Antigravity and pi, and Claude Code versions before it, are known only by their session
-files being written to: lately written is working, less lately idle, long ago not shown. Claude
-Code's own transcripts count only while they are being written, and never for a session its record
-has shown, since the record says when a session ends and a transcript written at the end does not.
-Their paths are taken from the harnesses' documentation and were not run here. An agent newly
-waiting on the user glances out of the notch like a notice, counts in the waiting sign, and makes
-its tab the one a hover opens. A Claude Code session that comes back to idle after working at least
-half a minute glances out too, the peek widening to tell it in a line either side of the notch:
-whose it was, then how its tests went, green or red, and how many files it changed, or how long it
-worked when there is nothing to count; its row says the same for ten minutes. Only that turn is
-read for it, from where the session's transcript stood while it was idle, and only its counts are
-told; the event log keeps the session's id alone. Knowing when Cursor, Hermes or OpenCode waits
-needs hooks installed in each harness's own configuration, which Kyuren does only with the user's
-consent.
+the session's own title, whether it is working, waiting (and for what) or idle, which harness,
+where it was started, and how long it has been so, the clock read afresh each time the list comes
+into view, since a folded island's timers may not have run. The core watches what each harness
+leaves on disk, and reads what was said in a session only once the user opens it, or, for its
+counts alone, the turn a Claude Code session has just finished. Claude Code keeps one small file
+per running session under `~/.claude/sessions`, saying whether it is busy, idle or waiting and for
+what; a file is believed only while its process is alive and began when the file says it did, since
+process numbers are reused. Its start is read in the plain locale, as the file writes it, since in
+the user's own a date may put the day before the month, and then no file would ever be believed.
+The Claude app stops a session's process between uses and keeps the session, so a session of the
+app once seen running stays in the list, idle, until a day passes without its being used, written
+down in `~/.kyuren/coding/kept.json` so that a restart of Kyuren keeps it too; a session from a
+terminal or an editor ends with its process. A turn ended with a command still running behind it is
+working, as Claude Code shows it, and the harness's own helper processes are not sessions.
+Harnesses that keep no such record, Codex, Gemini, Antigravity and pi, and Claude Code versions
+before it, are known only by their session files being written to: lately written is working, less
+lately idle, long ago not shown. Claude Code's own transcripts count only while they are being
+written, and never for a session its record has shown, since the record says when a session ends
+and a transcript written at the end does not. Their paths are taken from the harnesses'
+documentation and were not run here. An agent newly waiting on the user glances out of the notch
+like a notice, counts in the waiting sign, and makes its tab the one a hover opens. A Claude Code
+session that comes back to idle after working at least half a minute glances out too, the peek
+widening to tell it in a line either side of the notch: whose it was, then how its tests went,
+green or red, and how many files it changed, or how long it worked when there is nothing to count;
+its row says the same for ten minutes. Only that turn is read for it, from where the session's
+transcript stood while it was idle, and only its counts are told; the event log keeps the session's
+id alone. Knowing when Cursor, Hermes or OpenCode waits needs hooks installed in each harness's own
+configuration, which Kyuren does only with the user's consent.
 
 A Claude Code session opened from the list shows what it is doing: the task it was last given, its
 branch, how its tests last went, counted from what the command that ran them printed, a failed run
