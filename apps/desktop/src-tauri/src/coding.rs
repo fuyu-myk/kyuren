@@ -70,6 +70,10 @@ pub async fn coding_step(
 pub async fn coding_reveal(app: AppHandle, window: tauri::Window, session: String) -> Result<String, String> {
     only_from(&window, crate::island::LABEL)?;
     let found = core(&app)?.request("coding.where", json!({ "session": session }), PING_TIMEOUT).await.map_err(|failure| failure.to_string())?;
+    // The Claude app opens a session of its own on its own link to it, rather than only coming forward.
+    if let Some(link) = found.get("link").and_then(Value::as_str).filter(|link| crate::hosting::app_link(link)).map(str::to_string) {
+        return tauri::async_runtime::spawn_blocking(move || crate::hosting::open_app_link(&link)).await.map_err(|failure| failure.to_string())?;
+    }
     if let Some(pid) = found.get("pid").and_then(Value::as_i64).and_then(|pid| i32::try_from(pid).ok()) {
         return tauri::async_runtime::spawn_blocking(move || crate::hosting::reveal(pid)).await.map_err(|failure| failure.to_string())?;
     }

@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import type { HookListener } from "#coding/hooks.ts";
 import type { CodingWatch } from "#coding/watch.ts";
@@ -25,4 +28,15 @@ test("a Claude app session resting between uses has no process, and is said to b
   const watch = { list: () => [{ id: "s2", harness: "claude", project: "kyuren", state: "idle", active: 0, via: "the desktop app" }] } as unknown as CodingWatch;
   const where = codingHandlers(watch, {} as HookListener, "/nowhere/kyuren", "/nowhere/home")["coding.where"];
   assert.deepEqual(await where({ session: "s2" }), { pid: null, app: "claude" });
+});
+
+test("a Claude app session is opened by the app's own link to it, running or resting, when the app keeps one", async () => {
+  const home = await mkdtemp(join(tmpdir(), "kyuren-home-"));
+  const kept = join(home, "Library", "Application Support", "Claude", "claude-code-sessions", "a", "b");
+  await mkdir(kept, { recursive: true });
+  const local = "local_a08a89ff-b82d-4937-8053-f79500215283";
+  await writeFile(join(kept, `${local}.json`), JSON.stringify({ sessionId: local, cliSessionId: "s3", isArchived: false }));
+  const watch = { list: () => [{ id: "s3", harness: "claude", project: "kyuren", state: "working", active: 0, via: "the desktop app", pid: 4243 }] } as unknown as CodingWatch;
+  const where = codingHandlers(watch, {} as HookListener, "/nowhere/kyuren", home)["coding.where"];
+  assert.deepEqual(await where({ session: "s3" }), { pid: 4243, app: "claude", link: `claude://claude.ai/epitaxy/${local}` });
 });

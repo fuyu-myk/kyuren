@@ -560,15 +560,16 @@ and read alone when it is shown. A button brings forward the app the session run
 desktop app or an editor, found by climbing from the session's own process, which the core gives
 only for a session it knows to be running, to the nearest app above it, or the Claude app itself
 for one of its sessions resting without a process, and opened through Launch Services as its icon
-in the Dock would be, since an app not in front cannot bring another forward. Claude's documented
-links start a session but cannot open one already running, so the app comes forward, not the
-session within it. This alone reads a session's transcript: the open session's only, the one
-written last where a renamed project left two, read whole once and then only for what is added to
-it, a megabyte at a time; each look sends only the steps added or finished since, and a step's own
-lines are read from where they lie when it is opened. Nothing read is written anywhere, and what
-was read goes as another session is opened. Only the island may ask for it, only Claude Code's
-sessions open, and the island, opened afresh rather than back where the user was, shows the list,
-where a session newly waiting is.
+in the Dock would be, since an app not in front cannot bring another forward. A session of the
+Claude app opens in the app on the link the app itself gives each of its sessions, found in the
+app's own record of it, which names the Claude Code session it runs as; the host opens only a link
+of exactly that shape, and without one, or for one archived, the app comes forward. This alone
+reads a session's transcript: the open session's only, the one written last where a renamed project
+left two, read whole once and then only for what is added to it, a megabyte at a time; each look
+sends only the steps added or finished since, and a step's own lines are read from where they lie
+when it is opened. Nothing read is written anywhere, and what was read goes as another session is
+opened. Only the island may ask for it, only Claude Code's sessions open, and the island, opened
+afresh rather than back where the user was, shows the list, where a session newly waiting is.
 
 **Answering from the island.** Claude Code can bring what it asks the user to the island: a
 permission, questions to choose among, a plan to approve, an edit, and a form one of its servers

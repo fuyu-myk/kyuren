@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import type { Answer } from "#coding/asked.ts";
+import { appLink, appRecords } from "#coding/app.ts";
 import { inApp } from "#coding/claude.ts";
 import type { HookListener } from "#coding/hooks.ts";
 import { claudeHookState, setClaudeHook } from "#coding/install.ts";
@@ -49,9 +50,11 @@ export function codingHandlers(watch: CodingWatch, hooks: HookListener, kyurenHo
     "coding.where": async (params: Record<string, unknown>) => {
       const session = typeof params.session === "string" ? params.session : "";
       const found = watch.list().find((one) => one.id === session);
-      // A session of the Claude app resting between uses has no process: the app has it.
-      if (found && found.pid === undefined && inApp(found)) return { pid: null, app: "claude" };
-      return { pid: found?.pid ?? null };
+      if (!found || !inApp(found)) return { pid: found?.pid ?? null };
+      // The app opens the session itself by its own link to it; without one, or for a session
+      // resting between uses with no process, the app is brought forward.
+      const link = await appLink(appRecords(home), session);
+      return { pid: found.pid ?? null, app: "claude", ...(link ? { link } : {}) };
     },
     "coding.asks": async () => ({ asks: hooks.pending() }),
     /// The island has the question in front of the user.

@@ -52,6 +52,30 @@ pub fn reveal(pid: i32) -> Result<String, String> {
 /// The Claude app, which keeps a session resting between uses without a process of its own.
 pub const CLAUDE: (&str, &str) = ("Claude", "com.anthropic.claudefordesktop");
 
+/// Whether a link is one the Claude app gives for opening a session of its own, and nothing else:
+/// its scheme, its place and the session's id exactly, which leaves nothing else to be opened.
+pub fn app_link(link: &str) -> bool {
+    let Some(id) = link.strip_prefix("claude://claude.ai/epitaxy/local_") else {
+        return false;
+    };
+    id.len() == 36
+        && id.char_indices().all(|(at, c)| if matches!(at, 8 | 13 | 18 | 23) { c == '-' } else { c.is_ascii_digit() || ('a'..='f').contains(&c) })
+}
+
+/// Opens a session of the Claude app on the app's own link to it, which brings the app forward on
+/// that session.
+pub fn open_app_link(link: &str) -> Result<String, String> {
+    if !app_link(link) {
+        return Err("that is not a link to a session of the Claude app".into());
+    }
+    let opened = std::process::Command::new("/usr/bin/open").arg(link).status().map_err(|failure| failure.to_string())?;
+    if opened.success() {
+        Ok(CLAUDE.0.to_string())
+    } else {
+        Err(format!("{} could not open the session", CLAUDE.0))
+    }
+}
+
 /// Brings forward an app by how Launch Services knows it, opening it if it is not running.
 pub fn bring_forward(name: &str, bundle: &str) -> Result<String, String> {
     if !bundle.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-') {
@@ -69,6 +93,21 @@ pub fn bring_forward(name: &str, bundle: &str) -> Result<String, String> {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+
+    #[test]
+    fn only_the_claude_apps_own_link_to_a_session_is_opened() {
+        assert!(app_link("claude://claude.ai/epitaxy/local_a08a89ff-b82d-4937-8053-f79500215283"));
+        for link in [
+            "claude://claude.ai/epitaxy/local_A08A89FF-B82D-4937-8053-F79500215283",
+            "claude://claude.ai/epitaxy/local_a08a89ff-b82d-4937-8053-f79500215283/../x",
+            "claude://claude.ai/epitaxy/local_a08a89ff-b82d-4937-8053-f7950021528",
+            "claude://claude.ai/chat/local_a08a89ff-b82d-4937-8053-f79500215283",
+            "https://claude.ai/epitaxy/local_a08a89ff-b82d-4937-8053-f79500215283",
+            "claude://claude.ai/epitaxy/local_a08a89ffxb82d-4937-8053-f79500215283",
+        ] {
+            assert!(!app_link(link), "{link}");
+        }
+    }
 
     #[test]
     fn a_session_is_found_in_the_nearest_app_above_its_process() {
