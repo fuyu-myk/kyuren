@@ -127,3 +127,13 @@ test("a name spelled with letters that only look Latin, to pass for what it is n
     assert.ok(claudeForm(field("value", { type: "string", title: plain }), "f", NOW, 1), `${plain}, one script to a word or one with no Latin lookalikes`);
   }
 });
+
+test("a form asking for a secret in another language is for Claude Code's own dialog too", () => {
+  const titled = (title: string) => form({ type: "object", properties: { value: { type: "string", title } } });
+  const secrets = ["パスワード", "暗証番号", "認証コード", "密码", "驗證碼", "비밀번호", "인증번호", "contraseña", "mot de passe", "Passwort", "kata laluan", "kata sandi", "senha", "пароль"];
+  for (const title of secrets) assert.equal(claudeForm(titled(title), "f", NOW, 1), undefined, title);
+  assert.equal(claudeForm(form(SCHEMA, { message: "パスワードを入力してください。" }), "f", NOW, 1), undefined, "asked for in the message");
+  for (const plain of ["名前", "名字", "이름", "Nombre", "Nom", "Gitのブランチ名", "Clavecin"]) {
+    assert.ok(claudeForm(titled(plain), "f", NOW, 1), `${plain}, which asks for nothing secret`);
+  }
+});

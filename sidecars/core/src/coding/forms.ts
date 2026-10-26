@@ -12,6 +12,12 @@ export const VALUE_MOST = 2_000;
 const SECRET =
   /\b(pass(word|code|phrase)?|pwd?|secrets?|tokens?|(api|access|private|secret|signing|license|ssh|gpg|pgp) keys?|credentials?|bearer|cookies?|pins?|otp|totp|hotp|mfa|2fa|cvv|cvc|card numbers?|credit cards?|ssn|social security|seed( phrase)?|mnemonic|recovery (codes?|phrases?|keys?)|(verification|security|auth|one time) codes?)\b/;
 
+/// The same in other languages a form may be written in: where words are spaced, as whole words,
+/// and in Japanese, Chinese and Korean, which run on unspaced, wherever they stand.
+const SECRET_WORDS =
+  /(?<![\p{L}\p{N}])(kata laluan|kata sandi|kod pengesahan|kode verifikasi|kad kredit|kartu kredit|contraseña|código de verificación|tarjeta de crédito|mot de passe|code de vérification|carte bancaire|carte de crédit|passwort|kennwort|bestätigungscode|kreditkarte|senha|código de verificação|cartão de crédito|parola d'ordine|codice di verifica|carta di credito|пароль|токен|код подтверждения|кредитная карта)(?![\p{L}\p{N}])/u;
+const SECRET_SIGNS = /パスワード|暗証番号|合言葉|秘密鍵|トークン|認証コード|確認コード|ワンタイム|クレジットカード|カード番号|セキュリティコード|マイナンバー|密码|密碼|口令|令牌|验证码|驗證碼|私钥|私鑰|密钥|密鑰|信用卡|卡号|卡號|身份证|身分證|비밀번호|암호|토큰|인증번호|인증 ?코드|보안 ?코드|신용카드|카드 ?번호|주민등록번호/;
+
 /// Text as its words, however they are written or joined: full width or not, in camel case, or with
 /// underscores, hyphens or dots between them.
 function words(text: string): string {
@@ -93,7 +99,8 @@ export function claudeForm(payload: unknown, id: string, now: number, wait: Wait
   const shown = [server, message, ...fields.flatMap((field) => [field.name, field.title, field.about, ...field.choices])];
   if (shown.some((one) => HIDING.test(one))) return undefined;
   const asked = [message, ...fields.flatMap((field) => [field.name, field.title, field.about])].join(" ");
-  if (SECRET.test(words(asked)) || disguised(asked)) return undefined;
+  const said = words(asked);
+  if (SECRET.test(said) || SECRET_WORDS.test(said) || SECRET_SIGNS.test(said) || disguised(asked)) return undefined;
   return { id, harness: "claude", session, project, tool: "elicitation", at: now, kind: "form", server, message, fields, until: now + waited(wait, "form") };
 }
 
