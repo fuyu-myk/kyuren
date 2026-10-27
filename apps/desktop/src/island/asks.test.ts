@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { boundsOf, chose, contentFor, nextOpen, pickedFor, pickedOf, secondsLeft, summaryOf, waitingBesides, type AgentAsk, type Field, type Question } from "./asks.ts";
+import { answeredFor, boundsOf, chose, contentFor, nextOpen, pickedFor, pickedOf, pressed, secondsLeft, summaryOf, waitingBesides, type AgentAsk, type Chosen, type Field, type Question } from "./asks.ts";
 
 const ask: AgentAsk = { id: "a", harness: "claude", session: "s1", project: "kyuren", tool: "Bash", kind: "permission", verb: "run", target: "make", at: 0, until: 45_000 };
 
@@ -98,8 +98,25 @@ test("words a server could not be sent do not read right: too long, or holding a
 test("questions asked together are gone through in turn: the next still without its pick, coming round to the start", () => {
   const third: Question = { ...FRAMEWORK, question: "Which store?" };
   const all = [FRAMEWORK, CHECKS, third];
-  assert.equal(nextOpen(all, {}, 0), 1);
-  assert.equal(nextOpen(all, chose({}, CHECKS, "Lint"), 0), 2, "an answered one is passed over");
-  assert.equal(nextOpen(all, chose(chose({}, CHECKS, "Lint"), third, "React"), 2), 0, "round to the start");
-  assert.equal(nextOpen(all, chose(chose({}, CHECKS, "Lint"), third, "React"), 0), undefined, "only the one in hand is left");
+  const only = (picked: Record<string, string[]>): Chosen => ({ picked, typed: {} });
+  assert.equal(nextOpen(all, only({}), 0), 1);
+  assert.equal(nextOpen(all, only(chose({}, CHECKS, "Lint")), 0), 2, "an answered one is passed over");
+  assert.equal(nextOpen(all, only(chose(chose({}, CHECKS, "Lint"), third, "React")), 2), 0, "round to the start");
+  assert.equal(nextOpen(all, only(chose(chose({}, CHECKS, "Lint"), third, "React")), 0), undefined, "only the one in hand is left");
+  assert.equal(nextOpen([FRAMEWORK, CHECKS], { picked: {}, typed: { "Which framework?": "Svelte" } }, 1), undefined, "one answered by what was typed");
+});
+
+test("Other takes an answer typed in place of the options: alone where one may be picked, beside them where several may", () => {
+  const none: Chosen = { picked: {}, typed: {} };
+  let one = pressed(pressed(none, FRAMEWORK, "React"), FRAMEWORK, undefined);
+  assert.deepEqual(one, { picked: { "Which framework?": [] }, typed: { "Which framework?": "" } }, "Other in the option's place");
+  assert.equal(answeredFor([FRAMEWORK], one), undefined, "nothing typed yet");
+  one = { ...one, typed: { "Which framework?": "  Svelte " } };
+  assert.deepEqual(answeredFor([FRAMEWORK], one), { picked: {}, other: { "Which framework?": "Svelte" } });
+  assert.deepEqual(pressed(one, FRAMEWORK, "Vue"), { picked: { "Which framework?": ["Vue"] }, typed: {} }, "an option takes Other's place again");
+  let several = pressed(pressed(none, CHECKS, "Lint"), CHECKS, undefined);
+  several = { ...several, typed: { "Which checks?": "a smoke test" } };
+  assert.deepEqual(answeredFor([CHECKS], several), { picked: { "Which checks?": ["Lint"] }, other: { "Which checks?": "a smoke test" } });
+  assert.deepEqual(pressed(several, CHECKS, undefined).typed, {}, "pressed again, Other is taken away");
+  assert.equal(answeredFor([CHECKS], { picked: {}, typed: { "Which checks?": "x".repeat(1_001) } }), undefined, "longer than Claude Code takes");
 });

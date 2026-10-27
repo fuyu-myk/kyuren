@@ -2,6 +2,10 @@ import { z } from "zod";
 import { waited, type Answer, type Ask, type Question, type Wait } from "#coding/asked.ts";
 import { HIDING, projectOf, requestOf } from "#coding/shown.ts";
 
+/// The longest answer typed in place of a question's options, and what it may not hold.
+const OTHER_MOST = 1_000;
+const CONTROL = /\p{Cc}/u;
+
 /// Questions as the island shows them, and nothing beside: one carrying more, a preview drawn beside
 /// an option or anything Claude Code adds later, is for its own picker.
 const QUESTIONS = z
@@ -54,15 +58,21 @@ export function claudeChoice(payload: unknown, id: string, now: number, wait: Wa
 export function claudeChoiceAnswer(payload: unknown, ask: Ask, answer: Answer): string | undefined {
   if (answer.decision === "ask") return "";
   const request = requestOf(payload);
-  if (answer.decision !== "allow" || ask.kind !== "choice" || !answer.picked || !request) return undefined;
-  const picked = answer.picked;
-  if (Object.keys(picked).length !== ask.questions.length) return undefined;
+  if (answer.decision !== "allow" || ask.kind !== "choice" || !request) return undefined;
+  const picked = answer.picked ?? {};
+  const other = answer.other ?? {};
+  const asked = new Set(ask.questions.map((one) => one.question));
+  if ([...Object.keys(picked), ...Object.keys(other)].some((key) => !asked.has(key))) return undefined;
   const answers: Array<[string, string]> = [];
   for (const one of ask.questions) {
-    const labels = Object.hasOwn(picked, one.question) ? picked[one.question] : undefined;
-    if (!Array.isArray(labels) || labels.length === 0 || (!one.multiSelect && labels.length > 1)) return undefined;
-    if (new Set(labels).size !== labels.length || labels.some((label) => !one.options.some((option) => option.label === label))) return undefined;
-    answers.push([one.question, labels.join(", ")]);
+    const labels = (Object.hasOwn(picked, one.question) ? picked[one.question] : undefined) ?? [];
+    if (!Array.isArray(labels) || new Set(labels).size !== labels.length || labels.some((label) => !one.options.some((option) => option.label === label))) return undefined;
+    const typed = Object.hasOwn(other, one.question) ? other[one.question] : undefined;
+    const text = typeof typed === "string" ? typed.trim() : undefined;
+    if (typed !== undefined && (!text || text.length > OTHER_MOST || CONTROL.test(text))) return undefined;
+    const given = text ? [...labels, text] : labels;
+    if (given.length === 0 || (!one.multiSelect && given.length > 1)) return undefined;
+    answers.push([one.question, given.join(", ")]);
   }
   const updatedInput = { ...request.tool_input, answers: Object.fromEntries(answers) };
   return JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput } });

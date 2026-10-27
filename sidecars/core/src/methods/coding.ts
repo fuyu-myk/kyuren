@@ -17,6 +17,7 @@ const BUILT = fileURLToPath(new URL("../../../hook/target/release/kyuren-hook", 
 const ANSWER = z.object({
   decision: z.enum(["allow", "deny", "ask"]),
   picked: z.record(z.string().max(400), z.array(z.string().max(120)).max(4)).optional(),
+  other: z.record(z.string().max(400), z.string().max(1_000)).optional(),
   mode: z.enum(["acceptEdits", "default"]).optional(),
   content: z.record(z.string().max(64), z.union([z.string().max(2_000), z.number(), z.boolean()])).optional(),
 });

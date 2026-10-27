@@ -448,3 +448,28 @@ test("questions asked together come one at a time, a pick moving on to the next,
     { id: "pair", decision: "allow", picked: { "Which agents should come to the island?": ["None yet"], "Should the island speak up when CI fails?": ["Board only"] } },
   ]);
 });
+
+test("a question can be answered by Other, an answer typed in place of the options, as in Claude Code's own picker", async ({ page }) => {
+  await askOpened(page, "agent choice");
+  const option = (label: string | RegExp) => page.locator(".asked .option", { hasText: label });
+  const box = page.locator(".asked input.other");
+  await option(/^Other/).click();
+  await expect(box).toBeFocused();
+  await box.fill("A plain folder of files");
+  await box.press("Enter");
+  await expect(page.locator(".asked .asks")).toHaveText("Which checks should run first?");
+  await option("Lint").click();
+  await option(/^Other/).click();
+  await box.fill("a smoke test");
+  await box.press("Enter");
+  await expect(page.locator(".view.asked")).toHaveCount(0);
+  expect(await commanded(page, "coding_answer")).toEqual([
+    {
+      id: "agent-choice",
+      decision: "allow",
+      picked: { "Which checks should run first?": ["Lint"] },
+      other: { "Which store should hold the shelf?": "A plain folder of files", "Which checks should run first?": "a smoke test" },
+    },
+  ]);
+  await expect.poll(async () => (await commanded(page, "island_focus")).at(-1), { message: "the keyboard given back" }).toEqual({ on: false });
+});

@@ -614,8 +614,10 @@ all together, up to four of two to four options each, with no question or option
 preview drawn beside an option. They are shown one at a time, as Claude Code's own picker shows
 them, their topics saying which have their pick and going to any, and a pick where only one may be
 goes on to the next, since a second question below the first went unseen while the answer waited on
-it. The answer goes back as Claude Code's own dialog gives it: each question with the labels
-picked, from those it offered. A form comes in plain fields, up to eight, of words, numbers, a yes
+it. Each has Other too, as Claude Code's own picker does, for an answer typed in place of the
+options, on one line of up to 1,000 characters with no control character. The answer goes back as
+Claude Code's own dialog gives it: each question with the labels picked, from those it offered, and
+what was typed for it, joined. A form comes in plain fields, up to eight, of words, numbers, a yes
 or no or a choice among words, with the least and most each may be shown and held to; one with a
 rule the island does not check, a format, a pattern or names shown in place of its choices, goes
 back, as does one that reads as asking for a secret, a password, a token, a key, a PIN, a code sent

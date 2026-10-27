@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { boundsOf, chose, contentFor, nextOpen, pickedFor, pickedOf, secondsLeft, type AgentAsk, type Decision, type Extra, type Field } from "@/island/asks";
+import { answeredFor, boundsOf, contentFor, nextOpen, pickedOf, pressed, secondsLeft, type AgentAsk, type Chosen, type Decision, type Extra, type Field } from "@/island/asks";
 import { BackIcon } from "@/island/icons";
 import { harnessName } from "@/island/views/Coding";
 import { Markdown } from "@/Markdown";
@@ -51,13 +51,16 @@ export function Asked({ ask, now, shown, onAnswer, onBack, onReach, onLeave }: P
         </span>
         <span className="left" title="when it asks in its own window instead">{secondsLeft(ask, now)}s</span>
       </div>
-      {ask.kind === "choice" ? <Choosing ask={ask} steady={steady} onAnswer={onAnswer} /> : null}
+      {ask.kind === "choice" ? <Choosing ask={ask} steady={steady} onAnswer={onAnswer} onReach={onReach} onLeave={onLeave} /> : null}
       {ask.kind === "plan" ? <Planned ask={ask} steady={steady} onAnswer={onAnswer} /> : null}
       {ask.kind === "edit" ? <Edited ask={ask} steady={steady} onAnswer={onAnswer} /> : null}
       {ask.kind === "form" ? <Filled ask={ask} steady={steady} onAnswer={onAnswer} onReach={onReach} onLeave={onLeave} /> : null}
     </div>
   );
 }
+
+/// The keyboard is wanted, and then no longer.
+type Keyboard = { onReach: () => void; onLeave: () => void };
 
 type Answering<K extends AgentAsk["kind"]> = {
   ask: Extract<AgentAsk, { kind: K }>;
@@ -75,18 +78,27 @@ function Back({ steady, onAnswer }: Pick<Answering<AgentAsk["kind"]>, "steady" |
 
 /// Questions asked together come one at a time, as Claude Code's own picker shows them: the island
 /// has room for one, and a second below the first went unseen while the answer waited on it. Their
-/// topics say which have their pick and go to any; a pick where only one may be goes on to the next.
-function Choosing({ ask, steady, onAnswer }: Answering<"choice">) {
-  const [chosen, setChosen] = useState<Record<string, string[]>>({});
+/// topics say which have their answer and go to any; a pick where only one may be goes on to the
+/// next. Each has Other too, as Claude Code's own does, for an answer typed in place of the options.
+function Choosing({ ask, steady, onAnswer, onReach, onLeave }: Answering<"choice"> & Keyboard) {
+  const [chosen, setChosen] = useState<Chosen>({ picked: {}, typed: {} });
   const [at, setAt] = useState(0);
+  // The box going away, answered, handed back or out of time, takes no blur with it, so while it
+  // holds the keyboard it hands it back here. Only its own: another pane may be typed into.
+  const holding = useRef<(() => void) | null>(null);
+  useEffect(() => () => holding.current?.(), []);
   const one = ask.questions[at] ?? ask.questions[0];
   if (!one) return null;
-  const picked = pickedFor(ask.questions, chosen);
+  const answered = answeredFor(ask.questions, chosen);
   const next = nextOpen(ask.questions, chosen, at);
-  const pick = (label: string) => {
-    const made = chose(chosen, one, label);
+  const typing = Object.hasOwn(chosen.typed, one.question);
+  const send = steady(() => {
+    if (answered) onAnswer("allow", { picked: answered.picked, ...(Object.keys(answered.other).length > 0 ? { other: answered.other } : {}) });
+  });
+  const press = (label: string | undefined) => {
+    const made = pressed(chosen, one, label);
     setChosen(made);
-    const after = one.multiSelect ? undefined : nextOpen(ask.questions, made, at);
+    const after = label === undefined || one.multiSelect ? undefined : nextOpen(ask.questions, made, at);
     if (after !== undefined) setAt(after);
   };
   return (
@@ -98,7 +110,7 @@ function Choosing({ ask, steady, onAnswer }: Answering<"choice">) {
               <button
                 type="button"
                 key={each.question}
-                className={[place === at ? "on" : "", pickedFor([each], chosen) ? "done" : ""].filter(Boolean).join(" ") || undefined}
+                className={[place === at ? "on" : "", answeredFor([each], chosen) ? "done" : ""].filter(Boolean).join(" ") || undefined}
                 aria-current={place === at ? "step" : undefined}
                 onClick={() => setAt(place)}
               >
@@ -112,22 +124,51 @@ function Choosing({ ask, steady, onAnswer }: Answering<"choice">) {
           <p className="asks">{one.question}</p>
           <div className="options">
             {one.options.map((option) => {
-              const on = pickedOf(chosen, one).includes(option.label);
+              const on = pickedOf(chosen.picked, one).includes(option.label);
               return (
-                <button type="button" key={option.label} className={on ? "option on" : "option"} aria-pressed={on} onClick={() => pick(option.label)}>
+                <button type="button" key={option.label} className={on ? "option on" : "option"} aria-pressed={on} onClick={() => press(option.label)}>
                   <strong>{option.label}</strong>
                   {option.description ? <span>{option.description}</span> : null}
                 </button>
               );
             })}
+            <button type="button" className={typing ? "option on" : "option"} aria-pressed={typing} onClick={() => press(undefined)}>
+              <strong>Other</strong>
+              <span>an answer of your own</span>
+            </button>
           </div>
+          {typing ? (
+            <input
+              className="composer other"
+              autoFocus
+              maxLength={1_000}
+              spellCheck={false}
+              placeholder="your answer"
+              value={chosen.typed[one.question] ?? ""}
+              onPointerDown={onReach}
+              onFocus={() => {
+                holding.current = onLeave;
+                onReach();
+              }}
+              onBlur={() => {
+                holding.current = null;
+                onLeave();
+              }}
+              onChange={(event) => setChosen((was) => ({ ...was, typed: { ...was.typed, [one.question]: event.target.value } }))}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                if (answered) send();
+                else if (next !== undefined && answeredFor([one], chosen)) setAt(next);
+              }}
+            />
+          ) : null}
           {one.multiSelect ? <span className="hint">as many as apply</span> : null}
         </div>
       </div>
       <div className="foot">
         <Back steady={steady} onAnswer={onAnswer} />
-        {picked || next === undefined ? (
-          <button type="button" className="allow" disabled={!picked} onClick={steady(() => picked && onAnswer("allow", { picked }))}>
+        {answered || next === undefined ? (
+          <button type="button" className="allow" disabled={!answered} onClick={send}>
             answer
           </button>
         ) : (
@@ -211,7 +252,7 @@ function Titled({ field }: { field: Field }) {
   );
 }
 
-function Filled({ ask, steady, onAnswer, onReach, onLeave }: Answering<"form"> & { onReach: () => void; onLeave: () => void }) {
+function Filled({ ask, steady, onAnswer, onReach, onLeave }: Answering<"form"> & Keyboard) {
   const [typed, setTyped] = useState<Record<string, string | boolean>>({});
   // The form going away, answered, handed back or out of time, takes no blur with it, so a field
   // holding the keyboard hands it back here. Only its own: another pane may be typed into.

@@ -123,6 +123,13 @@
   cursor: default;
 }
 
+/* An answer typed in place of the options, on a line as wide as the question. */
+.asked .other {
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 6px;
+}
+
 .asked .option span {
   color: #9399b2;
   font-size: 10.5px;

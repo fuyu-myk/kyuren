@@ -80,3 +80,21 @@ test("questions carrying more than the island shows, a preview drawn beside an o
   assert.equal(claudeChoice(asked([previewed]), "c", NOW, 1), undefined, "a preview beside an option");
   assert.equal(claudeChoice(asked([{ ...one, layout: "grid" }]), "c", NOW, 1), undefined, "anything else on a question");
 });
+
+test("an answer typed in place of the options goes back as Claude Code's own Other gives it", () => {
+  const ask = claudeChoice(asked(QUESTIONS), "c1", NOW, 1);
+  assert.ok(ask);
+  const said = (answer: Answer) => JSON.parse(claudeChoiceAnswer(asked(QUESTIONS), ask, answer) ?? "null")?.hookSpecificOutput?.updatedInput?.answers;
+  assert.deepEqual(said({ decision: "allow", picked: { "Which checks should run?": ["Lint"] }, other: { "Which framework?": "  Svelte, with runes  ", "Which checks should run?": "a smoke test" } }), {
+    "Which framework?": "Svelte, with runes",
+    "Which checks should run?": "Lint, a smoke test",
+  });
+  const refused: Array<[Answer, string]> = [
+    [{ decision: "allow", picked: { "Which framework?": ["Vue"], "Which checks should run?": ["Lint"] }, other: { "Which framework?": "Svelte" } }, "an option and Other where only one may be"],
+    [{ decision: "allow", picked: { "Which checks should run?": ["Lint"] }, other: { "Which framework?": "   " } }, "Other left empty"],
+    [{ decision: "allow", picked: { "Which checks should run?": ["Lint"] }, other: { "Which framework?": "Svelte\u0007" } }, "a control character"],
+    [{ decision: "allow", picked: { "Which checks should run?": ["Lint"] }, other: { "Which framework?": "x".repeat(1_001) } }, "too long"],
+    [{ decision: "allow", picked: { "Which framework?": ["Vue"], "Which checks should run?": ["Lint"] }, other: { "Which language?": "Rust" } }, "an answer to a question not asked"],
+  ];
+  for (const [answer, why] of refused) assert.equal(claudeChoiceAnswer(asked(QUESTIONS), ask, answer), undefined, why);
+});

@@ -58,6 +58,8 @@ export type Decision = "allow" | "deny" | "ask";
 export type Answer = {
   decision: Decision;
   picked?: Record<string, string[]>;
+  /// What was typed for a question in place of its options, as Claude Code's own Other takes it.
+  other?: Record<string, string>;
   mode?: "acceptEdits" | "default";
   content?: Record<string, string | number | boolean>;
 };

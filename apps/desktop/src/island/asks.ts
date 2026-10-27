@@ -35,6 +35,7 @@ export type Decision = "allow" | "deny" | "ask";
 /// in, or a form's values.
 export type Extra = {
   picked?: Record<string, string[]>;
+  other?: Record<string, string>;
   mode?: "acceptEdits" | "default";
   content?: Record<string, string | number | boolean>;
 };
@@ -80,13 +81,48 @@ export function pickedFor(questions: Question[], chosen: Record<string, string[]
   return Object.fromEntries(picked);
 }
 
-/// The next question still without its pick after the one at `from`, coming round to the start;
-/// nothing when every other one has its pick.
-export function nextOpen(questions: Question[], chosen: Record<string, string[]>, from: number): number | undefined {
+/// What is chosen for questions asked together: the options picked for each, and for those where
+/// Other is chosen, what is typed in place of the options, as Claude Code's own picker takes it.
+export type Chosen = { picked: Record<string, string[]>; typed: Record<string, string> };
+
+/// The longest answer typed in place of the options; the core takes none longer.
+const OTHER_MOST = 1_000;
+
+/// The choice after an option, or Other when there is no label, is pressed. Where only one may be
+/// picked each takes the other's place; where several may, each is added or taken away.
+export function pressed(was: Chosen, question: Question, label: string | undefined): Chosen {
+  const key = question.question;
+  const typing = Object.hasOwn(was.typed, key);
+  const without = Object.fromEntries(Object.entries(was.typed).filter(([one]) => one !== key));
+  if (label !== undefined) return { picked: chose(was.picked, question, label), typed: question.multiSelect ? was.typed : without };
+  if (question.multiSelect) return { picked: was.picked, typed: typing ? without : { ...was.typed, [key]: "" } };
+  return { picked: { ...was.picked, [key]: [] }, typed: typing ? was.typed : { ...was.typed, [key]: "" } };
+}
+
+/// The answer, once every question has its pick or what was typed for it, and one alone where only
+/// one may be: the options picked, and what was typed, trimmed. Nothing while any is unanswered.
+export function answeredFor(questions: Question[], chosen: Chosen): { picked: Record<string, string[]>; other: Record<string, string> } | undefined {
+  const picked: Array<[string, string[]]> = [];
+  const other: Array<[string, string]> = [];
+  for (const one of questions) {
+    const labels = pickedOf(chosen.picked, one).filter((label) => one.options.some((option) => option.label === label));
+    const typed = ((Object.hasOwn(chosen.typed, one.question) ? chosen.typed[one.question] : undefined) ?? "").trim();
+    const said = typed !== "" && typed.length <= OTHER_MOST && !CONTROL.test(typed);
+    const given = labels.length + (said ? 1 : 0);
+    if (given === 0 || (!one.multiSelect && given > 1)) return undefined;
+    if (labels.length > 0) picked.push([one.question, labels]);
+    if (said) other.push([one.question, typed]);
+  }
+  return { picked: Object.fromEntries(picked), other: Object.fromEntries(other) };
+}
+
+/// The next question still without its answer after the one at `from`, coming round to the start;
+/// nothing when every other one has its answer.
+export function nextOpen(questions: Question[], chosen: Chosen, from: number): number | undefined {
   for (let step = 1; step < questions.length; step += 1) {
     const at = (from + step) % questions.length;
     const one = questions[at];
-    if (one && pickedFor([one], chosen) === undefined) return at;
+    if (one && answeredFor([one], chosen) === undefined) return at;
   }
   return undefined;
 }

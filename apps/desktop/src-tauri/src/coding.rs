@@ -99,6 +99,8 @@ pub async fn coding_seen(app: AppHandle, window: tauri::Window, id: String) -> R
 
 /// The user's answer to a coding agent's question: allow, deny, or ask, which hands it back to the
 /// agent's own prompt.
+// A command takes each part of an answer by name, as the island sends it.
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub async fn coding_answer(
     app: AppHandle,
@@ -106,11 +108,12 @@ pub async fn coding_answer(
     id: String,
     decision: String,
     picked: Option<Value>,
+    other: Option<Value>,
     mode: Option<String>,
     content: Option<Value>,
 ) -> Result<Value, String> {
     only_from(&window, crate::island::LABEL)?;
-    let answer = answer_of(id, &decision, picked, mode, content)?;
+    let answer = answer_of(id, &decision, picked, other, mode, content)?;
     core(&app)?.request("coding.answer", answer, PING_TIMEOUT).await.map_err(|failure| failure.to_string())
 }
 
@@ -120,7 +123,7 @@ const ANSWER_MOST: usize = 32 << 10;
 /// An answer as the core is asked to give it. Whether what was picked or filled in fits the
 /// question is the core's to judge, against the question it holds; here it is only an answer at all,
 /// and small.
-fn answer_of(id: String, decision: &str, picked: Option<Value>, mode: Option<String>, content: Option<Value>) -> Result<Value, String> {
+fn answer_of(id: String, decision: &str, picked: Option<Value>, other: Option<Value>, mode: Option<String>, content: Option<Value>) -> Result<Value, String> {
     if !matches!(decision, "allow" | "deny" | "ask") {
         return Err(format!("{decision} is not an answer"));
     }
@@ -131,10 +134,15 @@ fn answer_of(id: String, decision: &str, picked: Option<Value>, mode: Option<Str
         }
         answer["mode"] = json!(mode);
     }
-    for (key, value) in [("picked", picked), ("content", content)] {
+    for (key, value) in [("picked", picked), ("other", other), ("content", content)] {
         let Some(value) = value else { continue };
         if !value.is_object() || value.to_string().len() > ANSWER_MOST {
-            return Err(format!("what was {} is not an answer", if key == "picked" { "picked" } else { "filled in" }));
+            let what = match key {
+                "picked" => "picked",
+                "other" => "typed",
+                _ => "filled in",
+            };
+            return Err(format!("what was {what} is not an answer"));
         }
         answer[key] = value;
     }
@@ -180,22 +188,32 @@ mod tests {
     fn an_answer_carries_what_was_picked_the_mode_or_a_forms_values() {
         let picked = json!({ "Which framework?": ["Vue"] });
         assert_eq!(
-            answer_of("a".into(), "allow", Some(picked.clone()), None, None).expect("an answer"),
+            answer_of("a".into(), "allow", Some(picked.clone()), None, None, None).expect("an answer"),
             json!({ "id": "a", "decision": "allow", "picked": picked })
         );
         assert_eq!(
-            answer_of("p".into(), "allow", None, Some("acceptEdits".into()), None).expect("an answer"),
+            answer_of("p".into(), "allow", None, None, Some("acceptEdits".into()), None).expect("an answer"),
             json!({ "id": "p", "decision": "allow", "mode": "acceptEdits" })
         );
-        assert_eq!(answer_of("q".into(), "ask", None, None, None).expect("an answer"), json!({ "id": "q", "decision": "ask" }));
+        assert_eq!(answer_of("q".into(), "ask", None, None, None, None).expect("an answer"), json!({ "id": "q", "decision": "ask" }));
+    }
+
+    #[test]
+    fn an_answer_typed_in_place_of_the_options_is_carried_beside_what_was_picked() {
+        let typed = json!({ "Which framework?": "Svelte" });
+        assert_eq!(
+            answer_of("c".into(), "allow", None, Some(typed.clone()), None, None).expect("an answer"),
+            json!({ "id": "c", "decision": "allow", "other": typed })
+        );
+        assert!(answer_of("c".into(), "allow", None, Some(json!("Svelte")), None, None).is_err(), "typed answers are by question");
     }
 
     #[test]
     fn what_is_no_answer_is_refused_before_it_reaches_the_core() {
-        assert!(answer_of("a".into(), "maybe", None, None, None).is_err());
-        assert!(answer_of("a".into(), "allow", None, Some("bypassPermissions".into()), None).is_err(), "no mode beyond the two a plan is approved in");
-        assert!(answer_of("a".into(), "allow", Some(json!(["Vue"])), None, None).is_err(), "picks are by question");
+        assert!(answer_of("a".into(), "maybe", None, None, None, None).is_err());
+        assert!(answer_of("a".into(), "allow", None, None, Some("bypassPermissions".into()), None).is_err(), "no mode beyond the two a plan is approved in");
+        assert!(answer_of("a".into(), "allow", Some(json!(["Vue"])), None, None, None).is_err(), "picks are by question");
         let long = json!({ "title": "x".repeat(ANSWER_MOST) });
-        assert!(answer_of("a".into(), "allow", None, None, Some(long)).is_err());
+        assert!(answer_of("a".into(), "allow", None, None, None, Some(long)).is_err());
     }
 }
