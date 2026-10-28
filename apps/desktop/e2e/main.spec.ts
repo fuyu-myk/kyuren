@@ -45,7 +45,8 @@ function standIn(): void {
               { at: Date.now() - 2 * 3_600_000, kind: "plan", topic: "plan approved", said: "Move the shelf onto SQLite" },
             ],
           };
-          return { projects: [{ name: "kyuren", path: "/x/kyuren", branch: "main", upstream: "origin/main", ahead: 0, behind: 0, dirty: 0, lastAt: Date.now(), github, decisions }] };
+          const reviews = [{ repo: "someone/fractaldb", number: 31, title: "Bound batch decode memory", url: "https://github.com/someone/fractaldb/pull/31", author: "a-colleague", draft: false }];
+          return { projects: [{ name: "kyuren", path: "/x/kyuren", branch: "main", upstream: "origin/main", ahead: 0, behind: 0, dirty: 0, lastAt: Date.now(), github, decisions }], reviews };
         }
         if (cmd === "playbooks_list") return { playbooks: books };
         if (cmd === "playbook_read") {
@@ -230,4 +231,14 @@ test("the board shows what was decided about a project on the island, latest fir
   await expect(decided.locator(".said")).toHaveText(["Board only", "Move the shelf onto SQLite"]);
   await expect(decided.locator("li").first()).toHaveAttribute("title", "Should the island speak up when a check fails?");
   await expect(decided.locator(".others")).toHaveText("2 decided before");
+});
+
+test("the board lists the pull requests waiting on the user's review, above every project, each opening on GitHub", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "development and projects" }).click();
+  const waiting = page.locator(".reviews");
+  await expect(waiting.locator("h4")).toHaveText("waiting on your review");
+  await expect(waiting.locator(".pull")).toHaveText(["someone/fractaldb#31Bound batch decode memoryby a-colleague"]);
+  await waiting.locator(".pull").click();
+  const opened = await page.evaluate(() => (window as unknown as { standIn: { called: (cmd: string) => Array<{ args: Record<string, unknown> }> } }).standIn.called("open_link").map((one) => one.args.url));
+  expect(opened).toEqual(["https://github.com/someone/fractaldb/pull/31"]);
 });

@@ -183,7 +183,8 @@ A Node sidecar speaking newline-delimited JSON over stdio. Owns all cognition.
   on GitHub its open pull requests and how their checks stand, and the main branch's, asked of
   GitHub through its own command line as the user signed it in, in the background and at most
   every three minutes for each, so the board never waits on the network. Beside them, what was
-  decided about it on the island, its latest three.
+  decided about it on the island, its latest three, and above every project the pull requests
+  waiting on the user's review, wherever they are on GitHub, found with one search.
 
 ### 4.4 WebView, `apps/desktop/ui`
 

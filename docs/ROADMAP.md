@@ -284,9 +284,10 @@ sessions, Claude Code in read-only plan mode, spawned into the correct repositor
 up to ten minutes. Where a project stood when work stopped, answered on demand from its README, its
 working tree and its last commits. Coding agents running anywhere on the Mac are followed on the
 island. For a repository on GitHub, its open pull requests on the board, with how their checks
-stand, and the main branch's checks, read from GitHub in the background. What was decided about
-each project on the island, questions a coding agent asked answered and plans approved, kept in
-Kyuren's own folder and shown under the project on the board.
+stand, and the main branch's checks, read from GitHub in the background, and above every project
+the pull requests waiting on the user's review. What was decided about each project on the island,
+questions a coding agent asked answered and plans approved, kept in Kyuren's own folder and shown
+under the project on the board.
 
 **Gate.**
 1. The board reflects real state across every repository under the coding directory, refreshed

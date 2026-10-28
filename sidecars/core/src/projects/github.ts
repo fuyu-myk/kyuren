@@ -102,3 +102,45 @@ export async function githubAt(path: string): Promise<GitHub | undefined> {
     return undefined;
   }
 }
+
+/// A pull request waiting on the user's review, in any repository on GitHub.
+export type Review = { repo: string; number: number; title: string; url: string; author: string; draft: boolean };
+
+/// How many waiting reviews are asked for.
+const REVIEWS_MOST = 20;
+
+const REVIEWS = z.array(
+  z.object({
+    number: z.number().int().positive(),
+    title: z.string().max(500),
+    url: z.string(),
+    isDraft: z.boolean().optional(),
+    repository: z.object({ nameWithOwner: z.string() }),
+    author: z.object({ login: z.string() }).nullable().optional(),
+  }),
+);
+
+/// What GitHub's search found waiting on the user's review, or nothing for an answer that is not
+/// one. A pull request whose link does not lead to itself on GitHub is left out, since it is opened.
+export function readReviews(answer: unknown): Review[] | undefined {
+  const read = REVIEWS.safeParse(answer);
+  if (!read.success) return undefined;
+  return read.data
+    .filter((one) => githubOf(`https://github.com/${one.repository.nameWithOwner}`) === one.repository.nameWithOwner && one.url === `https://github.com/${one.repository.nameWithOwner}/pull/${one.number}`)
+    .map((one) => ({ repo: one.repository.nameWithOwner, number: one.number, title: one.title, url: one.url, author: one.author?.login ?? "", draft: one.isDraft ?? false }));
+}
+
+/// The open pull requests waiting on the user's review, wherever they are on GitHub, asked of it
+/// as the user signed in; nothing when GitHub cannot be asked.
+export async function reviewsWaiting(): Promise<Review[] | undefined> {
+  const asked = await run("gh", ["search", "prs", "--review-requested=@me", "--state=open", "--json", "number,title,url,repository,author,isDraft", "--limit", String(REVIEWS_MOST)], {
+    timeout: PATIENCE,
+    maxBuffer: 2_000_000,
+  }).catch(() => undefined);
+  if (!asked) return undefined;
+  try {
+    return readReviews(JSON.parse(asked.stdout));
+  } catch {
+    return undefined;
+  }
+}

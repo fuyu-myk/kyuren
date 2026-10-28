@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { Board } from "#projects/board.ts";
-import { githubOf, readGitHub, type GitHub } from "#projects/github.ts";
+import { githubOf, readGitHub, readReviews, type GitHub, type Review } from "#projects/github.ts";
 
 test("a repository's place on GitHub is read from where its origin points, and one elsewhere has none", () => {
   assert.equal(githubOf("https://github.com/fuyu-myk/kyuren.git"), "fuyu-myk/kyuren");
@@ -58,9 +58,11 @@ test("the board shows what GitHub says once it has been read, without waiting on
   await mkdir(join(root, "kyuren", ".git"), { recursive: true });
   const github: GitHub = { repo: "fuyu-myk/kyuren", branch: "main", main: "passing", count: 0, pulls: [] };
   let asked = 0;
-  const board = new Board(root, async () => {
-    asked += 1;
-    return github;
+  const board = new Board(root, {
+    github: async () => {
+      asked += 1;
+      return github;
+    },
   });
   const first = await board.projects(true);
   assert.equal(first[0]?.github, undefined, "the board is not held up while GitHub is asked");
@@ -69,5 +71,37 @@ test("the board shows what GitHub says once it has been read, without waiting on
   const second = await board.projects(true);
   assert.deepEqual(second[0]?.github, github);
   await board.projects(true);
+  assert.equal(asked, 1, "asked again only once its reading is old");
+});
+
+test("pull requests waiting on the user's review are read from GitHub's search, each only with a link to itself on GitHub", () => {
+  const found = [
+    { number: 7, title: "Bound the decode memory", url: "https://github.com/someone/fractaldb/pull/7", isDraft: false, repository: { name: "fractaldb", nameWithOwner: "someone/fractaldb" }, author: { login: "someone" } },
+    { number: 8, title: "Elsewhere", url: "https://evil.example/someone/fractaldb/pull/8", isDraft: false, repository: { name: "fractaldb", nameWithOwner: "someone/fractaldb" }, author: { login: "someone" } },
+    { number: 9, title: "A draft", url: "https://github.com/other/notes/pull/9", isDraft: true, repository: { name: "notes", nameWithOwner: "other/notes" }, author: null },
+  ];
+  assert.deepEqual(readReviews(found), [
+    { repo: "someone/fractaldb", number: 7, title: "Bound the decode memory", url: "https://github.com/someone/fractaldb/pull/7", author: "someone", draft: false },
+    { repo: "other/notes", number: 9, title: "A draft", url: "https://github.com/other/notes/pull/9", author: "", draft: true },
+  ]);
+  assert.equal(readReviews({ message: "Bad credentials" }), undefined);
+});
+
+test("the board holds what waits on the user's review, asked in the background like the rest of GitHub", async () => {
+  const root = await mkdtemp(join(tmpdir(), "kyuren-board-"));
+  const waiting: Review[] = [{ repo: "someone/fractaldb", number: 7, title: "Bound the decode memory", url: "https://github.com/someone/fractaldb/pull/7", author: "someone", draft: false }];
+  let asked = 0;
+  const board = new Board(root, {
+    github: async () => undefined,
+    reviews: async () => {
+      asked += 1;
+      return waiting;
+    },
+  });
+  assert.deepEqual(board.reviews(), [], "not held up while GitHub is asked");
+  for (let tries = 0; tries < 100 && asked === 0; tries += 1) await new Promise((resolve) => setTimeout(resolve, 10));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.deepEqual(board.reviews(), waiting);
+  board.reviews();
   assert.equal(asked, 1, "asked again only once its reading is old");
 });

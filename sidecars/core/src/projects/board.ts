@@ -3,7 +3,7 @@ import { basename } from "node:path";
 import { promisify } from "node:util";
 import { repositories } from "#projects/find.ts";
 import type { Decided } from "#projects/decisions.ts";
-import { githubAt, type GitHub } from "#projects/github.ts";
+import { githubAt, reviewsWaiting, type GitHub, type Review } from "#projects/github.ts";
 import { inHandfuls } from "#projects/pool.ts";
 import { readLast, readStatus, type Project } from "#projects/state.ts";
 
@@ -52,10 +52,22 @@ export async function stateOf(path: string): Promise<Project> {
 ///
 /// The pane asks whenever it is opened and on a timer, and forty repositories is eighty processes;
 /// reading them afresh every time would keep the disk busy for nothing.
+/// Where the board reads what is not on this Mac: GitHub, for a repository and for what waits on the
+/// user's review, and what was decided on the island about a project.
+type Readers = {
+  github?: (path: string) => Promise<GitHub | undefined>;
+  decided?: (path: string) => Promise<Decided | undefined>;
+  reviews?: () => Promise<Review[] | undefined>;
+};
+
 export class Board {
   private readonly root: string;
   private readonly github: (path: string) => Promise<GitHub | undefined>;
   private readonly decided: (path: string) => Promise<Decided | undefined>;
+  private readonly asked: () => Promise<Review[] | undefined>;
+  /// What waits on the user's review, asked in the background like the rest of GitHub.
+  private waiting: { data?: Review[]; asked: number; answered: number } = { asked: 0, answered: 0 };
+  private reviewing = false;
   private held: Project[] = [];
   private read = 0;
   private reading: Promise<Project[]> | undefined;
@@ -64,14 +76,31 @@ export class Board {
   private readonly hub = new Map<string, { data?: GitHub; asked: number; answered: number }>();
   private hubbing = false;
 
-  constructor(
-    root: string,
-    github: (path: string) => Promise<GitHub | undefined> = githubAt,
-    decided: (path: string) => Promise<Decided | undefined> = async () => undefined,
-  ) {
+  constructor(root: string, readers: Readers = {}) {
     this.root = root;
-    this.github = github;
-    this.decided = decided;
+    this.github = readers.github ?? githubAt;
+    this.decided = readers.decided ?? (async () => undefined);
+    this.asked = readers.reviews ?? reviewsWaiting;
+  }
+
+  /// The pull requests waiting on the user's review, as last read; asked again when that is old.
+  reviews(): Review[] {
+    const now = Date.now();
+    if (!this.reviewing && now - this.waiting.asked >= HUB_STALE) {
+      this.reviewing = true;
+      this.waiting = { ...this.waiting, asked: now };
+      void this.asked()
+        .catch(() => undefined)
+        .then((data) => {
+          const at = Date.now();
+          const was = this.waiting;
+          this.waiting = data ? { data, asked: at, answered: at } : { ...(was.data && at - was.answered < HUB_KEPT ? { data: was.data } : {}), asked: at, answered: was.answered };
+        })
+        .finally(() => {
+          this.reviewing = false;
+        });
+    }
+    return this.waiting.data ?? [];
   }
 
   async projects(fresh = false): Promise<Project[]> {

@@ -223,3 +223,36 @@
   margin-left: auto;
   color: var(--muted);
 }
+
+/* Pull requests waiting on the user's review, wherever they are, above every project. */
+.reviews {
+  margin: 0 0 0.6rem;
+  padding: 0 0.7rem;
+}
+
+.reviews h4 {
+  margin: 0 0 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--overlay1);
+}
+
+.reviews ul {
+  display: grid;
+  gap: 0.05rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reviews .repo {
+  flex: none;
+  color: var(--lavender);
+}
+
+.reviews .by {
+  flex: none;
+  color: var(--muted);
+}

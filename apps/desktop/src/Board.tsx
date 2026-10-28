@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { openLink } from "@/links";
 import { afterFew, FEW, More } from "@/More";
-import { projectBoard, type Checks, type Project } from "@/sessions";
+import { projectBoard, type Checks, type Project, type Review } from "@/sessions";
 import { ago } from "@/when";
 
 type BoardProps = {
@@ -19,12 +19,15 @@ const AGAIN = 30_000;
 
 export function Board({ onAsk }: BoardProps) {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [all, setAll] = useState(false);
   const [trouble, setTrouble] = useState<string>();
 
   const look = useCallback(async (fresh: boolean) => {
     try {
-      setProjects(await projectBoard(fresh));
+      const board = await projectBoard(fresh);
+      setProjects(board.projects);
+      setReviews(board.reviews);
       setTrouble(undefined);
     } catch (failure) {
       setTrouble(String(failure));
@@ -50,6 +53,24 @@ export function Board({ onAsk }: BoardProps) {
 
   return (
     <>
+    {reviews.length > 0 ? (
+      <section className="reviews">
+        <h4>waiting on your review</h4>
+        <ul>
+          {reviews.map((review) => (
+            <li key={review.url}>
+              <button type="button" className="pull" title={review.url} onClick={() => void openLink(review.url)}>
+                <span className="repo">{review.repo}</span>
+                <span className="number">#{review.number}</span>
+                <span className="title">{review.title}</span>
+                {review.author ? <span className="by">by {review.author}</span> : null}
+                {review.draft ? <em className="draft">draft</em> : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ) : null}
     <ul className="board">
       {shown.map((one, at) => (
         <li key={one.path} className={all ? "fresh" : ""} style={all ? afterFew(at) : undefined}>

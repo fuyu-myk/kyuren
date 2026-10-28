@@ -192,12 +192,15 @@ export type Project = {
   decisions?: Decided;
 };
 
-/// Where every project stands. Asked for whenever the pane is looked at and on a timer, which the
-/// core answers from its last reading unless it is asked for a fresh one.
-export async function projectBoard(fresh = false): Promise<Project[]> {
-  if (!insideTauri()) return pretend.projects();
-  const reply = await invoke<{ projects: Project[] }>("project_board", { fresh });
-  return reply.projects;
+/// A pull request waiting on the user's review, in any repository on GitHub.
+export type Review = { repo: string; number: number; title: string; url: string; author: string; draft: boolean };
+
+/// Where every project stands, and what waits on the user's review. Asked for whenever the pane is
+/// looked at and on a timer, which the core answers from its last reading unless asked for a fresh one.
+export async function projectBoard(fresh = false): Promise<{ projects: Project[]; reviews: Review[] }> {
+  if (!insideTauri()) return { projects: pretend.projects(), reviews: pretend.reviews() };
+  const reply = await invoke<{ projects: Project[]; reviews?: Review[] }>("project_board", { fresh });
+  return { projects: reply.projects, reviews: reply.reviews ?? [] };
 }
 
 export async function askable(): Promise<Asked[]> {

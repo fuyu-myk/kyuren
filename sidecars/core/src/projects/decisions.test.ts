@@ -55,7 +55,7 @@ test("the board shows a project's latest decisions under it", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "kyuren-board-")));
   mkdirSync(join(root, "kyuren", ".git"), { recursive: true });
   const decided: Decided = { count: 4, latest: [{ at: 3, kind: "choice", topic: "Checks", said: "Lint" }] };
-  const board = new Board(root, async () => undefined, async (path) => (path === join(root, "kyuren") ? decided : undefined));
+  const board = new Board(root, { github: async () => undefined, decided: async (path) => (path === join(root, "kyuren") ? decided : undefined) });
   const [project] = await board.projects(true);
   assert.deepEqual(project?.decisions, decided);
 });

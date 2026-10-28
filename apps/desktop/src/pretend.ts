@@ -1,5 +1,5 @@
 import type { Pane } from "@/panes";
-import type { Answer, Capability, Project, Route, Session, Skill, Turn } from "@/sessions";
+import type { Answer, Capability, Project, Review, Route, Session, Skill, Turn } from "@/sessions";
 
 /// A workspace that does not exist, so the window can be used in a browser with no sidecars
 /// running. Nothing outside a development preview ever reaches it.
@@ -186,6 +186,12 @@ export const pretend = {
     if (at >= 0) forged.splice(at, 1);
   },
 
+  reviews(): Review[] {
+    return [
+      { repo: "someone/fractaldb", number: 31, title: "Bound batch decode memory over gRPC", url: "https://github.com/someone/fractaldb/pull/31", author: "a-colleague", draft: false },
+      { repo: "lab/notes", number: 4, title: "Week 9 reading list", url: "https://github.com/lab/notes/pull/4", author: "a-classmate", draft: true },
+    ];
+  },
   projects(): Project[] {
     const day = 86_400_000;
     return [

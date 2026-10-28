@@ -6,6 +6,7 @@ export function projectHandlers() {
   return {
     "projects.board": async (params: Record<string, unknown>) => ({
       projects: await sharedBoard().projects(params.fresh === true),
+      reviews: sharedBoard().reviews(),
     }),
   };
 }
