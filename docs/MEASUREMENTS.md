@@ -819,6 +819,10 @@ when each process began day first and believed no session's record; read in the 
 editor's session idle for a day and a half was listed again. A plan from a terminal and a server's
 form have not been seen.
 
+2026-10-28, from the same session: a question in two parts came to the island one at a time; the
+first was answered with Other, in the user's own words, the second with an option, and Claude Code
+had both as given, the typed answer word for word.
+
 ## On the built app
 
 2026-10-03, by the user, on the app built from this repository.
