@@ -86,6 +86,18 @@ export function Board({ onAsk }: BoardProps) {
               {one.github.count > PULLS ? <li className="others">{one.github.count - PULLS} more open</li> : null}
             </ul>
           ) : null}
+          {one.decisions && one.decisions.count > 0 ? (
+            <ul className="decided">
+              {one.decisions.latest.map((made) => (
+                <li key={`${made.at}:${made.topic}`} title={made.question ?? made.topic}>
+                  <span className="topic">{made.topic}</span>
+                  <span className="said">{made.said}</span>
+                  <span className="when">{ago(made.at)}</span>
+                </li>
+              ))}
+              {one.decisions.count > one.decisions.latest.length ? <li className="others">{one.decisions.count - one.decisions.latest.length} decided before</li> : null}
+            </ul>
+          ) : null}
         </li>
       ))}
     </ul>

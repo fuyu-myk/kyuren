@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { basename } from "node:path";
 import { promisify } from "node:util";
 import { repositories } from "#projects/find.ts";
+import type { Decided } from "#projects/decisions.ts";
 import { githubAt, type GitHub } from "#projects/github.ts";
 import { inHandfuls } from "#projects/pool.ts";
 import { readLast, readStatus, type Project } from "#projects/state.ts";
@@ -54,6 +55,7 @@ export async function stateOf(path: string): Promise<Project> {
 export class Board {
   private readonly root: string;
   private readonly github: (path: string) => Promise<GitHub | undefined>;
+  private readonly decided: (path: string) => Promise<Decided | undefined>;
   private held: Project[] = [];
   private read = 0;
   private reading: Promise<Project[]> | undefined;
@@ -62,18 +64,26 @@ export class Board {
   private readonly hub = new Map<string, { data?: GitHub; asked: number; answered: number }>();
   private hubbing = false;
 
-  constructor(root: string, github: (path: string) => Promise<GitHub | undefined> = githubAt) {
+  constructor(
+    root: string,
+    github: (path: string) => Promise<GitHub | undefined> = githubAt,
+    decided: (path: string) => Promise<Decided | undefined> = async () => undefined,
+  ) {
     this.root = root;
     this.github = github;
+    this.decided = decided;
   }
 
   async projects(fresh = false): Promise<Project[]> {
     const projects = await this.local(fresh);
     this.askGitHub(projects);
-    return projects.map((one) => {
-      const data = this.hub.get(one.path)?.data;
-      return data ? { ...one, github: data } : one;
-    });
+    return Promise.all(
+      projects.map(async (one) => {
+        const data = this.hub.get(one.path)?.data;
+        const decided = await this.decided(one.path).catch(() => undefined);
+        return { ...one, ...(data ? { github: data } : {}), ...(decided && decided.count > 0 ? { decisions: decided } : {}) };
+      }),
+    );
   }
 
   private async local(fresh: boolean): Promise<Project[]> {

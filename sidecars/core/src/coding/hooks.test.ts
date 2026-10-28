@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { HookListener } from "#coding/hooks.ts";
+import type { Decision } from "#projects/decisions.ts";
 import type { Outbound } from "#protocol.ts";
 import type { Transport } from "#transport.ts";
 
@@ -257,4 +258,31 @@ test("a plan from a session in the Claude app is left to the app, which approves
   assert.equal(hooks.pending()[0]?.kind, "plan", "from a terminal it comes to the island");
   await hooks.stop();
   assert.equal(await fromTerminal.answer, "");
+});
+
+test("an answer given on the island that decides something is kept, and one sent back or handed back is not", async () => {
+  const { transport } = told();
+  const path = socketPath();
+  const decided: Array<[string, Decision[]]> = [];
+  const hooks = new HookListener(transport, path, { decided: (cwd, made) => decided.push([cwd, made]) });
+  await hooks.start();
+  const answered = async (header: typeof PERMISSION, payload: object, answer: Parameters<HookListener["answer"]>[1]) => {
+    const asked = relay(path, header, payload);
+    await until(() => hooks.pending().length === 1);
+    hooks.answer(hooks.pending()[0]?.id ?? "", answer);
+    await asked.answer;
+  };
+  const plan = (title: string) => ({ ...BASH, tool_name: "ExitPlanMode", tool_input: { plan: `## ${title}\n1. Extract it.` } });
+  await answered(CHOOSING, ASKING, { decision: "allow", picked: {}, other: { "Which framework?": "Svelte" } });
+  await answered(PERMISSION, plan("Keep planning this"), { decision: "deny" });
+  await answered(PERMISSION, plan("Refactor the parser"), { decision: "allow", mode: "default" });
+  await answered(CHOOSING, ASKING, { decision: "ask" });
+  assert.deepEqual(
+    decided.map(([cwd, made]) => [cwd, made.map((one) => [one.kind, one.topic, one.said])]),
+    [
+      ["/Users/someone/Code/kyuren", [["choice", "Framework", "Svelte"]]],
+      ["/Users/someone/Code/kyuren", [["plan", "plan approved", "Refactor the parser"]]],
+    ],
+  );
+  await hooks.stop();
 });

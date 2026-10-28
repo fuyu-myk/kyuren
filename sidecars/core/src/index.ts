@@ -27,6 +27,7 @@ import { webHandlers } from "#methods/web.ts";
 import { askMethod } from "#methods/ask.ts";
 import { ping } from "#methods/ping.ts";
 import { createStdioTransport } from "#transport.ts";
+import { noteDecisions } from "#projects/decisions.ts";
 
 const transport = createStdioTransport();
 const dispatcher = createDispatcher(transport);
@@ -67,7 +68,12 @@ const scheduler = new Scheduler(transport, root, scheduledStarter(sharedGate(), 
 for (const [method, handler] of Object.entries(ambientHandlers(ambient, scheduler))) {
   dispatcher.register(method, handler);
 }
-const hooks = new HookListener(transport, hookSocket(root), { changed: () => coding.nudge(), inApp: (session) => coding.inApp(session) });
+const hooks = new HookListener(transport, hookSocket(root), {
+  changed: () => coding.nudge(),
+  inApp: (session) => coding.inApp(session),
+  // A decision that could not be written is the record's loss alone: the answer itself was given.
+  decided: (cwd, made) => void noteDecisions(root, cwd, made).catch(() => undefined),
+});
 const coding: CodingWatch = new CodingWatch(transport, homedir(), processAlive(), () => hooks.pending(), Date.now, join(root, "coding", "kept.json"));
 for (const [method, handler] of Object.entries(codingHandlers(coding, hooks, root))) {
   dispatcher.register(method, handler);

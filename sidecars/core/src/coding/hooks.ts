@@ -4,8 +4,10 @@ import { connect, createServer, type Server, type Socket } from "node:net";
 import { dirname } from "node:path";
 import { z } from "zod";
 import { claudeAnswer, claudeAsk, claudePlanAnswer, type Answer, type Ask, type Kind, type Wait } from "#coding/asked.ts";
-import { claudeChoice, claudeChoiceAnswer } from "#coding/choices.ts";
+import { choiceAnswers, claudeChoice, claudeChoiceAnswer } from "#coding/choices.ts";
 import { claudeForm, claudeFormAnswer } from "#coding/forms.ts";
+import { requestOf } from "#coding/shown.ts";
+import { planTitle, type Decision } from "#projects/decisions.ts";
 import type { Transport } from "#transport.ts";
 
 /// How long a question waits on the island before Claude Code asks it itself. Claude Code holds its
@@ -47,6 +49,8 @@ type Options = {
   changed?: () => void;
   /// Whether a session runs in the Claude app.
   inApp?: (session: string) => boolean;
+  /// Decisions made on the island, with the folder the session that asked them ran in.
+  decided?: (cwd: string, made: Decision[]) => void;
 };
 
 function parsed(text: string): unknown {
@@ -81,6 +85,7 @@ export class HookListener {
   private readonly saying: number;
   private readonly changed: () => void;
   private readonly inApp: (session: string) => boolean;
+  private readonly decided: (cwd: string, made: Decision[]) => void;
   private readonly held = new Map<string, Held>();
   private server: Server | undefined;
 
@@ -94,6 +99,7 @@ export class HookListener {
     this.saying = options.saying ?? SAYING;
     this.changed = options.changed ?? (() => {});
     this.inApp = options.inApp ?? (() => false);
+    this.decided = options.decided ?? (() => {});
   }
 
   /// Listens in a folder of its own that only this user can look into, so the line is never open
@@ -160,7 +166,30 @@ export class HookListener {
     }
     held.socket.end(reply);
     this.release(id, answer.decision);
+    if (answer.decision === "allow") this.note(held, answer);
     return true;
+  }
+
+  /// An answer given on the island that decides something, questions answered or a plan approved,
+  /// kept with the project the session that asked it ran in.
+  private note(held: Held, answer: Answer): void {
+    const { ask } = held;
+    const cwd = requestOf(held.request)?.cwd;
+    if (!cwd) return;
+    const at = Date.now();
+    const made: Decision[] =
+      ask.kind === "choice"
+        ? (choiceAnswers(ask, answer) ?? []).map(([question, said]) => ({
+            at,
+            kind: "choice" as const,
+            topic: ask.questions.find((one) => one.question === question)?.header || question,
+            question,
+            said,
+          }))
+        : ask.kind === "plan"
+          ? [{ at, kind: "plan" as const, topic: "plan approved", said: planTitle(ask.plan) }]
+          : [];
+    if (made.length > 0) this.decided(cwd, made);
   }
 
   /// What Claude Code is told, by the hook the question came through.

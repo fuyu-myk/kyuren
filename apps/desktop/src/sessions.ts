@@ -173,6 +173,11 @@ export type Pull = { number: number; title: string; url: string; draft: boolean;
 /// all, and how the checks on its main branch's newest commit stand.
 export type GitHub = { repo: string; branch?: string; main: Checks; count: number; pulls: Pull[] };
 
+/// A decision made on the island about a project: a coding agent's question answered, or a plan
+/// approved, with when, what it was about and what was decided.
+export type Decision = { at: number; kind: "choice" | "plan"; topic: string; question?: string; said: string };
+export type Decided = { count: number; latest: Decision[] };
+
 export type Project = {
   name: string;
   path: string;
@@ -184,6 +189,7 @@ export type Project = {
   lastAt?: number;
   lastSaid?: string;
   github?: GitHub;
+  decisions?: Decided;
 };
 
 /// Where every project stands. Asked for whenever the pane is looked at and on a timer, which the

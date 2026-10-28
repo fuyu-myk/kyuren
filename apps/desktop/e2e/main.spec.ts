@@ -38,7 +38,14 @@ function standIn(): void {
         if (cmd === "project_board") {
           const pull = (number: number, title: string, checks: string, draft = false) => ({ number, title, url: `https://github.com/someone/kyuren/pull/${number}`, draft, checks });
           const github = { repo: "someone/kyuren", branch: "main", main: "failing", count: 5, pulls: [pull(41, "Keep the shelf in SQLite", "passing"), pull(40, "Try the wake word", "pending", true), pull(38, "Hover after waking", "failing"), pull(37, "Older", "none")] };
-          return { projects: [{ name: "kyuren", path: "/x/kyuren", branch: "main", upstream: "origin/main", ahead: 0, behind: 0, dirty: 0, lastAt: Date.now(), github }] };
+          const decisions = {
+            count: 4,
+            latest: [
+              { at: Date.now() - 5 * 60_000, kind: "choice", topic: "CI on notch", question: "Should the island speak up when a check fails?", said: "Board only" },
+              { at: Date.now() - 2 * 3_600_000, kind: "plan", topic: "plan approved", said: "Move the shelf onto SQLite" },
+            ],
+          };
+          return { projects: [{ name: "kyuren", path: "/x/kyuren", branch: "main", upstream: "origin/main", ahead: 0, behind: 0, dirty: 0, lastAt: Date.now(), github, decisions }] };
         }
         if (cmd === "playbooks_list") return { playbooks: books };
         if (cmd === "playbook_read") {
@@ -210,8 +217,17 @@ test("the board shows a project's main branch checks and its open pull requests,
   await expect(project.locator(".pull .title")).toHaveText(["Keep the shelf in SQLite", "Try the wake word", "Hover after waking"]);
   await expect(project.locator(".pull .checks")).toHaveClass([/passing/, /pending/, /failing/]);
   await expect(project.locator(".pull .draft")).toHaveText(["draft"]);
-  await expect(project.locator(".others")).toHaveText("2 more open");
+  await expect(project.locator(".pulls .others")).toHaveText("2 more open");
   await project.locator(".pull", { hasText: "Hover after waking" }).click();
   const opened = await page.evaluate(() => (window as unknown as { standIn: { called: (cmd: string) => Array<{ args: Record<string, unknown> }> } }).standIn.called("open_link").map((one) => one.args.url));
   expect(opened).toEqual(["https://github.com/someone/kyuren/pull/38"]);
+});
+
+test("the board shows what was decided about a project on the island, latest first, the rest counted", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "development and projects" }).click();
+  const decided = page.locator(".board > li", { hasText: "kyuren" }).locator(".decided");
+  await expect(decided.locator(".topic")).toHaveText(["CI on notch", "plan approved"]);
+  await expect(decided.locator(".said")).toHaveText(["Board only", "Move the shelf onto SQLite"]);
+  await expect(decided.locator("li").first()).toHaveAttribute("title", "Should the island speak up when a check fails?");
+  await expect(decided.locator(".others")).toHaveText("2 decided before");
 });

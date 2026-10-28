@@ -211,6 +211,14 @@ export const pretend = {
             { number: 37, title: "Older work", url: "https://github.com/someone/kyuren/pull/37", draft: false, checks: "none" },
           ],
         },
+        decisions: {
+          count: 5,
+          latest: [
+            { at: Date.now() - 20 * 60_000, kind: "choice", topic: "CI on notch", question: "Should the island speak up when a check fails?", said: "Board only" },
+            { at: Date.now() - 3 * 3_600_000, kind: "plan", topic: "plan approved", said: "Move the shelf onto SQLite" },
+            { at: Date.now() - 26 * 3_600_000, kind: "choice", topic: "Other agent", said: "Skip for now" },
+          ],
+        },
       },
       { name: "lantern-browser", path: "~/Documents/Coding/lantern-browser", branch: "main", upstream: "origin/main", ahead: 18, behind: 0, dirty: 29, lastAt: Date.now() - 8 * day, lastSaid: "tidy the toolbar's focus order" },
       { name: "tidepool", path: "~/Documents/Coding/tidepool", branch: "main", ahead: 7, behind: 0, dirty: 0, lastAt: Date.now() - 12 * day, lastSaid: "bump to 0.3.0" },

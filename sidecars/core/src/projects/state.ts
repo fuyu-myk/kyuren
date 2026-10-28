@@ -1,3 +1,4 @@
+import type { Decided } from "#projects/decisions.ts";
 import type { GitHub } from "#projects/github.ts";
 
 export type Project = {
@@ -14,6 +15,8 @@ export type Project = {
   lastSaid?: string;
   /// Where it stands on GitHub, once that has been read.
   github?: GitHub;
+  /// What was decided about it on the island, latest first.
+  decisions?: Decided;
 };
 
 export type Standing = Pick<Project, "branch" | "upstream" | "ahead" | "behind" | "dirty">;

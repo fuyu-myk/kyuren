@@ -182,7 +182,8 @@ A Node sidecar speaking newline-delimited JSON over stdio. Owns all cognition.
 - **Projects.** Where each repository under the coding folder stands, read from git, and for one
   on GitHub its open pull requests and how their checks stand, and the main branch's, asked of
   GitHub through its own command line as the user signed it in, in the background and at most
-  every three minutes for each, so the board never waits on the network.
+  every three minutes for each, so the board never waits on the network. Beside them, what was
+  decided about it on the island, its latest three.
 
 ### 4.4 WebView, `apps/desktop/ui`
 
@@ -643,8 +644,11 @@ asked, a permission, a plan to be approved, answers or a form, without naming wh
 More than sixteen held at once are handed straight back, a request too slow to arrive whole is let
 go, and with the island's questions page switched off a question goes straight back. What a
 question carries, and what it was answered with, is kept out of the event log, which has only its
-id and how it ended. Other harnesses' hooks take the same relay, and are added once each can be
-tried.
+id and how it ended. What was decided on the island, each question answered with what was chosen or
+typed and each plan approved by its title, is kept apart from it, one file for each repository
+under ~/.kyuren/decisions, a worktree's with the repository it was made from, and is shown under
+the project on the board. Other harnesses' hooks take the same relay, and are added once each can
+be tried.
 
 **Shelf.** The shelf holds files on their way somewhere, the way a desk holds a pile. Anything
 carried onto the notch opens the island on the shelf at once, without the hover's wait, and

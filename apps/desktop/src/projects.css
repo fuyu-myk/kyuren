@@ -187,3 +187,39 @@
   font-size: 0.72rem;
   color: var(--muted);
 }
+
+/* What was decided about a project on the island, latest first: what it was about, then what. */
+.board .decided {
+  display: grid;
+  gap: 0.05rem;
+  margin: -0.15rem 0 0.35rem;
+  padding: 0 0.7rem 0 1.3rem;
+  list-style: none;
+  font-size: 0.72rem;
+}
+
+.board .decided li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.board .decided .topic {
+  flex: none;
+  color: var(--overlay1);
+}
+
+.board .decided .said {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--subtext0);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.board .decided .when {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+}

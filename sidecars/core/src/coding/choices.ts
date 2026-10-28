@@ -58,7 +58,17 @@ export function claudeChoice(payload: unknown, id: string, now: number, wait: Wa
 export function claudeChoiceAnswer(payload: unknown, ask: Ask, answer: Answer): string | undefined {
   if (answer.decision === "ask") return "";
   const request = requestOf(payload);
-  if (answer.decision !== "allow" || ask.kind !== "choice" || !request) return undefined;
+  const answers = choiceAnswers(ask, answer);
+  if (!request || !answers) return undefined;
+  const updatedInput = { ...request.tool_input, answers: Object.fromEntries(answers) };
+  return JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput } });
+}
+
+/// Each question with what was answered to it, as Claude Code's own picker gives it: the labels
+/// picked, from those offered, and what was typed for Other, joined. Nothing for an answer that does
+/// not fit what was asked.
+export function choiceAnswers(ask: Ask, answer: Answer): Array<[string, string]> | undefined {
+  if (answer.decision !== "allow" || ask.kind !== "choice") return undefined;
   const picked = answer.picked ?? {};
   const other = answer.other ?? {};
   const asked = new Set(ask.questions.map((one) => one.question));
@@ -74,6 +84,5 @@ export function claudeChoiceAnswer(payload: unknown, ask: Ask, answer: Answer): 
     if (given.length === 0 || (!one.multiSelect && given.length > 1)) return undefined;
     answers.push([one.question, given.join(", ")]);
   }
-  const updatedInput = { ...request.tool_input, answers: Object.fromEntries(answers) };
-  return JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", updatedInput } });
+  return answers;
 }
