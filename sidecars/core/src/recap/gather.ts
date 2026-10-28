@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join, sep } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
-import { today } from "#brief/day.ts";
+import { localStamp, today } from "#brief/day.ts";
 import { folderOf } from "#coding/where.ts";
 import { decisionsSince } from "#projects/decisions.ts";
 import { githubOf } from "#projects/github.ts";
@@ -72,14 +72,6 @@ export async function commitsOf(path: string, since: Date): Promise<string[] | u
     maxBuffer: 2_000_000,
   }).catch(() => undefined);
   return log ? readCommits(log.stdout, email) : undefined;
-}
-
-/// A moment as GitHub's search reads it: the local time, with how far it is from UTC.
-export function localStamp(moment: Date): string {
-  const two = (value: number) => `${Math.trunc(value)}`.padStart(2, "0");
-  const ahead = -moment.getTimezoneOffset();
-  const offset = `${ahead >= 0 ? "+" : "-"}${two(Math.abs(ahead) / 60)}:${two(Math.abs(ahead) % 60)}`;
-  return `${today(moment)}T${two(moment.getHours())}:${two(moment.getMinutes())}:${two(moment.getSeconds())}${offset}`;
 }
 
 const MERGED = z.array(

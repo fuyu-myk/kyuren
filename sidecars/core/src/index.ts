@@ -29,6 +29,7 @@ import { ping } from "#methods/ping.ts";
 import { createStdioTransport } from "#transport.ts";
 import { noteDecisions } from "#projects/decisions.ts";
 import { startEvenings } from "#recap/evening.ts";
+import { todoHandlers } from "#methods/todos.ts";
 
 const transport = createStdioTransport();
 const dispatcher = createDispatcher(transport);
@@ -57,6 +58,9 @@ for (const [method, handler] of Object.entries(projectHandlers())) {
   dispatcher.register(method, handler);
 }
 for (const [method, handler] of Object.entries(skillHandlers())) {
+  dispatcher.register(method, handler);
+}
+for (const [method, handler] of Object.entries(todoHandlers(sharedGate(), (listed) => transport.send({ event: "todos.changed", data: listed })))) {
   dispatcher.register(method, handler);
 }
 for (const [method, handler] of Object.entries(webHandlers(transport))) {

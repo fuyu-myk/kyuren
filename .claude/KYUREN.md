@@ -521,11 +521,17 @@ only the calendars already allowed, as anything read with nobody asked does, and
 with a button that asks about them, there being someone who pressed it. The glance's next-event
 widget shows the same next event and its countdown.
 
-**Todos.** A list of its own on the island: added by typing into a box above it, ticked off and on
-again, and taken off one at a time or all that is done at once, what is left shown first in the
-order it was added. The host keeps it in Kyuren's own folder, readable by the user's account alone,
-written whole on each change, and a list it cannot read is left as it is rather than written over.
-A todo is one line of plain text, two hundred characters at most, and the list holds two hundred.
+**Todos.** Kept in the Notion database chosen for them in settings, and shown on the island: the
+todos not yet done, soonest due first, each with its priority and when it is due, overdue ones
+marked, and its words opening it in Notion. One is added by typing, with a date, a time, a priority
+and a note to hand, each written where the database keeps it, a time in local time and a priority
+as the database already names it; what the database has no place for is left out. Ticking one off
+sets the status its Complete group means, or else ticks its checkbox, and it stays struck through
+below the list, to be ticked back on, until the page is left. Nothing is deleted in Notion, which
+Kyuren never does. Choosing the database is the leave to read Notion and to write there and nowhere
+else; one chosen before goes back to being read only. What is added is checked at the core: one
+line of words, a real date, a time only with a date, a priority among high, medium and low, and a
+note of plain lines.
 
 The now-playing widget shows what Spotify or Music is playing: the cover, the track, where it is
 with room to seek, play, pause and skip, and the player's own volume, there only under the cursor,

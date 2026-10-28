@@ -5,6 +5,7 @@ import { ambientLook, ambientRecent, ambientState, onPresence, type AmbientState
 import { nextOf, timeOf } from "@/news";
 import { captureScreen, type Capture } from "@/capture";
 import { Connections } from "@/Connections";
+import { NotionTodos } from "@/NotionTodos";
 import { eveningRecap, heldSecrets, morningBrief, onConnections, showMind, type Brief, type Recap } from "@/connect";
 import { onOrbState } from "@/orb";
 import { Page } from "@/Page";
@@ -349,6 +350,8 @@ export function System() {
       <Web onTrouble={setError} />
 
       <IslandLayout onTrouble={setError} />
+
+      <NotionTodos connected={connections} onTrouble={setError} />
 
       <CodingAgents onTrouble={setError} />
 

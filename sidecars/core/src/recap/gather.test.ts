@@ -5,7 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import type { Project } from "#projects/state.ts";
-import { commitsOf, gatherRecap, localStamp, readCommits, readMerged, workedSince, type Readers } from "#recap/gather.ts";
+import { localStamp } from "#brief/day.ts";
+import { commitsOf, gatherRecap, readCommits, readMerged, workedSince, type Readers } from "#recap/gather.ts";
 
 const UNIT = "\u001f";
 const project = (name: string, path = `/x/${name}`): Project => ({ name, path, branch: "main", ahead: 0, behind: 0, dirty: 0 });

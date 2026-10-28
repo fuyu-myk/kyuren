@@ -3,6 +3,7 @@
 
 export type Property = {
   type?: string;
+  select?: { options?: Array<{ name?: string }> };
   status?: { groups?: Array<{ name?: string; option_ids?: string[] }>; options?: Array<{ id?: string; name?: string }> };
 };
 

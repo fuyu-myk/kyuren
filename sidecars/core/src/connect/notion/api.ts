@@ -15,12 +15,13 @@ export function tokenHeld(): boolean {
 export async function notion(
   path: string,
   body?: Record<string, unknown>,
+  method: "GET" | "POST" | "PATCH" = body === undefined ? "GET" : "POST",
 ): Promise<Record<string, unknown>> {
   const token = secretFor("notion");
   if (!token) throw new Error("notion is not connected");
 
   const response = await fetch(`${BASE}${path}`, {
-    method: body === undefined ? "GET" : "POST",
+    method,
     headers: {
       authorization: `Bearer ${token}`,
       "notion-version": VERSION,

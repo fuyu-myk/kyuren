@@ -17,7 +17,7 @@ const COMMANDS: &[&str] = &[
     "island_tabs_set", "island_home", "island_shortcuts", "island_shortcuts_set",
     "island_home_set", "island_week_starts", "island_week_starts_set", "model_options",
     "known_capabilities", "project_board", "todos_list", "todos_add", "todos_tick",
-    "todos_remove", "todos_clear",
+    "notion_todos", "notion_todos_choose",
     "project_session", "skills_list", "skill_approve", "skill_forget", "session_list",
     "session_read", "session_start", "session_rename", "session_prefer",
     "session_forget", "show_mind", "start_vision", "stop_vision",

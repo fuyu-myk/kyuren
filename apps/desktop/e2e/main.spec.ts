@@ -41,6 +41,10 @@ function standIn(): void {
         if (cmd === "island_home") return null;
         if (cmd === "island_week_starts") return "sunday";
         if (cmd === "island_week_starts_set") return args.starts;
+        if (cmd === "notion_todos" || cmd === "notion_todos_choose") {
+          const chosen = cmd === "notion_todos_choose" && args.id ? { chosen: args.id } : {};
+          return { connected: true, databases: [{ id: "db1", title: "Tasks" }, { id: "db2", title: "Reading" }], ...chosen };
+        }
         if (cmd === "evening_recap") {
           return { facts: "## Evening\n\n### Committed\n- **kyuren**, 1 commit: feat: the evening recap\n\n_Written at 6 pm._", note: "/vault/days/2026-10-28.md" };
         }
@@ -290,3 +294,14 @@ test("the island's week begins on Sunday, or on Monday once chosen in settings",
   await expect(begins).toHaveValue("monday");
 });
 
+
+
+test("the Notion database the island's todos are kept in is chosen in settings", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "system" }).click();
+  const kept = page.getByRole("combobox", { name: "todos are kept in" });
+  await expect(kept).toHaveValue("");
+  await expect(kept.locator("option")).toHaveText(["no database", "Tasks", "Reading"]);
+  await kept.selectOption("Tasks");
+  expect((await calledWith(page, "notion_todos_choose")).map((one) => one.args)).toEqual([{ id: "db1" }]);
+  await expect(kept).toHaveValue("db1");
+});

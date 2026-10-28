@@ -1,19 +1,21 @@
-import { useEffect, useRef, useState } from "react";
-import { ordered } from "@/island/todos";
+import { useEffect, useRef, useState, type FocusEvent } from "react";
+import { dueOf, missingSaid, priorityOf, PRIORITIES, type Todo } from "@/island/todos";
 import type { TodoList } from "@/island/useTodos";
 
 type Props = {
   list: TodoList;
+  now: number;
   onReach: () => void;
   onLeave: () => void;
 };
 
-/// As long as the host keeps one.
-const LONGEST = 200;
+/// As long as Notion keeps a todo's words and its note here.
+const WORDS = 200;
+const NOTE = 2_000;
 
 const BOX = "M3.5 3.5h9v9h-9z";
 const TICKED = "M3.5 3.5h9v9h-9z M5.6 8.2l1.7 1.7 3.2-3.6";
-const REMOVE = "M4.5 4.5l7 7 M11.5 4.5l-7 7";
+const MORE = "M3 4h10v9.5H3z M3 7h10 M5.5 2.5v3 M10.5 2.5v3";
 
 function Glyph({ path }: { path: string }) {
   return (
@@ -23,64 +25,122 @@ function Glyph({ path }: { path: string }) {
   );
 }
 
-/// A list of its own: added by typing, ticked off, and taken off one at a time or all that is done.
-export function Todos({ list, onReach, onLeave }: Props) {
-  const { todos, trouble } = list;
-  const [typed, setTyped] = useState("");
-  // Taken away while typed into, the box gives back the keyboard it was holding.
+const EMPTY = { text: "", date: "", time: "", priority: "", note: "" };
+
+/// The todos kept in the Notion database chosen for them: added by typing, with a date, a time, a
+/// priority and a note to hand, and ticked off there. A todo's words open it in Notion.
+export function Todos({ list, now, onReach, onLeave }: Props) {
+  const [typed, setTyped] = useState(EMPTY);
+  const [details, setDetails] = useState(false);
+  // Taken away while typed into, a box gives back the keyboard it was holding.
   const holding = useRef<(() => void) | null>(null);
   useEffect(() => () => holding.current?.(), []);
 
-  const done = todos.filter((one) => one.done).length;
-  const left = todos.length - done;
+  const listed = list.listed;
+  if (!listed) return <div className="view todos"><p className="empty">Reading the todos…</p></div>;
+  if (listed.missing) return <div className="view todos"><p className="empty">{list.trouble ?? missingSaid(listed.missing)}</p></div>;
+
+  const fields = listed.fields ?? { date: false, priority: false, done: false };
+  const open = listed.todos.filter((one) => !list.ticked.some((ticked) => ticked.id === one.id));
+  const keyboard = {
+    onPointerDown: onReach,
+    onFocus: () => {
+      holding.current = onLeave;
+      onReach();
+    },
+    onBlur: (event: FocusEvent) => {
+      // Moving between the boxes here keeps the keyboard.
+      if (event.relatedTarget instanceof HTMLElement && event.currentTarget.closest(".adding")?.contains(event.relatedTarget)) return;
+      holding.current = null;
+      onLeave();
+    },
+  };
+  const add = () => {
+    if (typed.text.trim() === "") return;
+    void list.add({ ...typed, time: typed.date ? typed.time : "" }).then((kept) => {
+      if (!kept) return;
+      setTyped(EMPTY);
+      setDetails(false);
+    });
+  };
+  const row = (one: Todo, done: boolean) => {
+    const due = dueOf(one.due, now);
+    const priority = priorityOf(one.priority);
+    return (
+      <li key={one.id} className={done ? "todo done" : "todo"}>
+        <button type="button" className="tick" aria-pressed={done} title={done ? "not done after all" : "done"} disabled={!fields.done} onClick={() => list.tick(one, !done)}>
+          <Glyph path={done ? TICKED : BOX} />
+        </button>
+        <button type="button" className="text" title={one.url ? "open in Notion" : one.text} onClick={() => one.url && list.open(one.url)}>
+          {one.text}
+        </button>
+        {one.priority ? <span className={`priority ${priority ?? ""}`}>{one.priority}</span> : null}
+        {due ? <span className={due.overdue && !done ? "due overdue" : "due"}>{due.said}</span> : null}
+      </li>
+    );
+  };
 
   return (
     <div className="view todos">
-      <input
-        className="composer todo"
-        value={typed}
-        maxLength={LONGEST}
-        spellCheck={false}
-        placeholder="add a todo"
-        onPointerDown={onReach}
-        onFocus={() => {
-          holding.current = onLeave;
-          onReach();
-        }}
-        onBlur={() => {
-          holding.current = null;
-          onLeave();
-        }}
-        onChange={(event) => setTyped(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== "Enter" || typed.trim() === "") return;
-          void list.add(typed).then((kept) => kept && setTyped(""));
-        }}
-      />
-      {todos.length === 0 ? (
-        <p className="empty">Nothing to do yet: type one above and press return.</p>
+      <div className="adding">
+        <div className="line">
+          <input
+            className="composer"
+            value={typed.text}
+            maxLength={WORDS}
+            spellCheck={false}
+            placeholder={`add a todo to ${listed.database ?? "Notion"}`}
+            {...keyboard}
+            onChange={(event) => setTyped((was) => ({ ...was, text: event.target.value }))}
+            onKeyDown={(event) => event.key === "Enter" && add()}
+          />
+          <button type="button" className={details ? "more on" : "more"} title="a date, a time, a priority or a note" onClick={() => setDetails((was) => !was)}>
+            <Glyph path={MORE} />
+          </button>
+        </div>
+        {details ? (
+          <div className="details">
+            {fields.date ? (
+              <>
+                <input type="date" aria-label="due date" value={typed.date} {...keyboard} onChange={(event) => setTyped((was) => ({ ...was, date: event.target.value }))} />
+                <input type="time" aria-label="due time" value={typed.time} disabled={!typed.date} {...keyboard} onChange={(event) => setTyped((was) => ({ ...was, time: event.target.value }))} />
+              </>
+            ) : null}
+            {fields.priority ? (
+              <select aria-label="priority" value={typed.priority} {...keyboard} onChange={(event) => setTyped((was) => ({ ...was, priority: event.target.value }))}>
+                <option value="">no priority</option>
+                {PRIORITIES.map((one) => (
+                  <option key={one} value={one}>
+                    {one}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <input
+              className="note"
+              aria-label="note"
+              placeholder="a note"
+              maxLength={NOTE}
+              spellCheck={false}
+              value={typed.note}
+              {...keyboard}
+              onChange={(event) => setTyped((was) => ({ ...was, note: event.target.value }))}
+              onKeyDown={(event) => event.key === "Enter" && add()}
+            />
+          </div>
+        ) : null}
+      </div>
+      {open.length + list.ticked.length === 0 ? (
+        <p className="empty">Nothing left to do in {listed.database ?? "Notion"}.</p>
       ) : (
         <ul className="list">
-          {ordered(todos).map((one) => (
-            <li key={one.id} className={one.done ? "todo done" : "todo"}>
-              <button type="button" className="tick" aria-pressed={one.done} title={one.done ? "not done after all" : "done"} onClick={() => list.tick(one.id, !one.done)}>
-                <Glyph path={one.done ? TICKED : BOX} />
-              </button>
-              <span className="text">{one.text}</span>
-              <button type="button" className="remove" title="take off the list" onClick={() => list.remove(one.id)}>
-                <Glyph path={REMOVE} />
-              </button>
-            </li>
-          ))}
+          {open.map((one) => row(one, false))}
+          {list.ticked.map((one) => row(one, true))}
         </ul>
       )}
       <p className="foot">
-        {trouble ? <span className="trouble">{trouble}</span> : <span className="left">{left === 0 ? "nothing left" : `${left} left`}</span>}
-        {done > 0 ? (
-          <button type="button" className="clear" onClick={list.clear}>
-            clear {done} done
-          </button>
-        ) : null}
+        {list.trouble ? <span className="trouble">{list.trouble}</span> : <span className="left">{open.length === 0 ? "nothing left" : `${open.length} left`}</span>}
+        <span className="where">{listed.database}</span>
       </p>
     </div>
   );

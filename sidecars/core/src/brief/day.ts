@@ -63,3 +63,11 @@ export function distance(day: string, from: string): string {
   if (apart === -1) return "yesterday";
   return apart > 0 ? `in ${apart} days` : `${-apart} days ago`;
 }
+
+/// A moment in local time, with how far it is from UTC, as GitHub's search and Notion read one.
+export function localStamp(moment: Date): string {
+  const two = (value: number) => `${Math.trunc(value)}`.padStart(2, "0");
+  const ahead = -moment.getTimezoneOffset();
+  const offset = `${ahead >= 0 ? "+" : "-"}${two(Math.abs(ahead) / 60)}:${two(Math.abs(ahead) % 60)}`;
+  return `${today(moment)}T${two(moment.getHours())}:${two(moment.getMinutes())}:${two(moment.getSeconds())}${offset}`;
+}

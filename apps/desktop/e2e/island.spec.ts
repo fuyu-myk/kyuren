@@ -512,29 +512,48 @@ test("the next event's widget on the glance counts down to it", async ({ page })
   expect(await commanded(page, "calendar_week")).toEqual([undefined]);
 });
 
-test("todos are added by typing, ticked off and taken off on the island, what is left first", async ({ page }) => {
+test("todos kept in Notion are added with their details, ticked off and back on, and open in Notion", async ({ page }) => {
+  const start = new Date(2026, 9, 28, 9, 30).getTime();
+  await page.clock.install({ time: start });
+  await page.goto("/island.html");
   await opened(page);
   await page.locator(".tabs .tab[title='todos']").click();
   const todos = page.locator(".view.todos");
-  await expect(todos.locator(".empty")).toHaveText("Nothing to do yet: type one above and press return.");
-  const box = todos.getByPlaceholder("add a todo");
-  await box.click();
-  await box.fill("  Buy milk ");
-  await box.press("Enter");
-  await expect(box).toHaveValue("");
-  expect(await commanded(page, "todos_add")).toEqual([{ text: "  Buy milk " }]);
-  expect(await commanded(page, "island_focus"), "the box holds the keyboard while typed into").toContainEqual({ on: true });
+  await emit(page, "todos:changed", { todos: [], missing: "unchosen" });
+  await expect(todos.locator(".empty")).toHaveText("Choose a Notion database for todos in System settings.");
+  expect(await commanded(page, "todos_list"), "read as the page shows").toHaveLength(1);
 
   await send(page, "todos");
-  await expect(todos.locator(".todo .text")).toHaveText(["Reply to the lab about Thursday", "Book the dentist", "Push the island's week"]);
-  await expect(todos.locator(".todo.done .text")).toHaveText(["Push the island's week"]);
-  await expect(todos.locator(".foot")).toHaveText("2 leftclear 1 done");
+  await expect(todos.locator(".todo .text")).toHaveText(["Reply to the lab about Thursday", "Book the dentist", "Read the graph paper"]);
+  await expect(todos.locator(".todo").first().locator(".due.overdue")).toHaveText("Tue 27");
+  await expect(todos.locator(".todo").first().locator(".priority.high")).toHaveText("High");
+  await expect(todos.locator(".todo").nth(1).locator(".due")).toHaveText("today 12:30 pm");
+  await expect(todos.locator(".foot")).toHaveText("3 leftTasks");
+
+  const box = todos.getByPlaceholder("add a todo to Tasks");
+  await box.fill("Buy milk");
+  await box.press("Enter");
+  await expect(box).toHaveValue("");
+  await box.fill("Hand in the report");
+  await todos.getByRole("button", { name: "a date, a time, a priority or a note" }).click();
+  await todos.getByLabel("due date").fill("2026-10-30");
+  await todos.getByLabel("due time").fill("14:05");
+  await todos.getByLabel("priority").selectOption("high");
+  await todos.getByLabel("note").fill("the second draft");
+  await todos.getByLabel("note").press("Enter");
+  expect(await commanded(page, "todos_add")).toEqual([
+    { text: "Buy milk", date: "", time: "", priority: "", note: "" },
+    { text: "Hand in the report", date: "2026-10-30", time: "14:05", priority: "high", note: "the second draft" },
+  ]);
+
+  const dentist = "0b8c1f2e-1111-4222-8333-000000000002";
   await todos.locator(".todo", { hasText: "Book the dentist" }).getByRole("button", { name: "done" }).click();
-  await todos.locator(".todo", { hasText: "Push the island's week" }).getByRole("button", { name: "not done after all" }).click();
-  await todos.locator(".todo", { hasText: "Reply to the lab" }).hover();
-  await todos.locator(".todo", { hasText: "Reply to the lab" }).getByRole("button", { name: "take off the list" }).click();
-  await todos.getByRole("button", { name: "clear 1 done" }).click();
-  expect(await commanded(page, "todos_tick")).toEqual([{ id: "3", done: true }, { id: "2", done: false }]);
-  expect(await commanded(page, "todos_remove")).toEqual([{ id: "1" }]);
-  expect(await commanded(page, "todos_clear")).toHaveLength(1);
+  await expect(todos.locator(".todo.done .text")).toHaveText(["Book the dentist"]);
+  await expect(todos.locator(".foot .left")).toHaveText("2 left");
+  await todos.locator(".todo.done").getByRole("button", { name: "not done after all" }).click();
+  await expect(todos.locator(".todo.done")).toHaveCount(0);
+  expect(await commanded(page, "todos_tick")).toEqual([{ id: dentist, done: true }, { id: dentist, done: false }]);
+
+  await todos.locator(".todo .text", { hasText: "Reply to the lab" }).click();
+  expect(await commanded(page, "open_link")).toEqual([{ url: "https://www.notion.so/one" }]);
 });

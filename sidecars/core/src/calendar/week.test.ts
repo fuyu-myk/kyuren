@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { WeekReader, weekOf, type Week } from "#calendar/week.ts";
 import type { Item, Source } from "#connect/source.ts";
 import { Gate } from "#permission/gate.ts";
-import { localStamp } from "#recap/gather.ts";
+import { localStamp } from "#brief/day.ts";
 
 const now = new Date(2026, 9, 28, 9, 30);
 const local = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute).toISOString();

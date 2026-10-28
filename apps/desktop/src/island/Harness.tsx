@@ -204,11 +204,15 @@ export function Harness({ notch }: { notch: Notch }) {
         <button
           type="button"
           onClick={() =>
-            emitPreview("todos:changed", [
-              { id: "1", text: "Reply to the lab about Thursday", done: false, at: Date.now() - 3_600_000 },
-              { id: "2", text: "Push the island's week", done: true, at: Date.now() - 1_800_000 },
-              { id: "3", text: "Book the dentist", done: false, at: Date.now() - 600_000 },
-            ])
+            emitPreview("todos:changed", {
+              database: "Tasks",
+              fields: { date: true, priority: true, done: true },
+              todos: [
+                { id: "0b8c1f2e-1111-4222-8333-000000000001", text: "Reply to the lab about Thursday", due: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10), priority: "High", done: false, url: "https://www.notion.so/one" },
+                { id: "0b8c1f2e-1111-4222-8333-000000000002", text: "Book the dentist", due: new Date(Date.now() + 3 * 3_600_000).toISOString(), done: false, url: "https://www.notion.so/two" },
+                { id: "0b8c1f2e-1111-4222-8333-000000000003", text: "Read the graph paper", priority: "Low", done: false },
+              ],
+            })
           }
         >
           todos

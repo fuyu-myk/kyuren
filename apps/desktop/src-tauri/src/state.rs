@@ -198,6 +198,9 @@ fn event_sink(app: AppHandle) -> EventSink {
         if name == "calendar.week" {
             let _ = app.emit_to(crate::island::LABEL, "calendar:week", &data);
         }
+        if name == "todos.changed" {
+            let _ = app.emit_to(crate::island::LABEL, "todos:changed", &data);
+        }
         if name == "coding.permission" {
             crate::coding::on_ask(&app, &data);
         }

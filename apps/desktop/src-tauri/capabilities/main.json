@@ -44,6 +44,8 @@
     "allow-playbook-repair",
     "allow-playbook-runs",
     "allow-playbooks-list",
+    "allow-notion-todos",
+    "allow-notion-todos-choose",
     "allow-project-board",
     "allow-project-session",
     "allow-research-notes",

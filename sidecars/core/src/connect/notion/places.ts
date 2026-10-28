@@ -27,9 +27,23 @@ export function pageAddress(databaseId: string, pageId: string): string {
   return `${addressOf(databaseId)}/${pageId}`;
 }
 
+function kept(): { databases?: unknown; todos?: unknown } {
+  try {
+    return JSON.parse(readFileSync(listed, "utf8")) as { databases?: unknown; todos?: unknown };
+  } catch {
+    return {};
+  }
+}
+
+/// The database the todos are kept in, by its id, if one was chosen.
+function chosen(): string | undefined {
+  const todos = kept().todos;
+  return typeof todos === "string" ? todos : undefined;
+}
+
 function held(): Database[] {
   try {
-    const parsed = JSON.parse(readFileSync(listed, "utf8")) as { databases?: unknown };
+    const parsed = kept();
     if (!Array.isArray(parsed.databases)) return [];
     return parsed.databases.flatMap((one): Database[] => {
       const entry = one as Partial<Database>;
@@ -49,10 +63,28 @@ export function databases(): Database[] {
   return held();
 }
 
-function save(all: Database[]): Database[] {
+function save(all: Database[], todos = chosen()): Database[] {
   mkdirSync(dirname(listed), { recursive: true });
-  writeFileSync(listed, `${JSON.stringify({ databases: all }, null, 2)}\n`, "utf8");
+  writeFileSync(listed, `${JSON.stringify({ databases: all, ...(todos ? { todos } : {}) }, null, 2)}\n`, "utf8");
   return held();
+}
+
+export function todosDatabase(): Database | undefined {
+  const id = chosen();
+  return held().find((one) => one.id === id);
+}
+
+/// Choosing where the todos are kept is leave to write there, and there alone: the database
+/// chosen may be written, and one chosen before goes back to being read only.
+export function chooseTodos(id: string | null): Database[] {
+  const all = held();
+  if (id !== null && !all.some((one) => one.id === id)) throw new Error(`${id} is not a known database`);
+  const before = chosen();
+  const moved = all.map((one) => {
+    if (one.id === id) return { ...one, mode: "write" as const };
+    return one.id === before ? { ...one, mode: DEFAULT_MODE } : one;
+  });
+  return save(moved, id ?? "");
 }
 
 /// Records what was found without changing anything already decided, so discovering a workspace
