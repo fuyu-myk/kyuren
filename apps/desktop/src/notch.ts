@@ -6,8 +6,12 @@ import { insideTauri } from "@/tauri";
 export const WIDGETS = ["music", "pomodoro", "network", "system", "next"] as const;
 export type Widget = (typeof WIDGETS)[number];
 
+/// The days the island's week may begin on.
+export const WEEK_STARTS = ["sunday", "monday"] as const;
+export type WeekStart = (typeof WEEK_STARTS)[number];
+
 /// Outside the app, in a browser, the settings live here instead, so the layout can be tried.
-const preview: { tabs: Tab[]; widgets: Widget[]; home: Tab | null; shortcuts: string[] } = { tabs: [...TABS], widgets: [], home: null, shortcuts: [] };
+const preview: { tabs: Tab[]; widgets: Widget[]; home: Tab | null; shortcuts: string[]; weekStarts: WeekStart } = { tabs: [...TABS], widgets: [], home: null, shortcuts: [], weekStarts: "sunday" };
 
 function kept<T extends string>(known: readonly T[], chosen: T[]): T[] {
   return chosen.filter((one, at) => known.includes(one) && chosen.indexOf(one) === at);
@@ -55,4 +59,15 @@ export function setIslandHome(home: Tab | null): Promise<Tab | null> {
   if (insideTauri()) return invoke<Tab | null>("island_home_set", { home });
   preview.home = home;
   return Promise.resolve(home);
+}
+
+/// The day the island's week begins on.
+export function islandWeekStarts(): Promise<WeekStart> {
+  return insideTauri() ? invoke<WeekStart>("island_week_starts") : Promise.resolve(preview.weekStarts);
+}
+
+export function setIslandWeekStarts(starts: WeekStart): Promise<WeekStart> {
+  if (insideTauri()) return invoke<WeekStart>("island_week_starts_set", { starts });
+  preview.weekStarts = starts;
+  return Promise.resolve(starts);
 }

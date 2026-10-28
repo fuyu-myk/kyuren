@@ -1,4 +1,4 @@
-import { clockOf, dayName, nextEvent, sourceNames, until, type Happening, type Week as Read } from "@/island/week";
+import { clockOf, dayName, nextEvent, sourceNames, todayOf, until, type Happening, type Week as Read } from "@/island/week";
 
 type Props = {
   week: Read | null;
@@ -7,13 +7,14 @@ type Props = {
   onAllow: () => void;
 };
 
-/// The week across the island, today first, each day with its events, and the next one counted
-/// down above them. A calendar not yet allowed is named, with a way to be asked about it.
+/// The calendar week across the island, from Sunday or Monday as set, each day with its events, the
+/// days gone by dimmed, and the next event counted down above them. A calendar not yet allowed is
+/// named, with a way to be asked about it.
 export function Week({ week, now, asking, onAllow }: Props) {
   if (!week) return <div className="view week"><p className="quiet">reading the calendars</p></div>;
 
   const next = nextEvent(week, now);
-  const today = week.days[0]?.day ?? "";
+  const today = todayOf(now);
   const state = (one: Happening): string => {
     if (one === next) return "next";
     return one.timed && new Date(one.at).getTime() <= now ? "past" : "";
@@ -41,7 +42,7 @@ export function Week({ week, now, asking, onAllow }: Props) {
       </div>
       <div className="days">
         {week.days.map((one) => (
-          <section key={one.day} className={one.day === today ? "day today" : "day"}>
+          <section key={one.day} className={one.day === today ? "day today" : one.day < today ? "day gone" : "day"}>
             <h4>{dayName(one.day, today)}</h4>
             <ul>
               {one.events.map((event) => (

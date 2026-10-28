@@ -12,29 +12,41 @@ function event(title: string, at: string, source = "apple_calendar", kind: Item[
   return { source, kind, collection: "Home", title, at, timed: at.length > 10, done: false };
 }
 
-test("the week is seven days from today, each with its events, those without a time first", () => {
-  const days = weekOf(
+test("the week is the calendar week holding today, Sunday to Saturday, each day with its events, those without a time first", () => {
+  const week = weekOf(
     [
       event("Standup", local(28, 10)),
       event("Holiday", "2026-10-28"),
       event("Lunch", local(28, 12, 30)),
-      event("Yesterday's", local(27, 10)),
-      event("Next week", local(4 + 31, 10)),
+      event("Monday's", local(26, 10)),
+      event("Last week", local(24, 10)),
+      event("Next Tuesday", local(31 + 3, 9)),
+      event("Too far", local(31 + 9, 9)),
       event("A task, not an event", local(29, 9), "notion", "task"),
       event("Friday review", local(30, 15)),
     ],
     now,
   );
-  assert.deepEqual(days.map((one) => one.day), ["2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02", "2026-11-03"]);
-  assert.deepEqual(days[0]!.events.map((one) => one.title), ["Holiday", "Standup", "Lunch"]);
-  assert.deepEqual(days[1]!.events, []);
-  assert.deepEqual(days[2]!.events.map((one) => one.title), ["Friday review"]);
+  assert.deepEqual(week.days.map((one) => one.day), ["2026-10-25", "2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31"]);
+  assert.deepEqual(week.days[3]!.events.map((one) => one.title), ["Holiday", "Standup", "Lunch"]);
+  assert.deepEqual(week.days[1]!.events.map((one) => one.title), ["Monday's"], "the days already past this week are in it");
+  assert.deepEqual(week.days[4]!.events, []);
+  assert.deepEqual(week.days[5]!.events.map((one) => one.title), ["Friday review"]);
+  assert.deepEqual(week.after.map((one) => one.day), ["2026-11-01", "2026-11-02", "2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07"]);
+  assert.deepEqual(week.after.flatMap((one) => one.events.map((event) => event.title)), ["Next Tuesday"], "the week after, for what comes next");
+});
+
+test("a week may begin on Monday instead, and a Sunday then ends it", () => {
+  assert.deepEqual(weekOf([], now, true).days.map((one) => one.day), ["2026-10-26", "2026-10-27", "2026-10-28", "2026-10-29", "2026-10-30", "2026-10-31", "2026-11-01"]);
+  const sunday = new Date(2026, 10, 1, 9);
+  assert.equal(weekOf([], sunday, true).days[6]!.day, "2026-11-01", "on a Sunday, the week that ends today");
+  assert.equal(weekOf([], sunday).days[0]!.day, "2026-11-01", "or the week that begins today");
 });
 
 test("an event two calendars both hold is shown once, whichever way each writes its time", () => {
   const ten = new Date(2026, 9, 28, 10);
-  const days = weekOf([event("standup ", ten.toISOString()), event("Standup", localStamp(ten), "google_calendar"), event("Standup", local(28, 15))], now);
-  assert.deepEqual(days[0]!.events.map((one) => [one.title, one.at]), [["standup ", ten.toISOString()], ["Standup", local(28, 15)]]);
+  const { days } = weekOf([event("standup ", ten.toISOString()), event("Standup", localStamp(ten), "google_calendar"), event("Standup", local(28, 15))], now);
+  assert.deepEqual(days[3]!.events.map((one) => [one.title, one.at]), [["standup ", ten.toISOString()], ["Standup", local(28, 15)]]);
 });
 
 function calendar(name: string, items: Item[], counted: { reads: number }): Source {
@@ -63,11 +75,12 @@ test("the week read on its own reads only calendars already allowed, and is held
   const first = await reader.week();
   assert.deepEqual(first.read, ["apple_calendar"]);
   assert.deepEqual(first.refused, ["google_calendar"], "not yet allowed, and nobody asked");
-  assert.deepEqual(first.days[0]!.events.map((one) => one.title), ["Standup"]);
+  assert.deepEqual(first.days[3]!.events.map((one) => one.title), ["Standup"]);
   assert.equal(told.length, 1, "what was read is told to the island");
 
   clock = new Date(now.getTime() + 60_000);
-  assert.equal(await reader.week(), first, "held");
+  assert.deepEqual(await reader.week(), first, "held");
+  assert.equal(told.length, 1, "told only of a new reading");
   assert.equal(counted.reads, 1);
 
   const questions: string[] = [];
@@ -77,7 +90,9 @@ test("the week read on its own reads only calendars already allowed, and is held
   });
   assert.deepEqual(questions, ["google_calendar"], "asked, when someone pressed for it, about the calendar not yet allowed");
   assert.deepEqual(answered.read, ["apple_calendar", "google_calendar"]);
-  assert.deepEqual(answered.days[1]!.events.map((one) => one.title), ["Review"]);
+  assert.deepEqual(answered.days[4]!.events.map((one) => one.title), ["Review"]);
+  const monday = await reader.week(undefined, true);
+  assert.deepEqual(monday.days[0]!.day, "2026-10-26", "a week begun on Monday, from the same reading");
 
   clock = new Date(now.getTime() + 10 * 60_000);
   await reader.week();

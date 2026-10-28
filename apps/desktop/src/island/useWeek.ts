@@ -16,8 +16,14 @@ export function useWeek(shown: boolean): { week: Week | null; now: number; askin
   const [asking, setAsking] = useState(false);
 
   useEffect(() => {
-    const stop = on<Week>("calendar:week", setWeek);
-    return () => void stop.then((unlisten) => unlisten());
+    const stops = [
+      on<Week>("calendar:week", setWeek),
+      // The week begun on another day is the same reading laid out again.
+      on<string>("island:week-starts", () => void command<Week>("calendar_week").then((read) => read && setWeek(read), () => undefined)),
+    ];
+    return () => {
+      for (const stop of stops) void stop.then((unlisten) => unlisten());
+    };
   }, []);
 
   // Before the page is drawn, so a countdown last moved an hour ago is never shown.

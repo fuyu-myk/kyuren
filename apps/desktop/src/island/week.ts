@@ -1,7 +1,8 @@
-/// An event as the island shows it, and the week of them the core reads: seven days, today first.
+/// An event as the island shows it, and the week of them the core reads: the calendar week holding
+/// today, from Sunday or Monday as set, and the week after, where the next event may be.
 export type Happening = { title: string; at: string; timed: boolean; source: string; collection: string };
 export type Day = { day: string; events: Happening[] };
-export type Week = { at: number; days: Day[]; read: string[]; refused: string[]; unavailable: string[]; failed: string[] };
+export type Week = { at: number; days: Day[]; after: Day[]; read: string[]; refused: string[]; unavailable: string[]; failed: string[] };
 
 const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const HOUR = 60;
@@ -30,9 +31,14 @@ function dayAfter(day: string, many: number): string {
   return localDay(moment);
 }
 
-/// The next event to start: the first with a time still ahead.
+/// The next event to start: the first with a time still ahead, this week or the next.
 export function nextEvent(week: Week | null, now: number): Happening | undefined {
-  return week?.days.flatMap((one) => one.events).find((one) => one.timed && new Date(one.at).getTime() > now);
+  return week ? [...week.days, ...(week.after ?? [])].flatMap((one) => one.events).find((one) => one.timed && new Date(one.at).getTime() > now) : undefined;
+}
+
+/// Today as the week names its days.
+export function todayOf(now: number): string {
+  return localDay(new Date(now));
 }
 
 /// How long until an event starts: minutes, then hours, today; its day, after.

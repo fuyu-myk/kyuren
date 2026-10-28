@@ -36,6 +36,11 @@ function standIn(): void {
         if (cmd === "resolve_permission") return { matched: true, pending: 0 };
         if (cmd === "open_link") return null;
         if (cmd === "project_session") return { started: true };
+        if (cmd === "island_tabs") return ["voice", "week"];
+        if (cmd === "island_widgets") return [];
+        if (cmd === "island_home") return null;
+        if (cmd === "island_week_starts") return "sunday";
+        if (cmd === "island_week_starts_set") return args.starts;
         if (cmd === "evening_recap") {
           return { facts: "## Evening\n\n### Committed\n- **kyuren**, 1 commit: feat: the evening recap\n\n_Written at 6 pm._", note: "/vault/days/2026-10-28.md" };
         }
@@ -274,5 +279,14 @@ test("the evening's recap is written on asking from the system pane, and shown t
   await page.getByRole("button", { name: "how did today go" }).click();
   await expect(page.locator(".facts.recap")).toContainText("- **kyuren**, 1 commit: feat: the evening recap");
   expect(await calledWith(page, "evening_recap")).toHaveLength(1);
+});
+
+test("the island's week begins on Sunday, or on Monday once chosen in settings", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "system" }).click();
+  const begins = page.getByRole("combobox", { name: "the week begins on" });
+  await expect(begins).toHaveValue("sunday");
+  await begins.selectOption("monday");
+  expect((await calledWith(page, "island_week_starts_set")).map((one) => one.args)).toEqual([{ starts: "monday" }]);
+  await expect(begins).toHaveValue("monday");
 });
 

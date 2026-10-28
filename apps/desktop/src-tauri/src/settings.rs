@@ -30,6 +30,9 @@ pub struct Island {
     /// The page the island opens on whenever the notch is expanded; none is what needs the user.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub home: Option<String>,
+    /// The day the island's week begins on, Sunday unless it is Monday.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub week_starts: Option<String>,
     /// Which music players macOS has let Kyuren control, each learned the first time a control is
     /// used on it, since the permission is given per player; a player is asked for its position
     /// only once it is so.

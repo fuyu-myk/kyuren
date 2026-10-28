@@ -133,6 +133,8 @@ pub fn run() {
             shortcuts::island_shortcuts,
             shortcuts::island_shortcuts_set,
             island::island_home_set,
+            island::island_week_starts,
+            island::island_week_starts_set,
             sessions::model_options,
             sessions::known_capabilities,
             sessions::project_board,

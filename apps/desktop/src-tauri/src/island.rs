@@ -531,6 +531,34 @@ pub fn island_home_set(app: AppHandle, home: Option<String>) -> Result<Option<St
     Ok(home)
 }
 
+/// The days a week may begin on, the first being the one it begins on unless set.
+const WEEK_STARTS: [&str; 2] = ["sunday", "monday"];
+
+/// The day the week begins on, as set, or Sunday for anything else.
+pub fn week_starts_from(set: Option<&str>) -> &'static str {
+    WEEK_STARTS.iter().find(|day| Some(**day) == set).copied().unwrap_or(WEEK_STARTS[0])
+}
+
+pub fn week_starts() -> &'static str {
+    week_starts_from(crate::settings::read_settings().island.week_starts.as_deref())
+}
+
+#[tauri::command]
+pub fn island_week_starts() -> String {
+    week_starts().to_string()
+}
+
+/// Chooses the day the island's week begins on, and has the island lay its week out again.
+#[tauri::command]
+pub fn island_week_starts_set(app: AppHandle, starts: String) -> Result<String, String> {
+    if !WEEK_STARTS.contains(&starts.as_str()) {
+        return Err(format!("a week begins on Sunday or Monday, not {starts}"));
+    }
+    crate::settings::update_settings(|settings| settings.island.week_starts = Some(starts.clone()))?;
+    let _ = app.emit_to(LABEL, "island:week-starts", &starts);
+    Ok(starts)
+}
+
 /// The notch of the screen the island is on, for a page that has just loaded.
 #[tauri::command]
 pub fn island_screen() -> Notch {
@@ -563,6 +591,14 @@ mod tests {
         assert_eq!(hover_zone(true, notch, Some(island)), island);
         let bare = hover_zone(false, Notch { present: false, width: 120.0, height: 24.0 }, None);
         assert_eq!(bare.height, 6.0, "without a notch, only a thin strip along the top");
+    }
+
+    #[test]
+    fn a_week_begins_on_sunday_unless_it_is_set_to_monday() {
+        assert_eq!(week_starts_from(None), "sunday");
+        assert_eq!(week_starts_from(Some("monday")), "monday");
+        assert_eq!(week_starts_from(Some("Monday")), "sunday", "only as the settings write it");
+        assert_eq!(week_starts_from(Some("friday")), "sunday");
     }
 
     #[test]

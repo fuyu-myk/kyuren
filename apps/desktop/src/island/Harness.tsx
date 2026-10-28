@@ -3,26 +3,31 @@ import { emitPreview, type Notch } from "@/island/channels";
 
 const NOTCHED: Notch = { present: true, width: 184, height: 38 };
 
-/// A week to look at: one event already begun, the next in forty-two minutes, and a calendar not
-/// yet allowed.
+/// A week to look at, Sunday to Saturday: a day gone by, one event already begun, the next in
+/// forty-two minutes, more in the week after, and a calendar not yet allowed.
 function sampleWeek(now: number) {
-  const morning = new Date(now);
-  morning.setHours(0, 0, 0, 0);
-  const at = (days: number, hours: number, minutes = 0) => new Date(morning.getFullYear(), morning.getMonth(), morning.getDate() + days, hours, minutes).toISOString();
-  const day = (days: number) => at(days, 12).slice(0, 10);
+  const today = new Date(now);
+  const on = (days: number) => new Date(today.getFullYear(), today.getMonth(), today.getDate() + days);
+  const at = (days: number, hours: number, minutes = 0) => new Date(on(days).setHours(hours, minutes, 0, 0)).toISOString();
+  const day = (days: number) => {
+    const moment = on(days);
+    return `${moment.getFullYear()}-${`${moment.getMonth() + 1}`.padStart(2, "0")}-${`${moment.getDate()}`.padStart(2, "0")}`;
+  };
   const timed = (title: string, when: string, collection = "Work") => ({ title, at: when, timed: true, source: "apple_calendar", collection });
-  const events: Array<Array<ReturnType<typeof timed>>> = [
-    [timed("Standup", new Date(now - 60 * 60_000).toISOString()), timed("Design review", new Date(now + 42 * 60_000).toISOString()), timed("Gym", at(0, 18), "Home")],
-    [timed("Dentist", at(1, 8, 15), "Home")],
-    [timed("Lecture: graph neural networks", at(2, 10)), timed("Lab", at(2, 14))],
-    [{ title: "Holiday", at: day(3), timed: false, source: "apple_calendar", collection: "Home" }],
-    [],
-    [timed("Brunch with Sam", at(5, 11), "Home")],
-    [timed("Planning", at(6, 9, 30)), timed("Office hours", at(6, 16))],
-  ];
+  const events: Record<number, Array<ReturnType<typeof timed>>> = {
+    [-2]: [timed("Seminar", at(-2, 15))],
+    0: [timed("Standup", new Date(now - 60 * 60_000).toISOString()), timed("Design review", new Date(now + 42 * 60_000).toISOString()), timed("Gym", at(0, 18), "Home")],
+    1: [timed("Dentist", at(1, 8, 15), "Home")],
+    2: [timed("Lecture: graph neural networks", at(2, 10)), timed("Lab", at(2, 14))],
+    3: [{ title: "Holiday", at: day(3), timed: false, source: "apple_calendar", collection: "Home" }],
+    5: [timed("Brunch with Sam", at(5, 11), "Home")],
+    6: [timed("Planning", at(6, 9, 30)), timed("Office hours", at(6, 16))],
+  };
+  const days = Array.from({ length: 14 }, (_, index) => index - today.getDay()).map((offset) => ({ day: day(offset), events: events[offset] ?? [] }));
   return {
     at: now,
-    days: events.map((list, days) => ({ day: day(days), events: list })),
+    days: days.slice(0, 7),
+    after: days.slice(7),
     read: ["apple_calendar"],
     refused: ["google_calendar"],
     unavailable: [],

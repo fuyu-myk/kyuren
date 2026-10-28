@@ -91,6 +91,10 @@
   border-color: rgb(180 190 254 / 32%);
 }
 
+.week .day.gone {
+  opacity: 0.5;
+}
+
 .week .day h4 {
   margin: 0;
   color: #bac2de;

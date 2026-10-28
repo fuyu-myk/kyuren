@@ -4,20 +4,21 @@ import { appleCalendar } from "#connect/apple/calendar.ts";
 import { googleCalendar } from "#connect/google/calendar.ts";
 import { microsoftCalendar } from "#connect/microsoft/calendar.ts";
 import { notionSource } from "#connect/notion/source.ts";
-import { gather } from "#connect/read.ts";
+import { gather, type Gathered } from "#connect/read.ts";
 import { spanAround, type Item, type Source } from "#connect/source.ts";
 import type { Gate } from "#permission/gate.ts";
 
 /// The calendars the brief reads, and Notion for the dated events in its databases.
 export const CALENDARS: Source[] = [appleCalendar, googleCalendar, microsoftCalendar, notionSource];
-/// How many days the week holds, today first.
+/// How many days a week holds.
 export const DAYS = 7;
 /// How long a reading is held before the calendars are read again.
 const HELD = 4 * 60_000;
 
 export type Happening = { title: string; at: string; timed: boolean; source: string; collection: string };
 export type Day = { day: string; events: Happening[] };
-export type Week = { at: number; days: Day[]; read: string[]; refused: string[]; unavailable: string[]; failed: string[] };
+/// The calendar week holding today, and the week after it, where the next event may be.
+export type Week = { at: number; days: Day[]; after: Day[]; read: string[]; refused: string[]; unavailable: string[]; failed: string[] };
 
 /// The same event in two calendars, as when the Mac's calendar also holds a Google account, is one
 /// event: the same title at the same moment, however each writes the moment.
@@ -31,24 +32,26 @@ function earlier(a: Item, b: Item): number {
   return a.timed ? new Date(a.at).getTime() - new Date(b.at).getTime() : a.title.localeCompare(b.title);
 }
 
-/// The seven days from today, each with its events: those without a time first, then by when they
-/// start.
-export function weekOf(items: Item[], now: Date): Day[] {
+/// The calendar week holding today, Sunday to Saturday or Monday to Sunday, and the week after, each
+/// day with its events: those without a time first, then by when they start.
+export function weekOf(items: Item[], now: Date, monday = false): Pick<Week, "days" | "after"> {
   const seen = new Set<string>();
   const events = items.filter((item) => {
     if (item.kind !== "event" || seen.has(sameAs(item))) return false;
     seen.add(sameAs(item));
     return true;
   });
-  const days = [today(now)];
-  while (days.length < DAYS) days.push(nextDay(days[days.length - 1]!));
-  return days.map((day) => ({
+  const back = monday ? (now.getDay() + 6) % 7 : now.getDay();
+  const days = [today(new Date(now.getFullYear(), now.getMonth(), now.getDate() - back))];
+  while (days.length < 2 * DAYS) days.push(nextDay(days[days.length - 1]!));
+  const all = days.map((day) => ({
     day,
     events: events
       .filter((item) => dayOf(item.at) === day)
       .sort(earlier)
       .map(({ title, at, timed, source, collection }) => ({ title, at, timed, source, collection })),
   }));
+  return { days: all.slice(0, DAYS), after: all.slice(DAYS) };
 }
 
 /// The week as the island shows it. Read on its own, it reads only the calendars already allowed
@@ -59,8 +62,8 @@ export class WeekReader {
   private readonly told: (week: Week) => void;
   private readonly sources: Source[];
   private readonly clock: () => Date;
-  private held: Week | undefined;
-  private reading: Promise<Week> | undefined;
+  private held: { at: number; gathered: Gathered } | undefined;
+  private reading: Promise<Gathered> | undefined;
 
   constructor(gate: Gate, told: (week: Week) => void, sources: Source[] = CALENDARS, clock: () => Date = () => new Date()) {
     this.gate = gate;
@@ -69,33 +72,35 @@ export class WeekReader {
     this.clock = clock;
   }
 
-  async week(ask?: Ask): Promise<Week> {
+  /// The week as last read, the calendars read again when the reading is old or someone is there
+  /// to be asked; which day it begins on changes only how the reading is laid out.
+  async week(ask?: Ask, monday = false): Promise<Week> {
     const now = this.clock();
-    const fresh = this.held && now.getTime() - this.held.at < HELD && this.held.days[0]?.day === today(now);
-    if (!ask && fresh) return this.held!;
-    if (!ask && this.reading) return this.reading;
-
-    const reading = this.read(now, ask);
-    if (!ask) this.reading = reading;
-    try {
-      const week = await reading;
-      this.held = week;
-      this.told(week);
-      return week;
-    } finally {
-      if (this.reading === reading) this.reading = undefined;
+    const kept = !ask && this.held !== undefined && now.getTime() - this.held.at < HELD && today(new Date(this.held.at)) === today(now);
+    let gathered: Gathered;
+    if (kept) {
+      gathered = this.held!.gathered;
+    } else {
+      const reading = !ask && this.reading ? this.reading : gather(this.sources, spanAround(now, DAYS + 1, 2 * DAYS + 1), this.gate, ask);
+      if (!ask) this.reading = reading;
+      try {
+        gathered = await reading;
+        this.held = { at: now.getTime(), gathered };
+      } finally {
+        if (this.reading === reading) this.reading = undefined;
+      }
     }
-  }
 
-  private async read(now: Date, ask?: Ask): Promise<Week> {
-    const gathered = await gather(this.sources, spanAround(now, 1, DAYS + 1), this.gate, ask);
-    return {
-      at: now.getTime(),
-      days: weekOf(gathered.items, now),
+    const week: Week = {
+      at: this.held!.at,
+      ...weekOf(gathered.items, now, monday),
       read: gathered.read,
       refused: gathered.refused,
       unavailable: gathered.unavailable,
       failed: gathered.failed.map((one) => one.source),
     };
+    // The island is told each new reading, whoever asked for it.
+    if (!kept) this.told(week);
+    return week;
   }
 }

@@ -474,7 +474,7 @@ test("a question can be answered by Other, an answer typed in place of the optio
   await expect.poll(async () => (await commanded(page, "island_focus")).at(-1), { message: "the keyboard given back" }).toEqual({ on: false });
 });
 
-test("the week shows seven days today first, the next event counted down, and asks about a calendar only when pressed", async ({ page }) => {
+test("the week shows Sunday to Saturday, the days gone dimmed, the next event counted down, and asks about a calendar only when pressed", async ({ page }) => {
   const start = new Date(2026, 9, 28, 9, 30).getTime();
   await page.clock.install({ time: start });
   await page.goto("/island.html");
@@ -483,11 +483,13 @@ test("the week shows seven days today first, the next event counted down, and as
   expect(await commanded(page, "calendar_week"), "read on opening, asking nothing").toEqual([undefined]);
   await send(page, "week");
   const week = page.locator(".view.week");
-  await expect(week.locator(".day h4")).toHaveText(["today", "tomorrow", "Fri 30", "Sat 31", "Sun 1", "Mon 2", "Tue 3"]);
+  await expect(week.locator(".day h4")).toHaveText(["Sun 25", "Mon 26", "Tue 27", "today", "tomorrow", "Fri 30", "Sat 31"]);
+  await expect(week.locator(".day.gone h4")).toHaveText(["Sun 25", "Mon 26", "Tue 27"]);
+  await expect(week.locator(".day.gone .title")).toHaveText(["Seminar"]);
   await expect(week.locator(".ahead .next")).toHaveText("nextDesign reviewin 42 min10:12 am");
   await expect(week.locator(".day.today li.past .title")).toHaveText(["Standup"]);
   await expect(week.locator(".day.today li.next .title")).toHaveText(["Design review"]);
-  await expect(week.locator(".day").nth(3).locator("li .time")).toHaveText(["all day"]);
+  await expect(week.locator(".day").nth(6).locator("li .time")).toHaveText(["all day"]);
 
   await page.clock.setSystemTime(start + 30 * 60_000);
   await folded(page);

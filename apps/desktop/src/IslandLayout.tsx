@@ -2,7 +2,19 @@ import { useEffect, useRef, useState, type PointerEvent as Pointer } from "react
 import { TABS, type Tab } from "@/island/fsm";
 import { TabIcon, TITLES } from "@/island/icons";
 import { arranged, landing, slot } from "@/layout";
-import { islandHome, islandTabs, islandWidgets, setIslandHome, setIslandTabs, setIslandWidgets, WIDGETS, type Widget } from "@/notch";
+import {
+  islandHome,
+  islandTabs,
+  islandWeekStarts,
+  islandWidgets,
+  setIslandHome,
+  setIslandTabs,
+  setIslandWeekStarts,
+  setIslandWidgets,
+  WIDGETS,
+  type WeekStart,
+  type Widget,
+} from "@/notch";
 
 type Props = { onTrouble: (message: string) => void };
 
@@ -29,6 +41,7 @@ export function IslandLayout({ onTrouble }: Props) {
   const [tabs, setTabs] = useState<Tab[]>();
   const [widgets, setWidgets] = useState<Widget[]>();
   const [home, setHome] = useState<Tab | null>(null);
+  const [weekStarts, setWeekStarts] = useState<WeekStart>("sunday");
   const [held, setHeld] = useState<Held | null>(null);
   const [over, setOver] = useState<Over | null>(null);
   const tabRow = useRef<HTMLDivElement>(null);
@@ -39,6 +52,7 @@ export function IslandLayout({ onTrouble }: Props) {
     void islandTabs().then(setTabs).catch((failure) => onTrouble(String(failure)));
     void islandWidgets().then(setWidgets).catch((failure) => onTrouble(String(failure)));
     void islandHome().then(setHome).catch(() => setHome(null));
+    void islandWeekStarts().then(setWeekStarts).catch(() => setWeekStarts("sunday"));
   }, [onTrouble]);
 
   const saveTabs = async (next: Tab[]) => {
@@ -54,6 +68,15 @@ export function IslandLayout({ onTrouble }: Props) {
     setWidgets(next);
     try {
       setWidgets(await setIslandWidgets(next));
+    } catch (failure) {
+      onTrouble(String(failure));
+    }
+  };
+
+  const saveWeekStarts = async (next: WeekStart) => {
+    setWeekStarts(next);
+    try {
+      setWeekStarts(await setIslandWeekStarts(next));
     } catch (failure) {
       onTrouble(String(failure));
     }
@@ -194,6 +217,13 @@ export function IslandLayout({ onTrouble }: Props) {
               {TITLES[tab]}
             </option>
           ))}
+        </select>
+      </label>
+      <label className="opens-on">
+        <span>the week begins on</span>
+        <select value={weekStarts} onChange={(event) => void saveWeekStarts(event.target.value as WeekStart)}>
+          <option value="sunday">Sunday</option>
+          <option value="monday">Monday</option>
         </select>
       </label>
       {held?.moved ? (

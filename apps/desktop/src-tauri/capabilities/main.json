@@ -24,6 +24,8 @@
     "allow-held-secrets",
     "allow-island-home",
     "allow-island-home-set",
+    "allow-island-week-starts",
+    "allow-island-week-starts-set",
     "allow-island-shortcuts",
     "allow-island-shortcuts-set",
     "allow-island-tabs",

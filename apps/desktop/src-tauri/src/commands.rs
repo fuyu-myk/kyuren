@@ -136,7 +136,7 @@ pub async fn evening_recap(sidecars: State<'_, Sidecars>) -> Result<Value, Strin
 pub async fn calendar_week(ask: Option<bool>, sidecars: State<'_, Sidecars>) -> Result<Value, String> {
     sidecars
         .core
-        .request("calendar.week", json!({ "ask": ask.unwrap_or(false) }), GATHER_TIMEOUT)
+        .request("calendar.week", json!({ "ask": ask.unwrap_or(false), "monday": crate::island::week_starts() == "monday" }), GATHER_TIMEOUT)
         .await
         .map_err(|failure| failure.to_string())
 }

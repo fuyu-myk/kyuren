@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { clockOf, dayName, nextEvent, sourceNames, until, type Week } from "./week.ts";
+import { clockOf, dayName, nextEvent, sourceNames, todayOf, until, type Week } from "./week.ts";
 
 const at = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute).toISOString();
 const now = new Date(2026, 9, 28, 9, 30).getTime();
@@ -18,6 +18,7 @@ const week: Week = {
     },
     { day: "2026-10-29", events: [{ title: "Dentist", at: at(29, 8, 15), timed: true, source: "apple_calendar", collection: "Home" }] },
   ],
+  after: [{ day: "2026-11-02", events: [{ title: "Planning", at: new Date(2026, 10, 2, 9).toISOString(), timed: true, source: "apple_calendar", collection: "Work" }] }],
   read: ["apple_calendar"],
   refused: ["google_calendar"],
   unavailable: [],
@@ -27,7 +28,8 @@ const week: Week = {
 test("the next event is the first with a time still ahead, passing over what started and what has no time", () => {
   assert.equal(nextEvent(week, now)?.title, "Review");
   assert.equal(nextEvent(week, new Date(2026, 9, 28, 15).getTime())?.title, "Dentist");
-  assert.equal(nextEvent(week, new Date(2026, 9, 30).getTime()), undefined);
+  assert.equal(nextEvent(week, new Date(2026, 9, 30).getTime())?.title, "Planning", "next week's, with nothing left in this one");
+  assert.equal(nextEvent(week, new Date(2026, 10, 3).getTime()), undefined);
   assert.equal(nextEvent(null, now), undefined);
 });
 
@@ -44,6 +46,7 @@ test("the next event is counted down in minutes, then hours, and named by its da
 });
 
 test("a day is named as the week reads, and a time as a clock does", () => {
+  assert.equal(todayOf(now), "2026-10-28");
   assert.equal(dayName("2026-10-28", "2026-10-28"), "today");
   assert.equal(dayName("2026-10-29", "2026-10-28"), "tomorrow");
   assert.equal(dayName("2026-10-31", "2026-10-28"), "Sat 31");

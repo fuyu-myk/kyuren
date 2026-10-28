@@ -511,13 +511,15 @@ settings file so a running period carries over a restart. A period that runs out
 the notch and makes the glance the tab a hover opens; one found run out long ago, through a time
 the app was closed, moves on without ringing.
 
-**The week.** Seven days across the island, today first, each with its events, those without a time
-first, and above them the next event counted down: in minutes, then hours, today, and by its day
-after. Its events come from the calendars the brief reads and Notion's dated events, the same event
-held in two calendars shown once. Read while the week or the next event's widget shows, at most
-every few minutes, it reads only the calendars already allowed, as anything read with nobody asked
-does, and names the rest with a button that asks about them, there being someone who pressed it.
-The glance's next-event widget shows the same next event and its countdown.
+**The week.** The calendar week holding today across the island, Sunday to Saturday, or Monday to
+Sunday as chosen in settings, each day with its events, those without a time first, the days gone
+by dimmed, and above them the next event counted down: in minutes, then hours, today, and by its
+day after, looking into the week after when nothing is left in this one. Its events come from the
+calendars the brief reads and Notion's dated events, the same event held in two calendars shown
+once. Read while the week or the next event's widget shows, at most every few minutes, it reads
+only the calendars already allowed, as anything read with nobody asked does, and names the rest
+with a button that asks about them, there being someone who pressed it. The glance's next-event
+widget shows the same next event and its countdown.
 
 The now-playing widget shows what Spotify or Music is playing: the cover, the track, where it is
 with room to seek, play, pause and skip, and the player's own volume, there only under the cursor,
