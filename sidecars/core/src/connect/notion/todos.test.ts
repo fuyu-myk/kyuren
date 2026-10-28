@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { localStamp } from "#brief/day.ts";
-import { addingOf, doneProperties, noteBlocks, openFilter, propertiesFor, shapeOf, todoOf, type Shape } from "#connect/notion/todos.ts";
+import { addingOf, doneProperties, editingOf, editProperties, noteBlocks, openFilter, propertiesFor, shapeOf, todoOf, type Shape } from "#connect/notion/todos.ts";
 import type { Schema } from "#connect/notion/schema.ts";
 
 const statusSchema: Schema = {
@@ -109,4 +109,26 @@ test("a note is written as the page's own text, a paragraph a line", () => {
     { object: "block", type: "paragraph", paragraph: { rich_text: [{ type: "text", text: { content: "the crown" } }] } },
   ]);
   assert.deepEqual(noteBlocks(undefined), []);
+});
+
+test("an edit is checked at the edge, and says only what changes: none, words, a due day cleared or moved, a priority", () => {
+  assert.deepEqual(editingOf({ id: "x" }), {});
+  assert.deepEqual(editingOf({ text: " Book the dentist ", date: null, time: null, priority: null }), { text: "Book the dentist" });
+  assert.deepEqual(editingOf({ date: "", time: "" }), { due: null });
+  assert.deepEqual(editingOf({ date: "2026-10-30", time: "09:15", priority: "low" }), { due: { date: "2026-10-30", time: "09:15" }, priority: "low" });
+  assert.deepEqual(editingOf({ priority: "" }), { priority: null });
+  for (const wrong of [{ text: "" }, { text: "two\nlines" }, { date: "tomorrow" }, { date: "", time: "09:15" }, { priority: "urgent" }]) {
+    assert.throws(() => editingOf(wrong), Error, JSON.stringify(wrong));
+  }
+});
+
+test("an edit writes what changes where the database keeps it, a cleared one emptied", () => {
+  const shape = shapeOf(statusSchema)!;
+  assert.deepEqual(editProperties({ text: "Read", due: { date: "2026-10-30", time: "09:15" }, priority: "high" }, shape), {
+    Name: { title: [{ text: { content: "Read" } }] },
+    Due: { date: { start: localStamp(new Date(2026, 9, 30, 9, 15)) } },
+    priority: { select: { name: "high" } },
+  });
+  assert.deepEqual(editProperties({ due: null, priority: null }, shape), { Due: { date: null }, priority: { select: null } });
+  assert.deepEqual(editProperties({ due: { date: "2026-10-30" }, priority: "low" }, shapeOf(checkboxSchema)!), {}, "what the database has no place for is left out");
 });

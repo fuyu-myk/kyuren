@@ -139,6 +139,7 @@ pub fn run() {
             todos::todos_list,
             todos::todos_add,
             todos::todos_tick,
+            todos::todos_edit,
             todos::notion_todos,
             todos::notion_todos_choose,
             sessions::model_options,

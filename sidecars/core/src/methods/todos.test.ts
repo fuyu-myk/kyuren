@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { readingAction } from "#connect/read.ts";
 import { notionSource } from "#connect/notion/source.ts";
 import { addressOf, type Database } from "#connect/notion/places.ts";
-import type { Adding, Shape, Todo } from "#connect/notion/todos.ts";
+import type { Adding, Editing, Shape, Todo } from "#connect/notion/todos.ts";
 import { todoHandlers, type Listed, type TodoNotion, type TodoPlaces } from "#methods/todos.ts";
 import { Gate } from "#permission/gate.ts";
 
@@ -16,6 +16,7 @@ function world(options: { chosen?: string; mode?: Database["mode"]; connected?: 
   const todos: Todo[] = [{ id: PAGE, text: "Book the dentist", done: false }];
   const added: Adding[] = [];
   const marked: Array<[string, boolean]> = [];
+  const edited: Array<[string, Editing]> = [];
   const told: Listed[] = [];
   const gate = new Gate(() => known.map((one) => ({ path: addressOf(one.id), mode: one.mode })), () => undefined);
   if (options.allowed !== false) gate.remember(readingAction(notionSource), "allow");
@@ -26,6 +27,7 @@ function world(options: { chosen?: string; mode?: Database["mode"]; connected?: 
     open: async () => todos,
     add: async (_id, _shape, adding) => void added.push(adding),
     mark: async (page, _shape, done) => void marked.push([page, done]),
+    edit: async (page, _shape, editing) => void edited.push([page, editing]),
   };
   const places: TodoPlaces = {
     chosen: () => known.find((one) => one.id === chosen),
@@ -37,7 +39,7 @@ function world(options: { chosen?: string; mode?: Database["mode"]; connected?: 
     known: () => known,
   };
   const handlers = todoHandlers(gate, (listed) => told.push(listed), notion, places);
-  return { handlers, added, marked, told, gate };
+  return { handlers, added, marked, edited, told, gate };
 }
 
 test("with no database chosen, or Notion not connected, the island is told why there are no todos", async () => {
@@ -82,3 +84,15 @@ test("the databases shared with Kyuren are listed for settings, and choosing one
   assert.equal(gate.decide(readingAction(notionSource)).verdict, "allow");
   await assert.rejects(handlers["notion.todos.choose"]({ id: 7 }), /database/);
 });
+
+test("a todo is edited in the chosen database with only what changes, and nowhere Kyuren may not write", async () => {
+  const { handlers, edited, told } = world({ chosen: "db" });
+  await handlers["todos.edit"]({ id: PAGE, text: " Book the dentist for Friday ", date: "2026-10-30", time: null, priority: "" });
+  assert.deepEqual(edited, [[PAGE, { text: "Book the dentist for Friday", due: { date: "2026-10-30" }, priority: null }]]);
+  assert.equal(told.length, 1);
+  const closed = world({ chosen: "db", mode: "read" });
+  await assert.rejects(closed.handlers["todos.edit"]({ id: PAGE, text: "x" }), /may not write/);
+  await assert.rejects(world({ chosen: "db" }).handlers["todos.edit"]({ id: "../x", text: "x" }), /todo/);
+  assert.deepEqual(closed.edited, []);
+});
+

@@ -2,7 +2,7 @@ import { readingAction } from "#connect/read.ts";
 import { tokenHeld } from "#connect/notion/api.ts";
 import { chooseTodos, databases, pageAddress, remember, todosDatabase, type Database } from "#connect/notion/places.ts";
 import { notionSource } from "#connect/notion/source.ts";
-import { addingOf, addTodo, databaseShape, markTodo, openTodos, type Adding, type Shape, type Todo } from "#connect/notion/todos.ts";
+import { addingOf, addTodo, databaseShape, editingOf, editTodo, markTodo, openTodos, type Adding, type Editing, type Shape, type Todo } from "#connect/notion/todos.ts";
 import { databasesAvailable } from "#connect/notion/write.ts";
 import type { Gate } from "#permission/gate.ts";
 
@@ -22,6 +22,7 @@ export type TodoNotion = {
   open: (id: string, shape: Shape) => Promise<Todo[]>;
   add: (id: string, shape: Shape, adding: Adding) => Promise<void>;
   mark: (page: string, shape: Shape, done: boolean) => Promise<void>;
+  edit: (page: string, shape: Shape, editing: Editing) => Promise<void>;
 };
 
 export type TodoPlaces = {
@@ -31,7 +32,7 @@ export type TodoPlaces = {
   known: () => Database[];
 };
 
-const NOTION: TodoNotion = { connected: tokenHeld, available: databasesAvailable, shape: databaseShape, open: openTodos, add: addTodo, mark: markTodo };
+const NOTION: TodoNotion = { connected: tokenHeld, available: databasesAvailable, shape: databaseShape, open: openTodos, add: addTodo, mark: markTodo, edit: editTodo };
 const PLACES: TodoPlaces = { chosen: todosDatabase, choose: chooseTodos, remember, known: databases };
 
 /// A Notion page's id as Notion gives it, and nothing that could reach another address.
@@ -93,6 +94,17 @@ export function todoHandlers(gate: Gate, told: (listed: Listed) => void, notion:
       writable(database, "new", adding.text);
       const { shape } = await shaped(database);
       await notion.add(database.id, shape, adding);
+      return changed();
+    },
+
+    /// Changes a todo's words, when it is due, or its priority; what is not given stays as it was.
+    "todos.edit": async (params: Record<string, unknown>) => {
+      if (typeof params.id !== "string" || !PAGE.test(params.id)) throw new Error("that is not a todo on the list");
+      const editing = editingOf(params);
+      const database = chosen();
+      writable(database, params.id, editing.text ?? "an edit");
+      const { shape } = await shaped(database);
+      await notion.edit(params.id, shape, editing);
       return changed();
     },
 

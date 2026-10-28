@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type FocusEvent } from "react";
+import { useState } from "react";
 import { dueOf, missingSaid, priorityOf, PRIORITIES, type Todo } from "@/island/todos";
+import { useKeyboard } from "@/island/useKeyboard";
 import type { TodoList } from "@/island/useTodos";
+import { TodoEditor } from "@/island/views/TodoEditor";
 
 type Props = {
   list: TodoList;
@@ -16,6 +18,7 @@ const NOTE = 2_000;
 const BOX = "M3.5 3.5h9v9h-9z";
 const TICKED = "M3.5 3.5h9v9h-9z M5.6 8.2l1.7 1.7 3.2-3.6";
 const MORE = "M3 4h10v9.5H3z M3 7h10 M5.5 2.5v3 M10.5 2.5v3";
+const EDIT = "M3.2 12.8l.9-3.3 6.6-6.6 2.4 2.4-6.6 6.6-3.3.9z M9.4 4.2l2.4 2.4";
 
 function Glyph({ path }: { path: string }) {
   return (
@@ -32,9 +35,8 @@ const EMPTY = { text: "", date: "", time: "", priority: "", note: "" };
 export function Todos({ list, now, onReach, onLeave }: Props) {
   const [typed, setTyped] = useState(EMPTY);
   const [details, setDetails] = useState(false);
-  // Taken away while typed into, a box gives back the keyboard it was holding.
-  const holding = useRef<(() => void) | null>(null);
-  useEffect(() => () => holding.current?.(), []);
+  const [editing, setEditing] = useState<string | null>(null);
+  const keyboard = useKeyboard(onReach, onLeave);
 
   const listed = list.listed;
   if (!listed) return <div className="view todos"><p className="empty">Reading the todos…</p></div>;
@@ -42,19 +44,6 @@ export function Todos({ list, now, onReach, onLeave }: Props) {
 
   const fields = listed.fields ?? { date: false, priority: false, done: false };
   const open = listed.todos.filter((one) => !list.ticked.some((ticked) => ticked.id === one.id));
-  const keyboard = {
-    onPointerDown: onReach,
-    onFocus: () => {
-      holding.current = onLeave;
-      onReach();
-    },
-    onBlur: (event: FocusEvent) => {
-      // Moving between the boxes here keeps the keyboard.
-      if (event.relatedTarget instanceof HTMLElement && event.currentTarget.closest(".adding")?.contains(event.relatedTarget)) return;
-      holding.current = null;
-      onLeave();
-    },
-  };
   const add = () => {
     if (typed.text.trim() === "") return;
     void list.add({ ...typed, time: typed.date ? typed.time : "" }).then((kept) => {
@@ -64,6 +53,9 @@ export function Todos({ list, now, onReach, onLeave }: Props) {
     });
   };
   const row = (one: Todo, done: boolean) => {
+    if (one.id === editing && !done) {
+      return <TodoEditor key={one.id} todo={one} fields={fields} onSave={(changes) => list.edit(one, changes)} onDone={() => setEditing(null)} onReach={onReach} onLeave={onLeave} />;
+    }
     const due = dueOf(one.due, now);
     const priority = priorityOf(one.priority);
     return (
@@ -76,13 +68,18 @@ export function Todos({ list, now, onReach, onLeave }: Props) {
         </button>
         {one.priority ? <span className={`priority ${priority ?? ""}`}>{one.priority}</span> : null}
         {due ? <span className={due.overdue && !done ? "due overdue" : "due"}>{due.said}</span> : null}
+        {done ? null : (
+          <button type="button" className="edit" title="edit" onClick={() => setEditing(one.id)}>
+            <Glyph path={EDIT} />
+          </button>
+        )}
       </li>
     );
   };
 
   return (
     <div className="view todos">
-      <div className="adding">
+      <div className="adding" data-keeps-keyboard>
         <div className="line">
           <input
             className="composer"

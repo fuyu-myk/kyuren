@@ -21,7 +21,9 @@
 }
 
 .todos .details input,
-.todos .details select {
+.todos .details select,
+.todos .editing input,
+.todos .editing select {
   height: 24px;
   padding: 0 8px;
   border: 1px solid rgb(205 214 244 / 12%);
@@ -35,7 +37,9 @@
 }
 
 .todos .details input:focus,
-.todos .details select:focus {
+.todos .details select:focus,
+.todos .editing input:focus,
+.todos .editing select:focus {
   border-color: rgb(180 190 254 / 45%);
 }
 
@@ -79,7 +83,8 @@
 }
 
 .todos .tick,
-.todos .more {
+.todos .more,
+.todos .edit {
   flex: none;
   display: grid;
   place-items: center;
@@ -88,6 +93,37 @@
 }
 
 .todos .more.on {
+  color: #b4befe;
+}
+
+/* The pencil shows on the todo pointed at, and on one reached by the keyboard. */
+.todos .edit {
+  opacity: 0;
+}
+
+.todos .todo:hover .edit,
+.todos .edit:focus-visible {
+  opacity: 1;
+}
+
+.todos .todo.editing {
+  gap: 6px;
+  padding: 2px 6px;
+  background: rgb(24 24 37 / 58%);
+}
+
+.todos .editing .words {
+  flex: 1;
+  min-width: 0;
+}
+
+.todos .editing .save,
+.todos .editing .cancel {
+  flex: none;
+  font-size: 11px;
+}
+
+.todos .editing .save {
   color: #b4befe;
 }
 

@@ -42,3 +42,33 @@ export function missingSaid(missing: NonNullable<Listed["missing"]>): string {
       return "That database has no title to keep todos in: choose another in settings.";
   }
 }
+
+/// A todo as its editor holds it.
+export type Form = { text: string; date: string; time: string; priority: string };
+
+function two(value: number): string {
+  return `${value}`.padStart(2, "0");
+}
+
+/// When a todo is due, as the editor's day and time boxes hold it, in local time.
+export function formOf(todo: Todo): Form {
+  const priority = priorityOf(todo.priority) ?? "";
+  if (!todo.due) return { text: todo.text, date: "", time: "", priority };
+  if (todo.due.length <= 10) return { text: todo.text, date: todo.due, time: "", priority };
+  const moment = new Date(todo.due);
+  return { text: todo.text, date: todayOf(moment.getTime()), time: `${two(moment.getHours())}:${two(moment.getMinutes())}`, priority };
+}
+
+/// What an edit changes, and only that: a priority the database names its own way is not written
+/// again unless it was changed, and a due day emptied is taken away.
+export function changesOf(todo: Todo, form: Form): Partial<Form> {
+  const was = formOf(todo);
+  const changes: Partial<Form> = {};
+  if (form.text.trim() !== todo.text) changes.text = form.text;
+  if (form.date !== was.date || (form.date !== "" && form.time !== was.time)) {
+    changes.date = form.date;
+    changes.time = form.date ? form.time : "";
+  }
+  if (form.priority !== was.priority) changes.priority = form.priority;
+  return changes;
+}

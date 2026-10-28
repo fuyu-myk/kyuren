@@ -557,3 +557,35 @@ test("todos kept in Notion are added with their details, ticked off and back on,
   await todos.locator(".todo .text", { hasText: "Reply to the lab" }).click();
   expect(await commanded(page, "open_link")).toEqual([{ url: "https://www.notion.so/one" }]);
 });
+
+test("a todo is edited where it stands, only what changed sent, and escape leaves it as it was", async ({ page }) => {
+  const start = new Date(2026, 9, 28, 9, 30).getTime();
+  await page.clock.install({ time: start });
+  await page.goto("/island.html");
+  await opened(page);
+  await page.locator(".tabs .tab[title='todos']").click();
+  await send(page, "todos");
+  const todos = page.locator(".view.todos");
+  const reply = "0b8c1f2e-1111-4222-8333-000000000001";
+
+  await todos.locator("li.todo", { hasText: "Reply to the lab" }).hover();
+  await todos.locator("li.todo", { hasText: "Reply to the lab" }).getByRole("button", { name: "edit" }).click();
+  const editor = todos.locator("li.todo.editing");
+  await expect(editor.getByLabel("todo")).toHaveValue("Reply to the lab about Thursday");
+  await expect(editor.getByLabel("due date")).toHaveValue("2026-10-27");
+  await expect(editor.getByLabel("priority")).toHaveValue("high");
+  await editor.getByLabel("todo").fill("Reply to the lab about Friday");
+  await editor.getByLabel("due date").fill("2026-10-30");
+  await editor.getByLabel("due time").fill("10:00");
+  await editor.getByLabel("todo").press("Enter");
+  await expect(editor).toHaveCount(0);
+  expect(await commanded(page, "todos_edit")).toEqual([{ id: reply, text: "Reply to the lab about Friday", date: "2026-10-30", time: "10:00" }]);
+
+  await todos.locator("li.todo", { hasText: "Read the graph paper" }).hover();
+  await todos.locator("li.todo", { hasText: "Read the graph paper" }).getByRole("button", { name: "edit" }).click();
+  await todos.locator("li.todo.editing").getByLabel("todo").fill("Something else");
+  await todos.locator("li.todo.editing").getByLabel("todo").press("Escape");
+  await expect(todos.locator("li.todo.editing")).toHaveCount(0);
+  await expect(page.locator(".tabs.shown"), "escape left the edit, not the island").toBeVisible();
+  expect(await commanded(page, "todos_edit")).toHaveLength(1);
+});

@@ -29,6 +29,21 @@ pub async fn todos_add(
     asked(&sidecars, "todos.add", params).await
 }
 
+/// Changes a todo's words, when it is due, or its priority. One not given stays as it was; a date or
+/// a priority given empty is taken away.
+#[tauri::command]
+pub async fn todos_edit(
+    id: String,
+    text: Option<String>,
+    date: Option<String>,
+    time: Option<String>,
+    priority: Option<String>,
+    sidecars: State<'_, Sidecars>,
+) -> Result<Value, String> {
+    let params = json!({ "id": id, "text": text, "date": date, "time": time, "priority": priority });
+    asked(&sidecars, "todos.edit", params).await
+}
+
 /// Ticks a todo off, or back on.
 #[tauri::command]
 pub async fn todos_tick(id: String, done: bool, sidecars: State<'_, Sidecars>) -> Result<Value, String> {

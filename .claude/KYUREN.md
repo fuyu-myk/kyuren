@@ -525,13 +525,15 @@ widget shows the same next event and its countdown.
 todos not yet done, soonest due first, each with its priority and when it is due, overdue ones
 marked, and its words opening it in Notion. One is added by typing, with a date, a time, a priority
 and a note to hand, each written where the database keeps it, a time in local time and a priority
-as the database already names it; what the database has no place for is left out. Ticking one off
-sets the status its Complete group means, or else ticks its checkbox, and it stays struck through
-below the list, to be ticked back on, until the page is left. Nothing is deleted in Notion, which
-Kyuren never does. Choosing the database is the leave to read Notion and to write there and nowhere
-else; one chosen before goes back to being read only. What is added is checked at the core: one
-line of words, a real date, a time only with a date, a priority among high, medium and low, and a
-note of plain lines.
+as the database already names it; what the database has no place for is left out. One is edited
+where it stands, its words, when it is due and its priority, and only what changed is written, so a
+priority the database names its own way is not renamed; its note is the page's own text, changed in
+Notion. Ticking one off sets the status its Complete group means, or else ticks its checkbox, and
+it stays struck through below the list, to be ticked back on, until the page is left. Nothing is
+deleted in Notion, which Kyuren never does. Choosing the database is the leave to read Notion and
+to write there and nowhere else; one chosen before goes back to being read only. What is added is
+checked at the core: one line of words, a real date, a time only with a date, a priority among
+high, medium and low, and a note of plain lines.
 
 The now-playing widget shows what Spotify or Music is playing: the cover, the track, where it is
 with room to seek, play, pause and skip, and the player's own volume, there only under the cursor,

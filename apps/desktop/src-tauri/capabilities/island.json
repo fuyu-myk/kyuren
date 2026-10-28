@@ -51,6 +51,7 @@
     "allow-shelf-reveal",
     "allow-stop-turn",
     "allow-todos-add",
+    "allow-todos-edit",
     "allow-todos-list",
     "allow-todos-tick"
   ]
