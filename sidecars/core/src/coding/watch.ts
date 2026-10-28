@@ -140,6 +140,8 @@ export class CodingWatch {
     const recorded = await claudeSessions(this.registry, this.alive);
     for (const one of recorded) this.recorded.add(one.id);
     const resting = this.resting(recorded, now);
+    // Written before the refresh is done, so a restart straight after finds what was kept.
+    if (this.keptChanged || now - this.keptSaved >= SAVE_EVERY) await this.save(now);
     await this.learnProjects();
     // A session whose question is held on the island waits on the user, whatever its own record
     // says while the question is held from its prompt.
@@ -179,7 +181,6 @@ export class CodingWatch {
       }
       resting.push({ id, harness: one.harness, project: one.project, ...(one.title ? { title: one.title } : {}), ...(one.started ? { started: one.started } : {}), state: "idle", active: one.active, ...(one.via ? { via: one.via } : {}) });
     }
-    if (this.keptChanged || now - this.keptSaved >= SAVE_EVERY) void this.save(now);
     return resting;
   }
 
