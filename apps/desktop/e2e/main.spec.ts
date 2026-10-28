@@ -35,6 +35,7 @@ function standIn(): void {
         called.push({ cmd, args });
         if (cmd === "resolve_permission") return { matched: true, pending: 0 };
         if (cmd === "open_link") return null;
+        if (cmd === "project_session") return { started: true };
         if (cmd === "project_board") {
           const pull = (number: number, title: string, checks: string, draft = false) => ({ number, title, url: `https://github.com/someone/kyuren/pull/${number}`, draft, checks });
           const github = { repo: "someone/kyuren", branch: "main", main: "failing", count: 5, pulls: [pull(41, "Keep the shelf in SQLite", "passing"), pull(40, "Try the wake word", "pending", true), pull(38, "Hover after waking", "failing"), pull(37, "Older", "none")] };
@@ -241,4 +242,26 @@ test("the board lists the pull requests waiting on the user's review, above ever
   await waiting.locator(".pull").click();
   const opened = await page.evaluate(() => (window as unknown as { standIn: { called: (cmd: string) => Array<{ args: Record<string, unknown> }> } }).standIn.called("open_link").map((one) => one.args.url));
   expect(opened).toEqual(["https://github.com/someone/fractaldb/pull/31"]);
+});
+
+test("a project on the board opens a new session in the Claude app, there or to fix the checks that fail", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "development and projects" }).click();
+  const project = page.locator(".board > li", { hasText: "kyuren" });
+  await expect(project.locator(".pulls .fix")).toHaveCount(1);
+  await project.locator(".project").hover();
+  await project.getByRole("button", { name: "new session" }).click();
+  await project.getByRole("button", { name: "fix main" }).click();
+  await project.locator(".pulls li", { hasText: "Hover after waking" }).getByRole("button", { name: "fix" }).click();
+  expect((await calledWith(page, "project_session")).map((one) => one.args)).toEqual([
+    { path: "/x/kyuren", prompt: null },
+    {
+      path: "/x/kyuren",
+      prompt: "The checks on the newest commit of someone/kyuren's default branch are failing on GitHub (https://github.com/someone/kyuren/commits). Find out why and fix them.",
+    },
+    {
+      path: "/x/kyuren",
+      prompt: "The checks on pull request #38 in someone/kyuren are failing on GitHub (https://github.com/someone/kyuren/pull/38/checks). Find out why and fix them on its branch.",
+    },
+  ]);
+  expect(await calledWith(page, "open_link"), "a fix opens a session, not the pull request").toEqual([]);
 });

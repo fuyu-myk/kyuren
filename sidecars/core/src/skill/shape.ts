@@ -73,6 +73,7 @@ const TAKEN = new Set([
   "today",
   "project",
   "code",
+  "start_coding_session",
   "skill",
   "forge",
 ]);

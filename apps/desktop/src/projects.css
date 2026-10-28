@@ -116,6 +116,52 @@
   color: var(--yellow);
 }
 
+/* What can be started from a project, in the Claude app: a new session while the project is
+   pointed at, and a fix wherever checks fail. */
+.board .head {
+  position: relative;
+}
+
+.board .actions {
+  position: absolute;
+  left: 0.7rem;
+  bottom: 0.5rem;
+  display: flex;
+  gap: 0.7rem;
+}
+
+.board .actions button,
+.board .pulls .fix {
+  flex: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.72rem;
+  color: var(--overlay1);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.board .actions button:hover,
+.board .pulls .fix:hover {
+  color: var(--ink);
+}
+
+.board .actions .fix,
+.board .pulls .fix {
+  color: var(--down);
+}
+
+.board .start {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.board li:hover .start,
+.board .head:focus-within .start {
+  opacity: 1;
+}
+
 /* A project's open pull requests, under it, each opening on GitHub. */
 .board .pulls {
   display: grid;
@@ -142,6 +188,17 @@
 
 .pull:hover {
   color: var(--ink);
+}
+
+.board .pulls li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.board .pulls .pull {
+  flex: 1;
+  min-width: 0;
 }
 
 .pull .number {

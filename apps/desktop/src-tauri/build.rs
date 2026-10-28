@@ -15,7 +15,7 @@ const COMMANDS: &[&str] = &[
     "shelf_drag", "island_dismiss", "island_reveal", "island_tabs",
     "island_tabs_set", "island_home", "island_shortcuts", "island_shortcuts_set",
     "island_home_set", "model_options", "known_capabilities", "project_board",
-    "skills_list", "skill_approve", "skill_forget", "session_list",
+    "project_session", "skills_list", "skill_approve", "skill_forget", "session_list",
     "session_read", "session_start", "session_rename", "session_prefer",
     "session_forget", "show_mind", "start_vision", "stop_vision",
     "capture_screen", "wake_listen", "wake_state", "ambient_state",

@@ -18,6 +18,7 @@ import {
 import { projectSchema, projectTool } from "#agent/project.ts";
 import { rememberSchema, rememberTool } from "#agent/remember.ts";
 import { skillSchema, skillTool } from "#agent/skill.ts";
+import { startSchema, startTool } from "#agent/start.ts";
 import { todaySchema, todayTool } from "#agent/today.ts";
 import { webFetchSchema, webFetchTool, webSearchSchema, webSearchTool } from "#agent/web.ts";
 import { sharedMemory } from "#memory/shared.ts";
@@ -92,6 +93,7 @@ export const CAPABILITIES = [
   { name: "remember", description: "Search the user's own notes.", pane: "knowledge" },
   { name: "project", description: "Where a project stood when work stopped.", pane: "development" },
   { name: "code", description: "Send a coding session into a repository.", pane: "development" },
+  { name: "start_coding_session", description: "Open a new Claude Code session in the Claude app, in a repository.", pane: "development" },
   { name: "forge", description: "Write down a new skill, inert until approved.", pane: "knowledge" },
   { name: "skill", description: "Use one of the approved skills.", pane: "knowledge" },
   { name: "today", description: "What the user's day holds.", pane: "comms" },
@@ -327,6 +329,7 @@ export async function run(options: Run): Promise<Transcript> {
       add_to_notion: adapt(noteTool, noteSchema, options.gate, options.ask, toSay, watching, exposure),
       project: adapt(projectTool(), projectSchema, options.gate, options.ask, toSay, watching, exposure),
       code: adapt(codeTool(), codeSchema, options.gate, options.ask, toSay, watching, exposure),
+      start_coding_session: adapt(startTool(), startSchema, options.gate, options.ask, toSay, watching, exposure),
       forge: adapt(forgeTool(), forgeSchema, options.gate, options.ask, toSay, watching, exposure),
       skill: adapt(skillTool(), skillSchema, options.gate, options.ask, toSay, watching, exposure),
       remember: adapt(

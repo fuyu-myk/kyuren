@@ -203,6 +203,13 @@ export async function projectBoard(fresh = false): Promise<{ projects: Project[]
   return { projects: reply.projects, reviews: reply.reviews ?? [] };
 }
 
+/// Opens a new Claude Code session in the Claude app, in a project on the board, with a request in
+/// its prompt or none.
+export async function projectSession(path: string, prompt?: string): Promise<void> {
+  if (!insideTauri()) return;
+  await invoke("project_session", { path, prompt: prompt ?? null });
+}
+
 export async function askable(): Promise<Asked[]> {
   if (!insideTauri()) {
     return [

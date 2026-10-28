@@ -184,7 +184,10 @@ A Node sidecar speaking newline-delimited JSON over stdio. Owns all cognition.
   GitHub through its own command line as the user signed it in, in the background and at most
   every three minutes for each, so the board never waits on the network. Beside them, what was
   decided about it on the island, its latest three, and above every project the pull requests
-  waiting on the user's review, wherever they are on GitHub, found with one search.
+  waiting on the user's review, wherever they are on GitHub, found with one search. From the board,
+  or asked for by voice or in the chat with a request, a new Claude Code session opens in the
+  Claude app in a project's folder, and a main branch or pull request whose checks fail offers one
+  handed the address of its checks and nothing its author wrote.
 
 ### 4.4 WebView, `apps/desktop/ui`
 

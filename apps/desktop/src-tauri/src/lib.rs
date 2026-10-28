@@ -134,6 +134,7 @@ pub fn run() {
             sessions::model_options,
             sessions::known_capabilities,
             sessions::project_board,
+            sessions::project_session,
             sessions::skills_list,
             sessions::skill_approve,
             sessions::skill_forget,

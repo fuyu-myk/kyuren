@@ -112,6 +112,18 @@ pub async fn project_board(
     asked(&sidecars, "projects.board", params, GATHER_TIMEOUT).await
 }
 
+/// Opens a new Claude Code session in the Claude app, in a project on the board, with a request or
+/// none. The core opens only a folder the board lists.
+#[tauri::command]
+pub async fn project_session(
+    path: String,
+    prompt: Option<String>,
+    sidecars: State<'_, Sidecars>,
+) -> Result<Value, String> {
+    let params = json!({ "path": path, "prompt": prompt });
+    asked(&sidecars, "projects.start", params, GATHER_TIMEOUT).await
+}
+
 /// What Kyuren has taught itself, and what standing each of those things has.
 #[tauri::command]
 pub async fn skills_list(

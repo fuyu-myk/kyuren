@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
+import { fixMain, fixPull } from "@/fixes";
 import { openLink } from "@/links";
 import { afterFew, FEW, More } from "@/More";
-import { projectBoard, type Checks, type Project, type Review } from "@/sessions";
+import { projectBoard, projectSession, type Checks, type GitHub, type Project, type Review } from "@/sessions";
 import { ago } from "@/when";
 
 type BoardProps = {
   onAsk: (about: Project) => void;
+};
+
+type PullsProps = {
+  github: GitHub;
+  fix: (prompt: string) => () => void;
 };
 
 /// How a project's checks are said: only those there are.
@@ -22,6 +28,7 @@ export function Board({ onAsk }: BoardProps) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [all, setAll] = useState(false);
   const [trouble, setTrouble] = useState<string>();
+  const [unstarted, setUnstarted] = useState<string>();
 
   const look = useCallback(async (fresh: boolean) => {
     try {
@@ -50,9 +57,17 @@ export function Board({ onAsk }: BoardProps) {
   if (projects.length === 0) return <p className="empty">no repositories found</p>;
 
   const shown = all ? projects : projects.slice(0, FEW);
+  // The request is worked out as the board is drawn, from what the board read.
+  const startIn = (one: Project, prompt?: string) => () => {
+    projectSession(one.path, prompt).then(
+      () => setUnstarted(undefined),
+      (failure: unknown) => setUnstarted(`no session started in ${one.name}: ${String(failure)}`),
+    );
+  };
 
   return (
     <>
+    {unstarted ? <p className="error">{unstarted}</p> : null}
     {reviews.length > 0 ? (
       <section className="reviews">
         <h4>waiting on your review</h4>
@@ -74,6 +89,7 @@ export function Board({ onAsk }: BoardProps) {
     <ul className="board">
       {shown.map((one, at) => (
         <li key={one.path} className={all ? "fresh" : ""} style={all ? afterFew(at) : undefined}>
+          <div className="head">
           <button type="button" className="project" onClick={() => onAsk(one)}>
             <span className="what">
               <span className="name">{one.name}</span>
@@ -92,21 +108,18 @@ export function Board({ onAsk }: BoardProps) {
               ) : null}
             </span>
           </button>
-          {one.github && one.github.pulls.length > 0 ? (
-            <ul className="pulls">
-              {one.github.pulls.slice(0, PULLS).map((pull) => (
-                <li key={pull.number}>
-                  <button type="button" className="pull" title={pull.url} onClick={() => void openLink(pull.url)}>
-                    <span className={`checks ${pull.checks}`} title={pull.checks === "none" ? "no checks" : `checks ${CHECKS[pull.checks]}`} />
-                    <span className="number">#{pull.number}</span>
-                    <span className="title">{pull.title}</span>
-                    {pull.draft ? <em className="draft">draft</em> : null}
-                  </button>
-                </li>
-              ))}
-              {one.github.count > PULLS ? <li className="others">{one.github.count - PULLS} more open</li> : null}
-            </ul>
-          ) : null}
+          <span className="actions">
+            {one.github && one.github.main === "failing" ? (
+              <button type="button" className="fix" onClick={startIn(one, fixMain(one.github.repo))}>
+                fix {one.github.branch ?? "main"}
+              </button>
+            ) : null}
+            <button type="button" className="start" title={`a new Claude Code session in ${one.name}`} onClick={startIn(one)}>
+              new session
+            </button>
+          </span>
+          </div>
+          {one.github && one.github.pulls.length > 0 ? <Pulls github={one.github} fix={(prompt) => startIn(one, prompt)} /> : null}
           {one.decisions && one.decisions.count > 0 ? (
             <ul className="decided">
               {one.decisions.latest.map((made) => (
@@ -124,5 +137,30 @@ export function Board({ onAsk }: BoardProps) {
     </ul>
     <More total={projects.length} all={all} onToggle={() => setAll((was) => !was)} />
     </>
+  );
+}
+
+/// A project's open pull requests, each opening on GitHub, and one whose checks fail offering a
+/// new session to fix them.
+function Pulls({ github, fix }: PullsProps) {
+  return (
+    <ul className="pulls">
+      {github.pulls.slice(0, PULLS).map((pull) => (
+        <li key={pull.number}>
+          <button type="button" className="pull" title={pull.url} onClick={() => void openLink(pull.url)}>
+            <span className={`checks ${pull.checks}`} title={pull.checks === "none" ? "no checks" : `checks ${CHECKS[pull.checks]}`} />
+            <span className="number">#{pull.number}</span>
+            <span className="title">{pull.title}</span>
+            {pull.draft ? <em className="draft">draft</em> : null}
+          </button>
+          {pull.checks === "failing" ? (
+            <button type="button" className="fix" title={`a new session to fix #${pull.number}`} onClick={fix(fixPull(github.repo, pull.number))}>
+              fix
+            </button>
+          ) : null}
+        </li>
+      ))}
+      {github.count > PULLS ? <li className="others">{github.count - PULLS} more open</li> : null}
+    </ul>
   );
 }

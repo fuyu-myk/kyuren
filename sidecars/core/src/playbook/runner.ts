@@ -122,8 +122,9 @@ function abandoned(options: Running, name: string, failure: unknown, children: R
 /// The tools that exist under their own names. A skill named in a playbook that is not one of
 /// these is a forged skill, reached through the skill tool.
 const NATIVE = new Set([
-  "read_file", "list_directory", "write_file", "add_to_notion", "project", "code", "forge",
-  "skill", "remember", "today", "playbook", "playbooks", "web_search", "web_fetch",
+  "read_file", "list_directory", "write_file", "add_to_notion", "project", "code",
+  "start_coding_session", "forge", "skill", "remember", "today", "playbook", "playbooks",
+  "web_search", "web_fetch",
 ]);
 
 /// The tools an approved playbook may use without a question per target: reaching the web to
