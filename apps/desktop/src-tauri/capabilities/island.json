@@ -10,6 +10,7 @@
     "core:event:allow-unlisten",
     "allow-ambient-recent",
     "allow-ask",
+    "allow-calendar-week",
     "allow-coding-answer",
     "allow-coding-asks",
     "allow-coding-detail",

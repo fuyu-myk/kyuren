@@ -2,6 +2,33 @@ import { useState } from "react";
 import { emitPreview, type Notch } from "@/island/channels";
 
 const NOTCHED: Notch = { present: true, width: 184, height: 38 };
+
+/// A week to look at: one event already begun, the next in forty-two minutes, and a calendar not
+/// yet allowed.
+function sampleWeek(now: number) {
+  const morning = new Date(now);
+  morning.setHours(0, 0, 0, 0);
+  const at = (days: number, hours: number, minutes = 0) => new Date(morning.getFullYear(), morning.getMonth(), morning.getDate() + days, hours, minutes).toISOString();
+  const day = (days: number) => at(days, 12).slice(0, 10);
+  const timed = (title: string, when: string, collection = "Work") => ({ title, at: when, timed: true, source: "apple_calendar", collection });
+  const events: Array<Array<ReturnType<typeof timed>>> = [
+    [timed("Standup", new Date(now - 60 * 60_000).toISOString()), timed("Design review", new Date(now + 42 * 60_000).toISOString()), timed("Gym", at(0, 18), "Home")],
+    [timed("Dentist", at(1, 8, 15), "Home")],
+    [timed("Lecture: graph neural networks", at(2, 10)), timed("Lab", at(2, 14))],
+    [{ title: "Holiday", at: day(3), timed: false, source: "apple_calendar", collection: "Home" }],
+    [],
+    [timed("Brunch with Sam", at(5, 11), "Home")],
+    [timed("Planning", at(6, 9, 30)), timed("Office hours", at(6, 16))],
+  ];
+  return {
+    at: now,
+    days: events.map((list, days) => ({ day: day(days), events: list })),
+    read: ["apple_calendar"],
+    refused: ["google_calendar"],
+    unavailable: [],
+    failed: [],
+  };
+}
 const BARE: Notch = { present: false, width: 120, height: 24 };
 
 /// One of each kind of question a coding agent can hold the island with, beside a plain permission.
@@ -139,7 +166,7 @@ export function Harness({ notch }: { notch: Notch }) {
           </button>
         ))}
         <button type="button" onClick={() => emitPreview("presence:notice", {})}>notice</button>
-        <button type="button" onClick={() => emitPreview("island:widgets", ["music", "pomodoro", "network", "system"])}>widgets</button>
+        <button type="button" onClick={() => emitPreview("island:widgets", ["music", "pomodoro", "network", "system", "next"])}>widgets</button>
         <button
           type="button"
           onClick={() => {
@@ -165,6 +192,9 @@ export function Harness({ notch }: { notch: Notch }) {
           }}
         >
           stats
+        </button>
+        <button type="button" onClick={() => emitPreview("calendar:week", sampleWeek(Date.now()))}>
+          week
         </button>
         <button
           type="button"

@@ -16,6 +16,7 @@ const WIDGET: Record<Widget, { name: string; width: number }> = {
   pomodoro: { name: "pomodoro", width: 106 },
   network: { name: "network", width: 150 },
   system: { name: "system", width: 150 },
+  next: { name: "next event", width: 150 },
 };
 
 /// A drag shorter than this is a click.

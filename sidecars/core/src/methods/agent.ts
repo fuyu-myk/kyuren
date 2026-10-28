@@ -7,6 +7,8 @@ import { Turns } from "#agent/turns.ts";
 import { watchedOver } from "#agent/watched.ts";
 import { briefHandlers } from "#methods/brief.ts";
 import { recapHandlers } from "#methods/recap.ts";
+import { calendarHandlers } from "#methods/calendar.ts";
+import { WeekReader } from "#calendar/week.ts";
 import { playbookHandlers } from "#methods/playbook.ts";
 import { researchHandlers } from "#methods/research.ts";
 import { ROUTES, type Route } from "#model/route.ts";
@@ -41,6 +43,7 @@ export function agentHandlers(transport: Transport) {
   return {
     ...briefHandlers(gate, asker.ask, vault),
     ...recapHandlers(vault),
+    ...calendarHandlers(new WeekReader(gate, (week) => transport.send({ event: "calendar.week", data: week })), asker.ask),
     ...playbookHandlers(gate, asker.ask, vault, () => watchedOver(transport), turns),
     ...researchHandlers(vault),
 

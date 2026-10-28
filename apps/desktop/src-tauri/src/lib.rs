@@ -87,6 +87,7 @@ pub fn run() {
             commands::connect_service,
             commands::morning_brief,
             commands::evening_recap,
+            commands::calendar_week,
             commands::mind_graph,
             commands::run_capability,
             commands::askable_capabilities,

@@ -26,6 +26,8 @@ import { Shelf } from "@/island/views/Shelf";
 import { Shortcuts, type Ran } from "@/island/views/Shortcuts";
 import { chosen, type Book } from "@/island/shortcuts";
 import { Voice } from "@/island/views/Voice";
+import { Week } from "@/island/views/Week";
+import { useWeek } from "@/island/useWeek";
 import { Work, type Step } from "@/island/views/Work";
 import { stillWorth } from "@/news";
 import type { Invoked, Listed } from "@/playbook";
@@ -403,6 +405,7 @@ export function Island() {
 
   // The host tells the glance every second only while it is looked at.
   const glancing = state.mode === "open" && ready === "open" && state.tab === "glance";
+  const calendar = useWeek(state.mode === "open" && (state.tab === "week" || (state.tab === "glance" && widgets.includes("next"))));
   useEffect(() => {
     void command("glance_watch", { on: glancing });
     if (glancing) void command<Snapshot>("glance_stats").then((seen) => seen && setSnapshot(seen));
@@ -705,10 +708,12 @@ export function Island() {
               }}
             />
           ) : null}
+          {state.tab === "week" ? <Week week={calendar.week} now={calendar.now} asking={calendar.asking} onAllow={calendar.allow} /> : null}
           {state.tab === "glance" ? (
             <Glance
               widgets={widgets}
               snapshot={snapshot}
+              calendar={{ week: calendar.week, now: calendar.now }}
               timer={{
                 clock,
                 start: () => void command<Clock>("pomodoro_start").then((kept) => kept && setClock(kept)),

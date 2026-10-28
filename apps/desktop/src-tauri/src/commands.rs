@@ -130,6 +130,17 @@ pub async fn evening_recap(sidecars: State<'_, Sidecars>) -> Result<Value, Strin
         .map_err(|failure| failure.to_string())
 }
 
+/// The week the island shows. Pressed for, it may ask about a calendar not yet allowed; asked for
+/// on its own, it reads only those already allowed.
+#[tauri::command]
+pub async fn calendar_week(ask: Option<bool>, sidecars: State<'_, Sidecars>) -> Result<Value, String> {
+    sidecars
+        .core
+        .request("calendar.week", json!({ "ask": ask.unwrap_or(false) }), GATHER_TIMEOUT)
+        .await
+        .map_err(|failure| failure.to_string())
+}
+
 #[tauri::command]
 pub async fn mind_graph(sidecars: State<'_, Sidecars>) -> Result<Value, String> {
     sidecars

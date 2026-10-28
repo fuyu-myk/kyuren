@@ -3,7 +3,7 @@ import { TABS, type Tab } from "@/island/fsm";
 import { insideTauri } from "@/tauri";
 
 /// The widgets the island's glance tab can hold.
-export const WIDGETS = ["music", "pomodoro", "network", "system"] as const;
+export const WIDGETS = ["music", "pomodoro", "network", "system", "next"] as const;
 export type Widget = (typeof WIDGETS)[number];
 
 /// Outside the app, in a browser, the settings live here instead, so the layout can be tried.

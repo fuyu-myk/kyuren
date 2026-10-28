@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Emitter};
 
 /// The widgets the island's glance tab can hold, in the order they are shown.
-pub const WIDGETS: [&str; 4] = ["music", "pomodoro", "network", "system"];
+pub const WIDGETS: [&str; 5] = ["music", "pomodoro", "network", "system", "next"];
 
 /// The widgets switched on, in the order the user arranged them, unknown names dropped. Nothing set
 /// is none: a widget reads the machine or the music, so it is asked for rather than assumed.
