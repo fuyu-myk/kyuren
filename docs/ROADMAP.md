@@ -484,8 +484,8 @@ the icosahedron and a composer; the questions waiting on the user, Kyuren's own 
 which the relay brings: its permissions, questions to choose among, plans, edits and its servers'
 forms, each opened whole and answered there; work in progress; the coding agents running on the
 Mac, a Claude Code session's steps opening whole; a glance of widgets; the week, day by day, with
-the next event counted down, and a widget of it for the glance; shortcuts that run
-playbooks; a shelf of files on their way somewhere; and notices. A page that fails to draw says so
+the next event counted down, and a widget of it for the glance; a todo list of its own; shortcuts
+that run playbooks; a shelf of files on their way somewhere; and notices. A page that fails to draw says so
 in its place, and the island failing as a whole lets go of the screen and starts again. Each window
 may call only the commands its own code calls, and the reader none at all.
 

@@ -1,0 +1,95 @@
+/* The todo list: a box to add one, the list, and what is left. */
+.view.todos {
+  gap: 6px;
+}
+
+.todos .composer.todo {
+  flex: none;
+  height: 28px;
+}
+
+.todos .list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.todos .todo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  padding: 0 6px;
+  border-radius: 8px;
+}
+
+.todos .todo:hover {
+  background: rgb(24 24 37 / 58%);
+}
+
+.todos .todo .text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.todos .todo.done .text {
+  color: #7f849c;
+  text-decoration: line-through;
+}
+
+.todos .todo button,
+.todos .foot .clear {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #9399b2;
+  font: inherit;
+  cursor: default;
+}
+
+.todos .todo .tick {
+  width: 18px;
+  height: 18px;
+}
+
+.todos .todo.done .tick {
+  color: #a6e3a1;
+}
+
+.todos .todo .remove {
+  width: 18px;
+  height: 18px;
+  opacity: 0;
+}
+
+.todos .todo:hover .remove,
+.todos .todo .remove:focus-visible {
+  opacity: 1;
+}
+
+.todos .foot {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 6px;
+  color: #7f849c;
+  font-size: 11px;
+}
+
+.todos .foot .clear {
+  font-size: 11px;
+}
+
+.todos .foot .trouble {
+  color: #f9e2af;
+}

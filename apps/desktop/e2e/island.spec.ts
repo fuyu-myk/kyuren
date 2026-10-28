@@ -511,3 +511,30 @@ test("the next event's widget on the glance counts down to it", async ({ page })
   await expect(page.locator(".widget.next-event")).toHaveText("nextDesign reviewin 42 min10:12 am");
   expect(await commanded(page, "calendar_week")).toEqual([undefined]);
 });
+
+test("todos are added by typing, ticked off and taken off on the island, what is left first", async ({ page }) => {
+  await opened(page);
+  await page.locator(".tabs .tab[title='todos']").click();
+  const todos = page.locator(".view.todos");
+  await expect(todos.locator(".empty")).toHaveText("Nothing to do yet: type one above and press return.");
+  const box = todos.getByPlaceholder("add a todo");
+  await box.click();
+  await box.fill("  Buy milk ");
+  await box.press("Enter");
+  await expect(box).toHaveValue("");
+  expect(await commanded(page, "todos_add")).toEqual([{ text: "  Buy milk " }]);
+  expect(await commanded(page, "island_focus"), "the box holds the keyboard while typed into").toContainEqual({ on: true });
+
+  await send(page, "todos");
+  await expect(todos.locator(".todo .text")).toHaveText(["Reply to the lab about Thursday", "Book the dentist", "Push the island's week"]);
+  await expect(todos.locator(".todo.done .text")).toHaveText(["Push the island's week"]);
+  await expect(todos.locator(".foot")).toHaveText("2 leftclear 1 done");
+  await todos.locator(".todo", { hasText: "Book the dentist" }).getByRole("button", { name: "done" }).click();
+  await todos.locator(".todo", { hasText: "Push the island's week" }).getByRole("button", { name: "not done after all" }).click();
+  await todos.locator(".todo", { hasText: "Reply to the lab" }).hover();
+  await todos.locator(".todo", { hasText: "Reply to the lab" }).getByRole("button", { name: "take off the list" }).click();
+  await todos.getByRole("button", { name: "clear 1 done" }).click();
+  expect(await commanded(page, "todos_tick")).toEqual([{ id: "3", done: true }, { id: "2", done: false }]);
+  expect(await commanded(page, "todos_remove")).toEqual([{ id: "1" }]);
+  expect(await commanded(page, "todos_clear")).toHaveLength(1);
+});

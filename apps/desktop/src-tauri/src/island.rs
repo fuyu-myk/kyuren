@@ -22,7 +22,7 @@ tauri_panel! {
 pub const LABEL: &str = "island";
 
 /// The island's tabs, in the order they are shown.
-pub const TABS: [&str; 9] = ["voice", "glance", "week", "shortcuts", "shelf", "permissions", "work", "coding", "notices"];
+pub const TABS: [&str; 10] = ["voice", "glance", "week", "todos", "shortcuts", "shelf", "permissions", "work", "coding", "notices"];
 
 /// The tabs there were before any list of them was kept with the tabs seen beside it: what a list
 /// arranged then was arranged among.
@@ -613,11 +613,11 @@ mod tests {
     #[test]
     fn a_tab_added_since_the_tabs_were_arranged_is_shown_and_one_hidden_since_stays_hidden() {
         let arranged = vec!["coding".to_string(), "voice".to_string()];
-        assert_eq!(tabs_from(Some(&arranged), None), vec!["coding", "voice", "week", "shortcuts", "shelf"], "arranged before any was");
+        assert_eq!(tabs_from(Some(&arranged), None), vec!["coding", "voice", "week", "todos", "shortcuts", "shelf"], "arranged before any was");
         let all: Vec<String> = TABS.iter().map(|tab| tab.to_string()).collect();
         assert_eq!(tabs_from(Some(&arranged), Some(&all)), vec!["coding", "voice"], "hidden with it there to see");
         let placed = vec!["shelf".to_string(), "voice".to_string()];
-        assert_eq!(tabs_from(Some(&placed), None), vec!["shelf", "voice", "week", "shortcuts"], "never twice");
+        assert_eq!(tabs_from(Some(&placed), None), vec!["shelf", "voice", "week", "todos", "shortcuts"], "never twice");
     }
 
     #[test]

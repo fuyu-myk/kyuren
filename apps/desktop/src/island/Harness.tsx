@@ -204,6 +204,18 @@ export function Harness({ notch }: { notch: Notch }) {
         <button
           type="button"
           onClick={() =>
+            emitPreview("todos:changed", [
+              { id: "1", text: "Reply to the lab about Thursday", done: false, at: Date.now() - 3_600_000 },
+              { id: "2", text: "Push the island's week", done: true, at: Date.now() - 1_800_000 },
+              { id: "3", text: "Book the dentist", done: false, at: Date.now() - 600_000 },
+            ])
+          }
+        >
+          todos
+        </button>
+        <button
+          type="button"
+          onClick={() =>
             emitPreview("coding:sessions", {
               sessions: [
                 { id: "a", harness: "claude", project: "kyuren", title: "island widgets", state: "waiting", waitingFor: "permission prompt", active: Date.now() - 40_000, via: "the desktop app" },

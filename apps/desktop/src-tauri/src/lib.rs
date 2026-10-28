@@ -27,6 +27,7 @@ mod sight;
 mod speaking;
 mod state;
 mod stats;
+mod todos;
 mod tray;
 mod vaults;
 mod wake;
@@ -135,6 +136,11 @@ pub fn run() {
             island::island_home_set,
             island::island_week_starts,
             island::island_week_starts_set,
+            todos::todos_list,
+            todos::todos_add,
+            todos::todos_tick,
+            todos::todos_remove,
+            todos::todos_clear,
             sessions::model_options,
             sessions::known_capabilities,
             sessions::project_board,

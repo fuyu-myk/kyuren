@@ -49,6 +49,11 @@
     "allow-shelf-list",
     "allow-shelf-remove",
     "allow-shelf-reveal",
-    "allow-stop-turn"
+    "allow-stop-turn",
+    "allow-todos-add",
+    "allow-todos-clear",
+    "allow-todos-list",
+    "allow-todos-remove",
+    "allow-todos-tick"
   ]
 }

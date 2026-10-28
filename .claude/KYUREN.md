@@ -477,7 +477,7 @@ percent of its size, so nothing is seen ahead of the island it belongs in.
 - Its tabs: voice and answers, with a composer across the whole width and, beside the notch,
   what is being done or which model answered, and no name for the page, which its tab already
   says; permission questions, with allow and deny; work in progress, step by step; the coding
-  agents running on this Mac; a glance, of widgets switched on in settings; the week; shortcuts, playbooks
+  agents running on this Mac; a glance, of widgets switched on in settings; the week; todos; shortcuts, playbooks
   run from the notch; a shelf of files on their way somewhere; and notices. In settings the island is drawn small, its pages beside
   the notch and the glance's widgets below, and both are arranged by dragging them into the order
   wanted or out to a tray of hidden ones; a click shows or hides one. The order is the island's. Each can be switched off in settings, and a tab added since they were last arranged is
@@ -520,6 +520,12 @@ once. Read while the week or the next event's widget shows, at most every few mi
 only the calendars already allowed, as anything read with nobody asked does, and names the rest
 with a button that asks about them, there being someone who pressed it. The glance's next-event
 widget shows the same next event and its countdown.
+
+**Todos.** A list of its own on the island: added by typing into a box above it, ticked off and on
+again, and taken off one at a time or all that is done at once, what is left shown first in the
+order it was added. The host keeps it in Kyuren's own folder, readable by the user's account alone,
+written whole on each change, and a list it cannot read is left as it is rather than written over.
+A todo is one line of plain text, two hundred characters at most, and the list holds two hundred.
 
 The now-playing widget shows what Spotify or Music is playing: the cover, the track, where it is
 with room to seek, play, pause and skip, and the player's own volume, there only under the cursor,

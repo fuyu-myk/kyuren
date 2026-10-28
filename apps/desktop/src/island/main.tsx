@@ -9,6 +9,7 @@ import "@/island/shelf.css";
 import "@/island/voice.css";
 import "@/island/glance.css";
 import "@/island/week.css";
+import "@/island/todos.css";
 import "@/island/coding-detail.css";
 import "@/island/asked.css";
 import "@/island/wings.css";

@@ -3,7 +3,7 @@
 
 export type Mode = "hidden" | "peek" | "open";
 
-export const TABS = ["voice", "glance", "week", "shortcuts", "shelf", "permissions", "work", "coding", "notices"] as const;
+export const TABS = ["voice", "glance", "week", "todos", "shortcuts", "shelf", "permissions", "work", "coding", "notices"] as const;
 export type Tab = (typeof TABS)[number];
 
 export type Island = {
