@@ -5,6 +5,9 @@ import type { Item } from "#connect/source.ts";
 
 export const OPEN = "<!-- kyuren:day -->";
 export const CLOSE = "<!-- kyuren:end -->";
+/// The evening's recap is a block of its own in the same note, under the morning's.
+export const EVENING = "<!-- kyuren:evening -->";
+export const EVENING_END = "<!-- kyuren:evening-end -->";
 
 /// Links are collected and named at the foot. A calendar address runs to four hundred characters,
 /// and a line that long is not one anybody edits by hand.
@@ -71,12 +74,39 @@ export function merge(existing: string | undefined, generated: string): string {
 
   const from = existing.indexOf(OPEN);
   const to = existing.indexOf(CLOSE);
+  if (from === -1 && to === -1 && whole(existing, EVENING, EVENING_END)) {
+    // The evening was written first, so the morning goes above it.
+    const evening = existing.indexOf(EVENING);
+    return `${existing.slice(0, evening)}${block}\n\n${existing.slice(evening)}`;
+  }
   if (from === -1 || to === -1 || to < from) {
     // Someone removed the markers, or wrote the file themselves. Theirs is the copy that stays.
     return existing;
   }
 
   return existing.slice(0, from) + block + existing.slice(to + CLOSE.length);
+}
+
+function whole(text: string, open: string, close: string): boolean {
+  const from = text.indexOf(open);
+  return from !== -1 && text.indexOf(close) > from;
+}
+
+/// The evening's block, rewritten where it is, or put under the morning's. Like the morning's, it
+/// is never put in a note Kyuren has not written in, nor in one whose markers someone took away.
+export function mergeEvening(existing: string | undefined, generated: string): string {
+  const block = `${EVENING}\n${generated}\n${EVENING_END}`;
+  if (!existing) return `${block}\n`;
+
+  const from = existing.indexOf(EVENING);
+  const to = existing.indexOf(EVENING_END);
+  if (from !== -1 || to !== -1) {
+    return whole(existing, EVENING, EVENING_END) ? existing.slice(0, from) + block + existing.slice(to + EVENING_END.length) : existing;
+  }
+  if (!whole(existing, OPEN, CLOSE)) return existing;
+
+  const after = existing.indexOf(CLOSE) + CLOSE.length;
+  return `${existing.slice(0, after)}\n\n${block}${existing.slice(after)}`;
 }
 
 export function noteName(day: string): string {

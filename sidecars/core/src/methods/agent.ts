@@ -6,6 +6,7 @@ import { Speech } from "#agent/speech.ts";
 import { Turns } from "#agent/turns.ts";
 import { watchedOver } from "#agent/watched.ts";
 import { briefHandlers } from "#methods/brief.ts";
+import { recapHandlers } from "#methods/recap.ts";
 import { playbookHandlers } from "#methods/playbook.ts";
 import { researchHandlers } from "#methods/research.ts";
 import { ROUTES, type Route } from "#model/route.ts";
@@ -39,6 +40,7 @@ export function agentHandlers(transport: Transport) {
 
   return {
     ...briefHandlers(gate, asker.ask, vault),
+    ...recapHandlers(vault),
     ...playbookHandlers(gate, asker.ask, vault, () => watchedOver(transport), turns),
     ...researchHandlers(vault),
 

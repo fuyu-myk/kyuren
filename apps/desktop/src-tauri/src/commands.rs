@@ -120,6 +120,16 @@ pub async fn morning_brief(sidecars: State<'_, Sidecars>) -> Result<Value, Strin
         .map_err(|failure| failure.to_string())
 }
 
+/// The day's work, written into the day's note under the morning's brief, and shown.
+#[tauri::command]
+pub async fn evening_recap(sidecars: State<'_, Sidecars>) -> Result<Value, String> {
+    sidecars
+        .core
+        .request("recap.today", json!({}), GATHER_TIMEOUT)
+        .await
+        .map_err(|failure| failure.to_string())
+}
+
 #[tauri::command]
 pub async fn mind_graph(sidecars: State<'_, Sidecars>) -> Result<Value, String> {
     sidecars

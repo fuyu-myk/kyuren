@@ -86,6 +86,7 @@ pub fn run() {
             commands::held_secrets,
             commands::connect_service,
             commands::morning_brief,
+            commands::evening_recap,
             commands::mind_graph,
             commands::run_capability,
             commands::askable_capabilities,

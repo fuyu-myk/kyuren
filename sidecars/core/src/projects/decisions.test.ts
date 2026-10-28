@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { appendFileSync, mkdirSync, mkdtempSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { test } from "node:test";
 import { Board } from "#projects/board.ts";
-import { decisionsAt, decisionsFile, noteDecisions, planTitle, rootOf, type Decided } from "#projects/decisions.ts";
+import { decisionsAt, decisionsFile, decisionsSince, noteDecisions, planTitle, rootOf, type Decided } from "#projects/decisions.ts";
 
 function repository(): string {
   const at = realpathSync(mkdtempSync(join(tmpdir(), "kyuren-decided-")));
@@ -58,4 +58,16 @@ test("the board shows a project's latest decisions under it", async () => {
   const board = new Board(root, { github: async () => undefined, decided: async (path) => (path === join(root, "kyuren") ? decided : undefined) });
   const [project] = await board.projects(true);
   assert.deepEqual(project?.decisions, decided);
+});
+
+test("what was decided since a moment is read back across every repository, oldest first, by repository name", async () => {
+  const home = realpathSync(mkdtempSync(join(tmpdir(), "kyuren-home-")));
+  const one = repository();
+  const two = repository();
+  await noteDecisions(home, one, [{ at: 5, kind: "choice", topic: "Store", said: "SQLite" }, { at: 20, kind: "plan", topic: "plan approved", said: "Move the shelf" }]);
+  await noteDecisions(home, two, [{ at: 15, kind: "choice", topic: "Checks", said: "Lint" }]);
+  appendFileSync(decisionsFile(home, two), "not json\n{\"at\": 30}\n");
+  const since = await decisionsSince(home, 10);
+  assert.deepEqual(since.map((made) => [made.at, made.project, made.topic]), [[15, basename(two), "Checks"], [20, basename(one), "plan approved"]]);
+  assert.deepEqual(await decisionsSince(join(home, "missing"), 0), [], "nothing decided yet");
 });

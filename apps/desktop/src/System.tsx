@@ -5,7 +5,7 @@ import { ambientLook, ambientRecent, ambientState, onPresence, type AmbientState
 import { nextOf, timeOf } from "@/news";
 import { captureScreen, type Capture } from "@/capture";
 import { Connections } from "@/Connections";
-import { heldSecrets, morningBrief, onConnections, showMind, type Brief } from "@/connect";
+import { eveningRecap, heldSecrets, morningBrief, onConnections, showMind, type Brief, type Recap } from "@/connect";
 import { onOrbState } from "@/orb";
 import { Page } from "@/Page";
 import { Playbooks } from "@/Playbooks";
@@ -51,6 +51,8 @@ export function System() {
   const [chosen, setChosen] = useState<Chosen>();
   const [connections, setConnections] = useState<string[]>([]);
   const [brief, setBrief] = useState<Brief>();
+  const [recap, setRecap] = useState<Recap>();
+  const [recapping, setRecapping] = useState(false);
   const [gathering, setGathering] = useState(false);
   const [taken, setTaken] = useState<Capture>();
   const [capturing, setCapturing] = useState(false);
@@ -130,6 +132,17 @@ export function System() {
       setError(String(failure));
     } finally {
       setGathering(false);
+    }
+  }, []);
+
+  const recapDay = useCallback(async () => {
+    setRecapping(true);
+    try {
+      setRecap(await eveningRecap());
+    } catch (failure) {
+      setError(String(failure));
+    } finally {
+      setRecapping(false);
     }
   }, []);
 
@@ -230,11 +243,15 @@ export function System() {
           <button type="button" onClick={() => void gather()} disabled={gathering}>
             {gathering ? "reading" : "what does today hold"}
           </button>
+          <button type="button" onClick={() => void recapDay()} disabled={recapping}>
+            {recapping ? "reading" : "how did today go"}
+          </button>
           <button type="button" onClick={() => void showMind()}>
             show mind
           </button>
         </div>
         {brief ? <pre className="facts">{brief.facts}</pre> : null}
+        {recap ? <pre className="facts recap">{recap.facts}</pre> : null}
       </section>
 
       <section>

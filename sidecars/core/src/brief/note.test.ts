@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { digest } from "#brief/digest.ts";
-import { CLOSE, merge, noteName, OPEN, render } from "#brief/note.ts";
+import { CLOSE, EVENING, EVENING_END, merge, mergeEvening, noteName, OPEN, render } from "#brief/note.ts";
 import type { Gathered } from "#connect/read.ts";
 import type { Item, Kind } from "#connect/source.ts";
 
@@ -109,3 +109,26 @@ test("the note groups mail by sender and says when there was more than one", () 
   assert.match(markdown, /- \*\*Microsoft account team\*\* — New app\(s\) connected _\(2 in all\)_/);
   assert.equal(markdown.match(/Microsoft account team/g)?.length, 1);
 });
+
+test("the evening goes under the morning, and a second evening replaces only the first", () => {
+  const morning = `${merge(undefined, "# Morning")}\nmy own line\n`;
+  const evening = mergeEvening(morning, "## Evening\none");
+  assert.equal(evening, `${OPEN}\n# Morning\n${CLOSE}\n\n${EVENING}\n## Evening\none\n${EVENING_END}\n\nmy own line\n`);
+  assert.equal(mergeEvening(evening, "## Evening\ntwo"), evening.replace("one", "two"));
+  assert.equal(merge(evening, "# Morning again"), evening.replace("# Morning", "# Morning again"), "the morning read again keeps the evening");
+});
+
+test("an evening written first is a note of its own, and the morning then goes above it", () => {
+  const evening = mergeEvening(undefined, "## Evening");
+  assert.equal(evening, `${EVENING}\n## Evening\n${EVENING_END}\n`);
+  assert.equal(merge(evening, "# Morning"), `${OPEN}\n# Morning\n${CLOSE}\n\n${EVENING}\n## Evening\n${EVENING_END}\n`);
+});
+
+test("the evening is not put in a note Kyuren never wrote in, nor where its markers were taken away", () => {
+  const theirs = "# My own day\n";
+  assert.equal(mergeEvening(theirs, "## Evening"), theirs);
+  const broken = `${EVENING}\n## Evening\n`;
+  assert.equal(mergeEvening(broken, "## Evening again"), broken);
+  assert.equal(merge(broken, "# Morning"), broken, "nor does the morning go into it");
+});
+

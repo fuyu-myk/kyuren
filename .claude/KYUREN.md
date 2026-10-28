@@ -187,7 +187,12 @@ A Node sidecar speaking newline-delimited JSON over stdio. Owns all cognition.
   waiting on the user's review, wherever they are on GitHub, found with one search. From the board,
   or asked for by voice or in the chat with a request, a new Claude Code session opens in the
   Claude app in a project's folder, and a main branch or pull request whose checks fail offers one
-  handed the address of its checks and nothing its author wrote.
+  handed the address of its checks and nothing its author wrote. From six each evening, and
+  whenever asked, the day's work is written into the day's note under the morning's brief: the
+  user's own commits across the repositories, their pull requests merged, what was decided on the
+  island, and how many Claude Code sessions worked in each project, counted by when their
+  transcripts were written and never by reading them. Asked aloud, it is said from those facts, as
+  the brief is.
 
 ### 4.4 WebView, `apps/desktop/ui`
 

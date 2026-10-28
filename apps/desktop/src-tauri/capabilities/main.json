@@ -33,6 +33,7 @@
     "allow-known-capabilities",
     "allow-model-options",
     "allow-morning-brief",
+    "allow-evening-recap",
     "allow-open-link",
     "allow-playbook-approve",
     "allow-playbook-invoke",

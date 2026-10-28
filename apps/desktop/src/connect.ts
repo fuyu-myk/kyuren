@@ -41,6 +41,13 @@ export function morningBrief(): Promise<Brief> {
   return invoke<Brief>("morning_brief");
 }
 
+/// How the day's work went, as written into the day's note.
+export type Recap = { facts: string; note?: string };
+
+export function eveningRecap(): Promise<Recap> {
+  return invoke<Recap>("evening_recap");
+}
+
 /// Shows the mind over everything, or hides it if it is already there.
 export function showMind(): Promise<void> {
   return invoke("show_mind");

@@ -16,6 +16,7 @@ import {
   proposeTool,
 } from "#agent/playbook.ts";
 import { projectSchema, projectTool } from "#agent/project.ts";
+import { recapSchema, recapTool } from "#agent/recap.ts";
 import { rememberSchema, rememberTool } from "#agent/remember.ts";
 import { skillSchema, skillTool } from "#agent/skill.ts";
 import { startSchema, startTool } from "#agent/start.ts";
@@ -97,6 +98,7 @@ export const CAPABILITIES = [
   { name: "forge", description: "Write down a new skill, inert until approved.", pane: "knowledge" },
   { name: "skill", description: "Use one of the approved skills.", pane: "knowledge" },
   { name: "today", description: "What the user's day holds.", pane: "comms" },
+  { name: "recap", description: "How the day's work went, written into the day's note.", pane: "development" },
   { name: "playbook", description: "Run one of the approved playbooks.", pane: "knowledge" },
   { name: "playbooks", description: "Run several approved playbooks at once, each with its own log.", pane: "knowledge" },
   { name: "web_search", description: "Search the web through the local browser.", pane: "knowledge" },
@@ -350,6 +352,7 @@ export async function run(options: Run): Promise<Transcript> {
         watching,
         exposure,
       ),
+    recap: adapt(recapTool(options.vault), recapSchema, options.gate, options.ask, toSay, watching, exposure),
     web_search: adapt(webSearchTool(), webSearchSchema, options.gate, options.ask, toSay, watching, exposure),
     web_fetch: adapt(webFetchTool(), webFetchSchema, options.gate, options.ask, toSay, watching, exposure),
     playbook: adapt(playbookTool(performing), playbookSchema, options.gate, options.ask, toSay, watching, exposure),

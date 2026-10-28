@@ -71,6 +71,7 @@ const TAKEN = new Set([
   "add_to_notion",
   "remember",
   "today",
+  "recap",
   "project",
   "code",
   "start_coding_session",

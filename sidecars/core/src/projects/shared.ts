@@ -10,7 +10,7 @@ const root = process.env.KYUREN_CODING ?? join(homedir(), "Documents", "Coding")
 
 /// Kyuren's own folder, where what was decided about each project is kept, and how many of a
 /// project's decisions the board shows.
-const kyuren = process.env.KYUREN_HOME ?? join(homedir(), ".kyuren");
+export const kyuren = process.env.KYUREN_HOME ?? join(homedir(), ".kyuren");
 const LATEST = 3;
 
 let held: Board | undefined;

@@ -289,7 +289,9 @@ the pull requests waiting on the user's review. What was decided about each proj
 questions a coding agent asked answered and plans approved, kept in Kyuren's own folder and shown
 under the project on the board. A new Claude Code session opened in the Claude app in a project's
 folder, from the board or asked for by voice or in the chat with the request in its prompt, and one
-offered wherever checks fail, to fix them.
+offered wherever checks fail, to fix them. An evening recap of the day's work across every
+repository, written into the day's note under the morning's brief from six and whenever asked, and
+said aloud on asking.
 
 **Gate.**
 1. The board reflects real state across every repository under the coding directory, refreshed

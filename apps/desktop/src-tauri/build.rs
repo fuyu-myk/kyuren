@@ -3,7 +3,7 @@
 const COMMANDS: &[&str] = &[
     "sidecar_status", "speak", "resolve_permission", "open_link",
     "store_secret", "forget_secret", "held_secrets", "connect_service",
-    "morning_brief", "mind_graph", "run_capability", "askable_capabilities",
+    "morning_brief", "evening_recap", "mind_graph", "run_capability", "askable_capabilities",
     "ask", "stop_turn", "island_rect", "island_mode", "island_focus",
     "island_screen", "coding_sessions", "coding_asks", "coding_detail",
     "coding_step", "coding_reveal", "coding_seen", "coding_answer",

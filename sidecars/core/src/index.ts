@@ -28,6 +28,7 @@ import { askMethod } from "#methods/ask.ts";
 import { ping } from "#methods/ping.ts";
 import { createStdioTransport } from "#transport.ts";
 import { noteDecisions } from "#projects/decisions.ts";
+import { startEvenings } from "#recap/evening.ts";
 
 const transport = createStdioTransport();
 const dispatcher = createDispatcher(transport);
@@ -86,6 +87,7 @@ for (const [method, handler] of Object.entries(mediaHandlers())) {
 if (!process.env.KYUREN_DRIVEN) {
   ambient.start();
   scheduler.start();
+  startEvenings(ownVault);
   void coding.start();
   // Without the line open, a hook finds no one and its agent asks in its own way, as without Kyuren.
   hooks.start().catch((failure: unknown) => transport.send({ event: "coding.hooks.failed", data: { reason: String(failure) } }));

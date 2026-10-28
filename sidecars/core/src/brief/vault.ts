@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { Digest } from "#brief/digest.ts";
-import { merge, noteName, render } from "#brief/note.ts";
+import { merge, mergeEvening, noteName, render } from "#brief/note.ts";
 
 /// Days live together in one folder, named for the day, so an Obsidian vault pointed here sees a
 /// daily note and nothing it has to be taught about.
@@ -19,5 +19,15 @@ export async function writeNote(
 
   const existing = await readFile(path, "utf8").catch(() => undefined);
   await writeFile(path, merge(existing, render(summary, read)), "utf8");
+  return path;
+}
+
+/// The evening's recap, written into the day's note under the morning's brief.
+export async function writeEvening(vault: string, day: string, generated: string): Promise<string> {
+  const path = notePath(vault, day);
+  await mkdir(dirname(path), { recursive: true });
+
+  const existing = await readFile(path, "utf8").catch(() => undefined);
+  await writeFile(path, mergeEvening(existing, generated), "utf8");
   return path;
 }

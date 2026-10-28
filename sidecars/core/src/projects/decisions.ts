@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFile, mkdir, readFile, realpath } from "node:fs/promises";
+import { appendFile, mkdir, readdir, readFile, realpath } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
@@ -51,11 +51,9 @@ export async function noteDecisions(home: string, folder: string, made: Decision
   await appendFile(file, made.map((one) => `${JSON.stringify({ ...one, root })}\n`).join(""), { mode: 0o600 });
 }
 
-/// A repository's latest decisions, newest first, and how many there are; a line that does not
-/// read as one is passed over.
-export async function decisionsAt(home: string, root: string, most: number): Promise<Decided> {
-  const text = await readFile(decisionsFile(home, await realpath(root).catch(() => root)), "utf8").catch(() => "");
-  const all: Decision[] = [];
+/// The lines of a record that read as decisions; one that does not is passed over.
+function linesOf<T>(text: string, shape: z.ZodType<T>): T[] {
+  const all: T[] = [];
   for (const line of text.split("\n")) {
     if (line.trim() === "") continue;
     let parsed: unknown;
@@ -64,10 +62,34 @@ export async function decisionsAt(home: string, root: string, most: number): Pro
     } catch {
       continue;
     }
-    const one = LINE.safeParse(parsed);
+    const one = shape.safeParse(parsed);
     if (one.success) all.push(one.data);
   }
+  return all;
+}
+
+/// A repository's latest decisions, newest first, and how many there are.
+export async function decisionsAt(home: string, root: string, most: number): Promise<Decided> {
+  const text = await readFile(decisionsFile(home, await realpath(root).catch(() => root)), "utf8").catch(() => "");
+  const all = linesOf(text, LINE);
   return { count: all.length, latest: all.slice(-most).reverse() };
+}
+
+const ROOTED = LINE.extend({ root: z.string().min(1) });
+
+/// Every decision made since a moment, about any repository, oldest first, each with the name of
+/// the repository it was about.
+export async function decisionsSince(home: string, since: number): Promise<Array<Decision & { project: string }>> {
+  const dir = join(home, "decisions");
+  const names = (await readdir(dir).catch(() => [] as string[])).filter((name) => name.endsWith(".jsonl"));
+  const found: Array<Decision & { project: string }> = [];
+  for (const name of names) {
+    const text = await readFile(join(dir, name), "utf8").catch(() => "");
+    for (const { root, ...one } of linesOf(text, ROOTED)) {
+      if (one.at >= since) found.push({ ...one, project: basename(root) });
+    }
+  }
+  return found.sort((a, b) => a.at - b.at);
 }
 
 /// A plan as the record names it: its first line, without the marks that make it a heading or an

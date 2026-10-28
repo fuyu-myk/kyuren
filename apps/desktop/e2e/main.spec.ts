@@ -36,6 +36,9 @@ function standIn(): void {
         if (cmd === "resolve_permission") return { matched: true, pending: 0 };
         if (cmd === "open_link") return null;
         if (cmd === "project_session") return { started: true };
+        if (cmd === "evening_recap") {
+          return { facts: "## Evening\n\n### Committed\n- **kyuren**, 1 commit: feat: the evening recap\n\n_Written at 6 pm._", note: "/vault/days/2026-10-28.md" };
+        }
         if (cmd === "project_board") {
           const pull = (number: number, title: string, checks: string, draft = false) => ({ number, title, url: `https://github.com/someone/kyuren/pull/${number}`, draft, checks });
           const github = { repo: "someone/kyuren", branch: "main", main: "failing", count: 5, pulls: [pull(41, "Keep the shelf in SQLite", "passing"), pull(40, "Try the wake word", "pending", true), pull(38, "Hover after waking", "failing"), pull(37, "Older", "none")] };
@@ -265,3 +268,11 @@ test("a project on the board opens a new session in the Claude app, there or to 
   ]);
   expect(await calledWith(page, "open_link"), "a fix opens a session, not the pull request").toEqual([]);
 });
+
+test("the evening's recap is written on asking from the system pane, and shown there", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "system" }).click();
+  await page.getByRole("button", { name: "how did today go" }).click();
+  await expect(page.locator(".facts.recap")).toContainText("- **kyuren**, 1 commit: feat: the evening recap");
+  expect(await calledWith(page, "evening_recap")).toHaveLength(1);
+});
+
