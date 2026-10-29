@@ -474,7 +474,7 @@ test("a question can be answered by Other, an answer typed in place of the optio
   await expect.poll(async () => (await commanded(page, "island_focus")).at(-1), { message: "the keyboard given back" }).toEqual({ on: false });
 });
 
-test("the week shows Sunday to Saturday, the days gone dimmed, the next event counted down, and asks about a calendar only when pressed", async ({ page }) => {
+test("the week shows Sunday to Saturday, the days gone dimmed, the todos due on their days, the next event counted down, and asks about a calendar only when pressed", async ({ page }) => {
   const start = new Date(2026, 9, 28, 9, 30).getTime();
   await page.clock.install({ time: start });
   await page.goto("/island.html");
@@ -490,6 +490,13 @@ test("the week shows Sunday to Saturday, the days gone dimmed, the next event co
   await expect(week.locator(".day.today li.past .title")).toHaveText(["Standup"]);
   await expect(week.locator(".day.today li.next .title")).toHaveText(["Design review"]);
   await expect(week.locator(".day").nth(6).locator("li .time")).toHaveText(["all day"]);
+
+  expect(await commanded(page, "todos_list"), "the todos read beside the week").toHaveLength(1);
+  await send(page, "todos");
+  await expect(week.locator(".day.gone li.todo.overdue .title")).toHaveText(["Reply to the lab about Thursday"]);
+  await expect(week.locator(".day.today li .title")).toHaveText(["Standup", "Design review", "Book the dentist", "Gym"]);
+  await expect(week.locator(".day.today li.todo .time")).toHaveText(["12:30 pm"]);
+  await expect(week.locator(".ahead .next .title"), "a todo is not counted down").toHaveText("Design review");
 
   await page.clock.setSystemTime(start + 30 * 60_000);
   await folded(page);

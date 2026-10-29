@@ -1,4 +1,4 @@
-import { clockOf, dayName, todayOf } from "./week.ts";
+import { clockOf, dayName, todayOf, type Day, type Happening } from "./week.ts";
 
 /// A todo as it is kept in Notion, and the list as the core reads it: the database it is kept in,
 /// what that database can hold, and the todos not yet done; or, with none, why.
@@ -22,6 +22,26 @@ export function dueOf(due: string | undefined, now: number): { said: string; ove
   const moment = new Date(due);
   if (Number.isNaN(moment.getTime())) return undefined;
   return { said: `${dayName(todayOf(moment.getTime()), today)} ${clockOf(due)}`, overdue: moment.getTime() < now };
+}
+
+/// What a day of the week shows: its events, and the todos due on it.
+export type Entry = { event: Happening } | { todo: Todo };
+
+function dayDue(due: string): string {
+  return due.length <= 10 ? due : todayOf(new Date(due).getTime());
+}
+
+function whenOf(entry: Entry): number {
+  if ("event" in entry) return entry.event.timed ? new Date(entry.event.at).getTime() : 0;
+  return entry.todo.due && entry.todo.due.length > 10 ? new Date(entry.todo.due).getTime() : 0;
+}
+
+/// A day with the open todos due on it among its events: those with no time first, events before
+/// todos, then all by when they fall.
+export function entriesOf(day: Day, todos: Todo[]): Entry[] {
+  const due = todos.filter((one) => !one.done && one.due !== undefined && dayDue(one.due) === day.day);
+  const entries: Entry[] = [...day.events.map((event) => ({ event })), ...due.map((todo) => ({ todo }))];
+  return entries.sort((a, b) => whenOf(a) - whenOf(b));
 }
 
 /// A priority as the database names it, read as one of the three, for its colour.

@@ -407,7 +407,7 @@ export function Island() {
 
   // The host tells the glance every second only while it is looked at.
   const glancing = state.mode === "open" && ready === "open" && state.tab === "glance";
-  const list = useTodos(state.mode === "open" && state.tab === "todos");
+  const list = useTodos(state.mode === "open" && state.tab === "todos", state.mode === "open" && state.tab === "week");
   const calendar = useWeek(state.mode === "open" && (state.tab === "week" || (state.tab === "glance" && widgets.includes("next"))));
   useEffect(() => {
     void command("glance_watch", { on: glancing });
@@ -711,7 +711,7 @@ export function Island() {
               }}
             />
           ) : null}
-          {state.tab === "week" ? <Week week={calendar.week} now={calendar.now} asking={calendar.asking} onAllow={calendar.allow} /> : null}
+          {state.tab === "week" ? <Week week={calendar.week} todos={list.listed?.todos ?? []} now={calendar.now} asking={calendar.asking} onAllow={calendar.allow} /> : null}
           {state.tab === "todos" ? (
             <Todos
               list={list}

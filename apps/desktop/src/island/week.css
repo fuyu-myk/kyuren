@@ -11,7 +11,7 @@
   padding: 0 4px;
 }
 
-.week .next {
+.week .ahead .next {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -29,7 +29,7 @@
   text-transform: uppercase;
 }
 
-.week .next .title {
+.week .ahead .next .title {
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -144,6 +144,22 @@
 .week .day li.next .time,
 .week .day li.next .title {
   color: #b4befe;
+}
+
+/* A todo due that day, marked by a small box before its words. */
+.week .day li.todo .title::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 4px;
+  border: 1.2px solid currentColor;
+  border-radius: 2px;
+  vertical-align: 0;
+}
+
+.week .day li.todo.overdue .time {
+  color: #f38ba8;
 }
 
 /* The next event on the glance. */

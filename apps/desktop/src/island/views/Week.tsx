@@ -1,16 +1,18 @@
+import { dueOf, entriesOf, type Todo } from "@/island/todos";
 import { clockOf, dayName, nextEvent, sourceNames, todayOf, until, type Happening, type Week as Read } from "@/island/week";
 
 type Props = {
   week: Read | null;
+  todos: Todo[];
   now: number;
   asking: boolean;
   onAllow: () => void;
 };
 
-/// The calendar week across the island, from Sunday or Monday as set, each day with its events, the
-/// days gone by dimmed, and the next event counted down above them. A calendar not yet allowed is
-/// named, with a way to be asked about it.
-export function Week({ week, now, asking, onAllow }: Props) {
+/// The calendar week across the island, from Sunday or Monday as set, each day with its events and
+/// the todos due on it, the days gone by dimmed, and the next event counted down above them. A
+/// calendar not yet allowed is named, with a way to be asked about it.
+export function Week({ week, todos, now, asking, onAllow }: Props) {
   if (!week) return <div className="view week"><p className="quiet">reading the calendars</p></div>;
 
   const next = nextEvent(week, now);
@@ -45,12 +47,24 @@ export function Week({ week, now, asking, onAllow }: Props) {
           <section key={one.day} className={one.day === today ? "day today" : one.day < today ? "day gone" : "day"}>
             <h4>{dayName(one.day, today)}</h4>
             <ul>
-              {one.events.map((event) => (
-                <li key={`${event.at}|${event.title}`} className={state(event)} title={`${event.title}, ${event.collection}`}>
-                  <span className="time">{event.timed ? clockOf(event.at) : "all day"}</span>
-                  <span className="title">{event.title}</span>
-                </li>
-              ))}
+              {entriesOf(one, todos).map((entry) => {
+                if ("todo" in entry) {
+                  const { todo } = entry;
+                  return (
+                    <li key={todo.id} className={dueOf(todo.due, now)?.overdue ? "todo overdue" : "todo"} title={`${todo.text}, a todo`}>
+                      <span className="time">{todo.due && todo.due.length > 10 ? clockOf(todo.due) : "due"}</span>
+                      <span className="title">{todo.text}</span>
+                    </li>
+                  );
+                }
+                const { event } = entry;
+                return (
+                  <li key={`${event.at}|${event.title}`} className={state(event)} title={`${event.title}, ${event.collection}`}>
+                    <span className="time">{event.timed ? clockOf(event.at) : "all day"}</span>
+                    <span className="title">{event.title}</span>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ))}

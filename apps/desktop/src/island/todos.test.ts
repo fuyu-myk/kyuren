@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { changesOf, dueOf, formOf, missingSaid, priorityOf, type Todo } from "./todos.ts";
+import { changesOf, dueOf, entriesOf, formOf, missingSaid, priorityOf, type Todo } from "./todos.ts";
+import type { Day } from "./week.ts";
 
 const now = new Date(2026, 9, 28, 9, 30).getTime();
 
@@ -39,3 +40,19 @@ test("an edit sends only what changed", () => {
   assert.deepEqual(changesOf(dentist, { ...formOf(dentist), priority: "" }), { priority: "" });
 });
 
+
+test("the todos due on a day take their place among its events, those with no time first, then by when", () => {
+  const timed = (title: string, hours: number) => ({ title, at: new Date(2026, 9, 30, hours).toISOString(), timed: true, source: "apple_calendar", collection: "Work" });
+  const day: Day = { day: "2026-10-30", events: [{ title: "Holiday", at: "2026-10-30", timed: false, source: "apple_calendar", collection: "Home" }, timed("Lab", 14)] };
+  const todos: Todo[] = [
+    dentist,
+    { id: "a", text: "Hand in the essay", due: "2026-10-30", done: false },
+    { id: "b", text: "Morning run", due: new Date(2026, 9, 30, 8).toISOString(), done: false },
+    { id: "c", text: "Another day", due: "2026-10-31", done: false },
+    { id: "d", text: "Ticked off", due: "2026-10-30", done: true },
+    { id: "e", text: "Whenever", done: false },
+  ];
+  const named = entriesOf(day, todos).map((entry) => ("event" in entry ? entry.event.title : `todo: ${entry.todo.text}`));
+  assert.deepEqual(named, ["Holiday", "todo: Hand in the essay", "todo: Morning run", "Lab", "todo: Book the dentist"]);
+  assert.deepEqual(entriesOf({ day: "2026-10-29", events: [] }, todos), []);
+});

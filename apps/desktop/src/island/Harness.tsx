@@ -34,6 +34,13 @@ function sampleWeek(now: number) {
     failed: [],
   };
 }
+/// A day this many days from today, in local time, as the core names days.
+function dayFrom(days: number): string {
+  const moment = new Date();
+  moment.setDate(moment.getDate() + days);
+  return `${moment.getFullYear()}-${`${moment.getMonth() + 1}`.padStart(2, "0")}-${`${moment.getDate()}`.padStart(2, "0")}`;
+}
+
 const BARE: Notch = { present: false, width: 120, height: 24 };
 
 /// One of each kind of question a coding agent can hold the island with, beside a plain permission.
@@ -208,7 +215,7 @@ export function Harness({ notch }: { notch: Notch }) {
               database: "Tasks",
               fields: { date: true, priority: true, done: true },
               todos: [
-                { id: "0b8c1f2e-1111-4222-8333-000000000001", text: "Reply to the lab about Thursday", due: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10), priority: "High", done: false, url: "https://www.notion.so/one" },
+                { id: "0b8c1f2e-1111-4222-8333-000000000001", text: "Reply to the lab about Thursday", due: dayFrom(-1), priority: "High", done: false, url: "https://www.notion.so/one" },
                 { id: "0b8c1f2e-1111-4222-8333-000000000002", text: "Book the dentist", due: new Date(Date.now() + 3 * 3_600_000).toISOString(), done: false, url: "https://www.notion.so/two" },
                 { id: "0b8c1f2e-1111-4222-8333-000000000003", text: "Read the graph paper", priority: "Low", done: false },
               ],

@@ -518,8 +518,10 @@ day after, looking into the week after when nothing is left in this one. Its eve
 calendars the brief reads and Notion's dated events, the same event held in two calendars shown
 once. Read while the week or the next event's widget shows, at most every few minutes, it reads
 only the calendars already allowed, as anything read with nobody asked does, and names the rest
-with a button that asks about them, there being someone who pressed it. The glance's next-event
-widget shows the same next event and its countdown.
+with a button that asks about them, there being someone who pressed it. The open todos due in the
+week stand on their days among the events, at their time if they have one, marked as todos and
+read with the todo list, but only events are counted down. The glance's next-event widget shows the
+same next event and its countdown.
 
 **Todos.** Kept in the Notion database chosen for them in settings, and shown on the island: the
 todos not yet done, soonest due first, each with its priority and when it is due, overdue ones
