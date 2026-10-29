@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { WeekReader, weekOf, type Week } from "#calendar/week.ts";
-import type { Item, Source } from "#connect/source.ts";
+import { WeekReader, weekOf, weekSpan, weekStart, type Week } from "#calendar/week.ts";
+import type { Item, Source, Span } from "#connect/source.ts";
 import { Gate } from "#permission/gate.ts";
-import { localStamp } from "#brief/day.ts";
+import { dayOf, localStamp } from "#brief/day.ts";
 
 const now = new Date(2026, 9, 28, 9, 30);
 const local = (day: number, hour: number, minute = 0) => new Date(2026, 9, day, hour, minute).toISOString();
@@ -92,9 +92,51 @@ test("the week read on its own reads only calendars already allowed, and is held
   assert.deepEqual(answered.read, ["apple_calendar", "google_calendar"]);
   assert.deepEqual(answered.days[4]!.events.map((one) => one.title), ["Review"]);
   const monday = await reader.week(undefined, true);
-  assert.deepEqual(monday.days[0]!.day, "2026-10-26", "a week begun on Monday, from the same reading");
+  assert.deepEqual(monday.days[0]!.day, "2026-10-26", "a week begun on Monday");
+  assert.equal(counted.reads, 5, "is read for its own days");
 
   clock = new Date(now.getTime() + 10 * 60_000);
   await reader.week();
-  assert.equal(counted.reads, 5, "read again once old, now without a question");
+  assert.equal(counted.reads, 7, "read again once old, now without a question");
+});
+
+test("a week is read for its own seven days and a day either side, as some calendars count days in UTC", () => {
+  assert.equal(weekStart(now), "2026-10-25");
+  assert.equal(weekStart(now, true), "2026-10-26");
+  assert.deepEqual(weekSpan("2026-10-25"), { from: "2026-10-24", to: "2026-11-01" });
+  assert.deepEqual(weekSpan("2026-10-25", 2), { from: "2026-10-24", to: "2026-11-08" });
+});
+
+test("only this week is read while something lies ahead in it, and the week after once nothing does", async () => {
+  const spans: Span[] = [];
+  const items = [event("Standup", local(28, 10)), event("Review", local(31, 15)), event("Planning", local(31 + 2, 9, 30))];
+  const source: Source = {
+    name: "apple_calendar",
+    effect: "personal",
+    origin: "apple_calendar:local",
+    available: () => true,
+    read: async (span) => {
+      spans.push(span);
+      return items.filter((one) => dayOf(one.at) >= span.from && dayOf(one.at) <= span.to);
+    },
+  };
+  const gate = new Gate(() => [], () => undefined);
+  gate.remember({ tool: "apple_calendar", effect: "personal", target: "apple_calendar:local" }, "allow");
+  let clock = now;
+  const reader = new WeekReader(gate, () => undefined, [source], () => clock);
+
+  const wednesday = await reader.week();
+  assert.deepEqual(spans, [{ from: "2026-10-24", to: "2026-11-01" }]);
+  assert.deepEqual(wednesday.after.flatMap((one) => one.events), [], "the week after not read");
+
+  spans.length = 0;
+  clock = new Date(2026, 9, 31, 18);
+  const saturday = await reader.week();
+  assert.deepEqual(spans, [{ from: "2026-10-24", to: "2026-11-01" }, { from: "2026-10-24", to: "2026-11-08" }], "nothing left this week, so the next is read too");
+  assert.deepEqual(saturday.after.flatMap((one) => one.events.map((event) => event.title)), ["Planning"]);
+
+  spans.length = 0;
+  clock = new Date(2026, 9, 31, 18, 10);
+  await reader.week();
+  assert.deepEqual(spans, [{ from: "2026-10-24", to: "2026-11-08" }], "and from then on read together");
 });
