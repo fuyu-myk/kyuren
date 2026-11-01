@@ -10,10 +10,13 @@ export const RESPONSE = 64;
 /// How much a hit lifts a bar, as a share of its own height.
 const LIFT = 0.4;
 
-/// How keenly the response follows loudness beyond the bars: a loud master's usual level stands at
-/// about a third, and about 9 dB over it the response passes the bars on its way to the top.
-const KEENNESS = 2.6;
-const GAIN = 1.6;
+/// A loud master's usual level, as the bars stand for it, and where the response stands for it
+/// instead: above the bars, moving twice as far as they do for a step in loudness.
+const USUAL = 0.56;
+const RESTING = 0.62;
+const KEENNESS = 2;
+/// Past this the response eases into the top rather than flattening against it.
+const KNEE = 0.8;
 
 /// Each level eased toward what is heard over a frame of `dt` ms: within `rise` ms on the way up
 /// and `fall` on the way down, so a beat lands at once and dies away.
@@ -34,9 +37,11 @@ export function struck(level: number, impact: number): number {
   return Math.min(1, level * (1 + LIFT * impact));
 }
 
-/// A step of the response as the analyser draws it: lower at rest than the bars, higher at its peaks.
+/// A step of the response as the analyser draws it: above the bars and keener than they are.
 export function analysed(level: number): number {
-  return Math.min(1, GAIN * level ** KEENNESS);
+  const raised = RESTING + KEENNESS * (level - USUAL);
+  if (raised <= KNEE) return Math.max(0, raised);
+  return KNEE + (1 - KNEE) * Math.tanh((raised - KNEE) / (1 - KNEE));
 }
 
 type Rgb = [number, number, number];

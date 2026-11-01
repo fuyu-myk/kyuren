@@ -22,13 +22,13 @@ test("a hit lifts the bars, the louder ones the most, and never past full", () =
   assert.equal(struck(0.9, 1), 1);
 });
 
-test("the response rests lower than the bars and peaks higher, keener to a step in loudness", () => {
+test("the response stands above the bars and moves more than they do, easing into the top", () => {
   assert.equal(analysed(0), 0);
-  assert.ok(analysed(0.56) < 0.45, `a loud master's usual level stands at ${analysed(0.56)}`);
-  assert.ok(analysed(0.3) > 0, "quiet music still shows");
-  assert.ok(analysed(0.82) > 0.88, `a peak stands at only ${analysed(0.82)}`);
-  assert.ok(analysed(0.7) - analysed(0.6) > 0.1 + 0.05, "a step near the top counts for more than in the bars");
-  assert.equal(analysed(1), 1);
+  const usual = analysed(0.56);
+  assert.ok(usual > 0.58 && usual < 0.66, `a loud master's usual level stands at ${usual}, not a little over the bars`);
+  assert.ok(analysed(0.6) - analysed(0.5) > 0.18, "a step counts for more than in the bars");
+  assert.ok(analysed(0.75) < analysed(0.85) && analysed(0.85) < 1, "near the top a step still shows");
+  assert.ok(analysed(1) <= 1);
 });
 
 test("drawing stops once everything has come to rest", () => {

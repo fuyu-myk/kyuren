@@ -2,7 +2,8 @@ import { useEffect, useRef } from "react";
 import { on } from "@/island/channels";
 import { analysed, BANDS, FALLBACK, follow, paletteOf, RESPONSE, settled, struck } from "@/island/visualizer";
 
-const HEIGHT = 34;
+/// Both halves, the music drawn above the middle and mirrored below it.
+const HEIGHT = 48;
 /// How much of its slot a bar takes, the rest left as air for the response to show through.
 const FILL = 0.3;
 /// How long nothing at all may come through while a track plays before it is taken as not heard.
@@ -48,54 +49,62 @@ function paint(context: CanvasRenderingContext2D, element: HTMLCanvasElement, ba
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, HEIGHT);
 
-  const floor = HEIGHT - 1;
-  const reach = HEIGHT - 5;
+  const middle = HEIGHT / 2;
+  const reach = middle - 2;
   const tint = context.createLinearGradient(0, 0, width, 0);
   tint.addColorStop(0, from);
   tint.addColorStop(1, to);
 
-  // The response, as an analyser shows it behind an equaliser: filled faintly and fading toward the
-  // floor, with its outline over it, both brightening as the music hits.
-  const area = new Path2D();
-  area.moveTo(0, floor);
-  trace(area, response, width, floor, reach);
-  area.lineTo(width, floor);
-  area.closePath();
-  context.fillStyle = tint;
-  context.globalAlpha = 0.24 + 0.36 * impact;
-  context.fill(area);
-  const fade = context.createLinearGradient(0, 0, 0, floor);
-  fade.addColorStop(0, "rgb(0 0 0 / 0)");
-  fade.addColorStop(1, "rgb(0 0 0 / 0.9)");
-  context.globalCompositeOperation = "destination-out";
-  context.globalAlpha = 1;
-  context.fillStyle = fade;
-  context.fillRect(0, 0, width, HEIGHT);
-  context.globalCompositeOperation = "source-over";
+  // The response, as an analyser shows it behind an equaliser, above the middle and again mirrored
+  // below it: filled faintly and fading toward the middle, with its outline over it, both
+  // brightening as the music hits.
+  for (const mirrored of [false, true]) {
+    context.setTransform(ratio, 0, 0, mirrored ? -ratio : ratio, 0, mirrored ? HEIGHT * ratio : 0);
+    const area = new Path2D();
+    area.moveTo(0, middle);
+    trace(area, response, width, middle, reach);
+    area.lineTo(width, middle);
+    area.closePath();
+    context.fillStyle = tint;
+    context.globalAlpha = 0.24 + 0.36 * impact;
+    context.fill(area);
+    const fade = context.createLinearGradient(0, 0, 0, middle);
+    fade.addColorStop(0, "rgb(0 0 0 / 0)");
+    fade.addColorStop(1, "rgb(0 0 0 / 0.9)");
+    context.globalCompositeOperation = "destination-out";
+    context.globalAlpha = 1;
+    context.fillStyle = fade;
+    context.fillRect(0, 0, width, middle);
+    context.globalCompositeOperation = "source-over";
 
-  const outline = new Path2D();
-  outline.moveTo(0, floor - response[0]! * reach);
-  trace(outline, response, width, floor, reach);
-  context.strokeStyle = tint;
-  context.lineWidth = 1;
-  context.globalAlpha = 0.3 + 0.4 * impact;
-  context.stroke(outline);
+    const outline = new Path2D();
+    outline.moveTo(0, middle - response[0]! * reach);
+    trace(outline, response, width, middle, reach);
+    context.strokeStyle = tint;
+    context.lineWidth = 1;
+    context.globalAlpha = 0.3 + 0.4 * impact;
+    context.stroke(outline);
+  }
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
 
+  // Each bar reaches as far below the middle as above it, drawn whole so the halves do not pinch
+  // where they meet.
   const slot = width / BANDS;
   const bar = slot * FILL;
   context.fillStyle = tint;
   context.globalAlpha = 0.8 + 0.2 * impact;
   bars.forEach((level, index) => {
-    const height = Math.max(bar, struck(level, impact) * reach);
+    const half = Math.max(bar / 2, struck(level, impact) * reach);
     context.beginPath();
-    context.roundRect(index * slot + (slot - bar) / 2, floor - height, bar, height, bar / 2);
+    context.roundRect(index * slot + (slot - bar) / 2, middle - half, bar, 2 * half, bar / 2);
     context.fill();
   });
   context.globalAlpha = 1;
 }
 
-/// What plays, drawn under the music widget as an equaliser would show it: bars that jump with each
-/// band of the music over the response, finer and fainter, that an analyser draws behind them. A
+/// What plays, drawn under the music widget as an equaliser would show it, mirrored about its middle:
+/// bars that jump with each band of the music over the response, finer, fainter and keener, that an
+/// analyser draws behind them. A
 /// hit well over the music before it lifts the bars and lights the response. Coloured from the
 /// cover, and still once the music is.
 export function Visualizer({ live, art, onUnheard }: Props) {
