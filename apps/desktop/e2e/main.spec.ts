@@ -41,6 +41,8 @@ function standIn(): void {
         if (cmd === "island_home") return null;
         if (cmd === "island_week_starts") return "sunday";
         if (cmd === "island_week_starts_set") return args.starts;
+        if (cmd === "island_visualizer") return false;
+        if (cmd === "island_visualizer_set") return args.on;
         if (cmd === "notion_todos" || cmd === "notion_todos_choose") {
           const chosen = cmd === "notion_todos_choose" && args.id ? { chosen: args.id } : {};
           return { connected: true, databases: [{ id: "db1", title: "Tasks" }, { id: "db2", title: "Reading" }], ...chosen };
@@ -295,6 +297,17 @@ test("the island's week begins on Sunday, or on Monday once chosen in settings",
 });
 
 
+
+test("the music widget draws the music once switched on in settings, and the settings follow a click on the cover", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "system" }).click();
+  const drawn = page.getByRole("combobox", { name: "under the now playing widget, draw" });
+  await expect(drawn).toHaveValue("nothing");
+  await drawn.selectOption("music");
+  expect((await calledWith(page, "island_visualizer_set")).map((one) => one.args)).toEqual([{ on: true }]);
+  await expect(drawn).toHaveValue("music");
+  await emit(page, "island:visualizer", false);
+  await expect(drawn).toHaveValue("nothing");
+});
 
 test("the Notion database the island's todos are kept in is chosen in settings", async ({ page }) => {
   await page.locator(".rail").getByRole("button", { name: "system" }).click();

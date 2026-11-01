@@ -35,6 +35,21 @@ function sampleWeek(now: number) {
   };
 }
 /// A day this many days from today, in local time, as the core names days.
+/// Music as the visualizer would hear it, made up: a kick on every beat at 120 a minute, a line
+/// moving through the middle, and cymbals above, brighter on the off beat.
+function bandsAt(t: number): number[] {
+  const beat = (t % 500) / 500;
+  const kick = Math.exp(-beat * 6);
+  return Array.from({ length: 24 }, (_, band) => {
+    let level = 0.3 + 0.2 * Math.abs(Math.sin(t / 61 + band)) * (beat > 0.5 ? 1 : 0.5);
+    if (band < 5) level = 0.5 + 0.45 * kick - band * 0.04;
+    else if (band < 16) level = 0.35 + 0.25 * Math.sin(t / 380 + band * 0.9) + 0.15 * Math.sin(t / 97 + band * 2.1);
+    return Math.round(Math.min(1, Math.max(0, level)) * 100) / 100;
+  });
+}
+
+let playingBands: ReturnType<typeof setInterval> | undefined;
+
 function dayFrom(days: number): string {
   const moment = new Date();
   moment.setDate(moment.getDate() + days);
@@ -187,6 +202,19 @@ export function Harness({ notch }: { notch: Notch }) {
           }}
         >
           music
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (playingBands !== undefined) {
+              clearInterval(playingBands);
+              playingBands = undefined;
+              return;
+            }
+            playingBands = setInterval(() => emitPreview("music:bands", { bands: bandsAt(Date.now()), silent: false }), 33);
+          }}
+        >
+          bands
         </button>
         <button type="button" onClick={() => emitPreview("pomodoro:state", { period: "focus", endsAt: Date.now() + 17 * 60_000 + 42_000, left: 0, done: 2 })}>
           pomodoro

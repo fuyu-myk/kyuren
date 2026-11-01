@@ -33,6 +33,9 @@ pub struct Island {
     /// The day the island's week begins on, Sunday unless it is Monday.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub week_starts: Option<String>,
+    /// Whether the music widget draws the music it hears; off unless switched on.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visualizer: Option<bool>,
     /// Which music players macOS has let Kyuren control, each learned the first time a control is
     /// used on it, since the permission is given per player; a player is asked for its position
     /// only once it is so.

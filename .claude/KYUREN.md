@@ -554,6 +554,17 @@ back while Kyuren is not the app in front. Covers are looked up by the core,
 by track id from Spotify's oEmbed and by store id from Apple's lookup, fetched only from the
 services' own image hosts and handed to the island as images, since its pages load nothing from
 the web.
+Under the widget, once switched on by a click on the cover or in settings, and off until then, the
+music is drawn as an equaliser shows it: thin bars for 24 bands spaced as pitch is heard, and over
+them a bell for each of the bass, the low and high middle and the treble, as tall as its loudest
+band and gliding to where its loudness gathers, coloured from the cover. The perception sidecar
+hears the player alone through a Core Audio process tap on its own processes, its sound going on to
+the speakers untouched, measures a window of 4096 samples thirty times a second and keeps nothing;
+the bands go to the island and nowhere else, and are not logged. The player is heard only while the
+widget is in sight, the visualizer is on and a track plays, so macOS asks to let Kyuren record the
+computer's audio only once it is switched on. A player is looked for again for a few seconds after
+it is told to play, as it may not have opened its sound yet, and music coming through as nothing
+at all for three seconds says where to allow it.
 
 **Coding agents.** The coding tab lists every session of a coding agent running on this Mac,
 however long it has been idle, scrolling past what fits, what waits on the user first: the project,

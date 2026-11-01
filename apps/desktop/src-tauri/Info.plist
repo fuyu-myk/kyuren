@@ -10,6 +10,8 @@
 	<string>Kyuren reads your calendars to tell you what your day holds.</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Kyuren reads your calendars to tell you what your day holds.</string>
+	<key>NSAudioCaptureUsageDescription</key>
+	<string>Kyuren hears only the music player, and only while the visualizer is on, to draw the music under the island's now-playing widget. Nothing it hears is kept.</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Kyuren asks Mail for your unread messages so it can summarise them, and asks Spotify or Music what is playing so the island can show and control it.</string>
 	<key>LSUIElement</key>

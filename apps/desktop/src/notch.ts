@@ -11,7 +11,7 @@ export const WEEK_STARTS = ["sunday", "monday"] as const;
 export type WeekStart = (typeof WEEK_STARTS)[number];
 
 /// Outside the app, in a browser, the settings live here instead, so the layout can be tried.
-const preview: { tabs: Tab[]; widgets: Widget[]; home: Tab | null; shortcuts: string[]; weekStarts: WeekStart } = { tabs: [...TABS], widgets: [], home: null, shortcuts: [], weekStarts: "sunday" };
+const preview: { tabs: Tab[]; widgets: Widget[]; home: Tab | null; shortcuts: string[]; weekStarts: WeekStart; visualizer: boolean } = { tabs: [...TABS], widgets: [], home: null, shortcuts: [], weekStarts: "sunday", visualizer: false };
 
 function kept<T extends string>(known: readonly T[], chosen: T[]): T[] {
   return chosen.filter((one, at) => known.includes(one) && chosen.indexOf(one) === at);
@@ -70,4 +70,15 @@ export function setIslandWeekStarts(starts: WeekStart): Promise<WeekStart> {
   if (insideTauri()) return invoke<WeekStart>("island_week_starts_set", { starts });
   preview.weekStarts = starts;
   return Promise.resolve(starts);
+}
+
+/// Whether the music widget draws the music it hears.
+export function islandVisualizer(): Promise<boolean> {
+  return insideTauri() ? invoke<boolean>("island_visualizer") : Promise.resolve(preview.visualizer);
+}
+
+export function setIslandVisualizer(on: boolean): Promise<boolean> {
+  if (insideTauri()) return invoke<boolean>("island_visualizer_set", { on });
+  preview.visualizer = on;
+  return Promise.resolve(on);
 }

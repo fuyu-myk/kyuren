@@ -154,6 +154,7 @@ fn restored(app: &AppHandle, sidecar: &str) {
             });
         }
         "perception" => {
+            crate::visualizer::restored(&app);
             let wake = crate::wake::wanted();
             if wake.on {
                 tauri::async_runtime::spawn(async move {
@@ -169,6 +170,11 @@ fn restored(app: &AppHandle, sidecar: &str) {
 
 fn event_sink(app: AppHandle) -> EventSink {
     Arc::new(move |sidecar: &str, name: &str, data: Value| {
+        // Thirty times a second and for the island alone: not kept, nor told to every window.
+        if name == "music.bands" {
+            let _ = app.emit_to(crate::island::LABEL, "music:bands", &data);
+            return;
+        }
         log_event(sidecar, name, &data);
         if name == "sidecar.stderr" {
             if let Some(line) = data.get("line").and_then(Value::as_str) {
@@ -212,6 +218,9 @@ fn event_sink(app: AppHandle) -> EventSink {
         }
         if name == "hand.pose" {
             let _ = app.emit("mind:hand", &data);
+        }
+        if name == "music.trouble" {
+            let _ = app.emit_to(crate::island::LABEL, "music:hear-trouble", &data);
         }
         if name == "wake.heard" {
             crate::listening::on_wake(&app);

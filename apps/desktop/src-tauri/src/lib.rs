@@ -30,6 +30,7 @@ mod stats;
 mod todos;
 mod tray;
 mod vaults;
+mod visualizer;
 mod wake;
 mod web;
 mod widgets;
@@ -136,6 +137,9 @@ pub fn run() {
             island::island_home_set,
             island::island_week_starts,
             island::island_week_starts_set,
+            visualizer::island_visualizer,
+            visualizer::island_visualizer_set,
+            visualizer::music_hear,
             todos::todos_list,
             todos::todos_add,
             todos::todos_tick,

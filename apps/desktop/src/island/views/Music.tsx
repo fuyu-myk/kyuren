@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { minutes, played, type Playing } from "@/island/glance";
 import { pacer } from "@/island/pacer";
+import { useVisualizer } from "@/island/useVisualizer";
+import { Visualizer } from "@/island/views/Visualizer";
 
 export type Player = {
   playing: Playing | null;
+  /// Whether the widget is in sight, the only time the player may be heard for the visualizer.
+  shown: boolean;
   art: string | null;
   /// Why the last control did not reach the player, such as not yet being allowed to.
   trouble: string | null;
@@ -29,11 +33,14 @@ const PREVIOUS = "M12.5 3.8l-6 4.2 6 4.2Z M5.2 3.8H3.4v8.4h1.8z";
 const SPEAKER = "M3 6.2h2.2L8.2 3.6v8.8L5.2 9.8H3Z M10.6 5.8a3 3 0 0 1 0 4.4 M12.2 4.2a5.2 5.2 0 0 1 0 7.6";
 
 /// What is playing in Spotify or Music: the cover, the track, where it is with room to seek, and
-/// play, pause and skip. The player's own volume shows only under the cursor.
+/// play, pause and skip. The player's own volume shows only under the cursor. A click on the cover
+/// draws the music below, or stops drawing it.
 export function Music({ player }: { player: Player }) {
   const { playing, art } = player;
   const [, redraw] = useState(0);
   const [volume, setVolume] = useState<number | null>(null);
+  const [unheard, setUnheard] = useState(false);
+  const drawing = useVisualizer(player.shown, playing);
   const bar = useRef<HTMLDivElement>(null);
   // The level follows the slider as it moves, as fast as the player takes it, and what the player
   // says meanwhile is not let move the slider back under the cursor.
@@ -75,64 +82,71 @@ export function Music({ player }: { player: Player }) {
   };
 
   return (
-    <div className="widget music">
-      <div className="cover">{art ? <img src={art} alt="" /> : <Icon d="M6 11.5V4l6-1.5V10 M6 11.5a1.8 1.8 0 1 1-1.8-1.8A1.8 1.8 0 0 1 6 11.5Z M12 10a1.8 1.8 0 1 1-1.8-1.8A1.8 1.8 0 0 1 12 10Z" size={28} />}</div>
-      <div className="volume" title="the player's volume">
-        <Icon d={SPEAKER} size={13} />
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={volume ?? 50}
-          style={{ "--level": `${volume ?? 50}%` } as CSSProperties}
-          onChange={(event) => {
-            const to = Number(event.target.value);
-            level.current = to;
-            setVolume(to);
-            send({ level: to, settled: !dragging.current });
-          }}
-          onPointerDown={() => {
-            dragging.current = true;
-            // Let go anywhere, the slider's own track or not.
-            const done = () => {
-              dragging.current = false;
-              if (level.current !== null) send({ level: level.current, settled: true });
-            };
-            window.addEventListener("pointerup", done, { once: true });
-          }}
-        />
-      </div>
-      <div className="track">
-        <strong className="title">{playing.title || "Untitled"}</strong>
-        <span className="by">{[playing.artist, playing.album].filter(Boolean).join(" - ")}</span>
-        <div className="scrub">
-          <span>{at === null ? "" : minutes(at)}</span>
-          <div
-            ref={bar}
-            className="line"
-            onPointerDown={(event) => seek(event.clientX)}
-            role="slider"
-            aria-valuemin={0}
-            aria-valuemax={playing.duration}
-            aria-valuenow={at ?? 0}
-          >
-            <div className="done" style={{ width: at === null || playing.duration <= 0 ? "0%" : `${(at / playing.duration) * 100}%` }} />
+    <div className={drawing.on ? "widget music drawing" : "widget music"}>
+      <div className="now">
+        <div className="cover" title={drawing.on ? "stop drawing the music" : "draw the music"} onClick={drawing.toggle}>
+          {art ? <img src={art} alt="" /> : <Icon d="M6 11.5V4l6-1.5V10 M6 11.5a1.8 1.8 0 1 1-1.8-1.8A1.8 1.8 0 0 1 6 11.5Z M12 10a1.8 1.8 0 1 1-1.8-1.8A1.8 1.8 0 0 1 12 10Z" size={28} />}
+        </div>
+        <div className="volume" title="the player's volume">
+          <Icon d={SPEAKER} size={13} />
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={volume ?? 50}
+            style={{ "--level": `${volume ?? 50}%` } as CSSProperties}
+            onChange={(event) => {
+              const to = Number(event.target.value);
+              level.current = to;
+              setVolume(to);
+              send({ level: to, settled: !dragging.current });
+            }}
+            onPointerDown={() => {
+              dragging.current = true;
+              // Let go anywhere, the slider's own track or not.
+              const done = () => {
+                dragging.current = false;
+                if (level.current !== null) send({ level: level.current, settled: true });
+              };
+              window.addEventListener("pointerup", done, { once: true });
+            }}
+          />
+        </div>
+        <div className="track">
+          <strong className="title">{playing.title || "Untitled"}</strong>
+          <span className="by">{[playing.artist, playing.album].filter(Boolean).join(" - ")}</span>
+          <div className="scrub">
+            <span>{at === null ? "" : minutes(at)}</span>
+            <div
+              ref={bar}
+              className="line"
+              onPointerDown={(event) => seek(event.clientX)}
+              role="slider"
+              aria-valuemin={0}
+              aria-valuemax={playing.duration}
+              aria-valuenow={at ?? 0}
+            >
+              <div className="done" style={{ width: at === null || playing.duration <= 0 ? "0%" : `${(at / playing.duration) * 100}%` }} />
+            </div>
+            <span>{at === null ? minutes(playing.duration) : `-${minutes(playing.duration - at)}`}</span>
           </div>
-          <span>{at === null ? minutes(playing.duration) : `-${minutes(playing.duration - at)}`}</span>
+          <div className="controls">
+            <button type="button" title="previous" onClick={() => player.control("previous")}>
+              <Icon d={PREVIOUS} filled />
+            </button>
+            <button type="button" className="go" title={playing.playing ? "pause" : "play"} onClick={() => player.control("toggle")}>
+              <Icon d={playing.playing ? PAUSE : PLAY} filled />
+            </button>
+            <button type="button" title="next" onClick={() => player.control("next")}>
+              <Icon d={NEXT} filled />
+            </button>
+          </div>
+          {player.trouble ? <p className="trouble">{player.trouble}</p> : null}
         </div>
-        <div className="controls">
-          <button type="button" title="previous" onClick={() => player.control("previous")}>
-            <Icon d={PREVIOUS} filled />
-          </button>
-          <button type="button" className="go" title={playing.playing ? "pause" : "play"} onClick={() => player.control("toggle")}>
-            <Icon d={playing.playing ? PAUSE : PLAY} filled />
-          </button>
-          <button type="button" title="next" onClick={() => player.control("next")}>
-            <Icon d={NEXT} filled />
-          </button>
-        </div>
-        {player.trouble ? <p className="trouble">{player.trouble}</p> : null}
       </div>
+      {drawing.on ? <Visualizer live={player.shown && playing.playing} art={art} onUnheard={setUnheard} /> : null}
+      {drawing.on && drawing.trouble ? <p className="trouble">{drawing.trouble}</p> : null}
+      {drawing.on && !drawing.trouble && unheard && playing.volume !== 0 ? <p className="hint">Nothing is coming through: let Kyuren in under Privacy & Security, Screen & System Audio Recording.</p> : null}
     </div>
   );
 }

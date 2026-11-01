@@ -1,3 +1,4 @@
+import { listen } from "@tauri-apps/api/event";
 import { useEffect, useRef, useState, type PointerEvent as Pointer } from "react";
 import { TABS, type Tab } from "@/island/fsm";
 import { TabIcon, TITLES } from "@/island/icons";
@@ -5,16 +6,19 @@ import { arranged, landing, slot } from "@/layout";
 import {
   islandHome,
   islandTabs,
+  islandVisualizer,
   islandWeekStarts,
   islandWidgets,
   setIslandHome,
   setIslandTabs,
+  setIslandVisualizer,
   setIslandWeekStarts,
   setIslandWidgets,
   WIDGETS,
   type WeekStart,
   type Widget,
 } from "@/notch";
+import { insideTauri } from "@/tauri";
 
 type Props = { onTrouble: (message: string) => void };
 
@@ -42,6 +46,7 @@ export function IslandLayout({ onTrouble }: Props) {
   const [widgets, setWidgets] = useState<Widget[]>();
   const [home, setHome] = useState<Tab | null>(null);
   const [weekStarts, setWeekStarts] = useState<WeekStart>("sunday");
+  const [visualizer, setVisualizer] = useState(false);
   const [held, setHeld] = useState<Held | null>(null);
   const [over, setOver] = useState<Over | null>(null);
   const tabRow = useRef<HTMLDivElement>(null);
@@ -53,7 +58,15 @@ export function IslandLayout({ onTrouble }: Props) {
     void islandWidgets().then(setWidgets).catch((failure) => onTrouble(String(failure)));
     void islandHome().then(setHome).catch(() => setHome(null));
     void islandWeekStarts().then(setWeekStarts).catch(() => setWeekStarts("sunday"));
+    void islandVisualizer().then(setVisualizer).catch((failure) => onTrouble(String(failure)));
   }, [onTrouble]);
+
+  // A click on the cover switches it too, and this follows.
+  useEffect(() => {
+    if (!insideTauri()) return;
+    const stop = listen<boolean>("island:visualizer", (event) => setVisualizer(event.payload));
+    return () => void stop.then((unlisten) => unlisten());
+  }, []);
 
   const saveTabs = async (next: Tab[]) => {
     setTabs(next);
@@ -68,6 +81,15 @@ export function IslandLayout({ onTrouble }: Props) {
     setWidgets(next);
     try {
       setWidgets(await setIslandWidgets(next));
+    } catch (failure) {
+      onTrouble(String(failure));
+    }
+  };
+
+  const saveVisualizer = async (next: boolean) => {
+    setVisualizer(next);
+    try {
+      setVisualizer(await setIslandVisualizer(next));
     } catch (failure) {
       onTrouble(String(failure));
     }
@@ -224,6 +246,13 @@ export function IslandLayout({ onTrouble }: Props) {
         <select value={weekStarts} onChange={(event) => void saveWeekStarts(event.target.value as WeekStart)}>
           <option value="sunday">Sunday</option>
           <option value="monday">Monday</option>
+        </select>
+      </label>
+      <label className="opens-on">
+        <span>under the now playing widget, draw</span>
+        <select value={visualizer ? "music" : "nothing"} onChange={(event) => void saveVisualizer(event.target.value === "music")}>
+          <option value="nothing">nothing</option>
+          <option value="music">the music as it plays</option>
         </select>
       </label>
       {held?.moved ? (

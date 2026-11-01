@@ -160,6 +160,75 @@ test("the volume follows the slider as it moves, and what the player says meanwh
   await expect(slider).toHaveValue("30");
 });
 
+test("a click on the cover draws the music below it, the player heard only while a track plays in sight", async ({ page }) => {
+  const playing = { player: "spotify", title: "Pastel Rain", artist: "Sangatsu no Phantasia", album: "", duration: 211, position: 41, at: Date.now(), playing: true, track: "t", volume: 64 };
+  await send(page, "widgets");
+  await opened(page);
+  await page.locator(".tabs .tab[title='glance']").click();
+  await emit(page, "music:now", playing);
+  const strip = page.locator(".music .visualizer");
+  await expect(strip).toHaveCount(0);
+  // Nothing is heard, and whatever a page before this one left hearing is told to stop.
+  const heard = () => commanded(page, "music_hear");
+  await expect.poll(async () => (await heard()).length).toBeGreaterThan(0);
+  expect(await heard()).toEqual((await heard()).map(() => ({})));
+  const before = (await heard()).length;
+  const since = async () => (await heard()).slice(before);
+
+  await page.locator(".music .cover").click();
+  await expect(strip).toBeVisible();
+  expect(await commanded(page, "island_visualizer_set")).toEqual([{ on: true }]);
+  await expect.poll(since).toEqual([{ player: "spotify" }]);
+
+  // What is heard is drawn: most of the strip is lit by music this loud.
+  await emit(page, "music:bands", { bands: new Array(24).fill(0.8), silent: false });
+  const lit = () =>
+    page.evaluate(() => {
+      const canvas = document.querySelector<HTMLCanvasElement>(".music .visualizer")!;
+      const pixels = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+      let shown = 0;
+      for (let at = 3; at < pixels.length; at += 4) if (pixels[at]! > 0) shown++;
+      return shown / (pixels.length / 4);
+    });
+  await expect.poll(lit).toBeGreaterThan(0.3);
+
+  // Paused, or folded away, the player is no longer heard.
+  await emit(page, "music:now", { ...playing, playing: false });
+  await expect.poll(since).toEqual([{ player: "spotify" }, {}]);
+  await emit(page, "music:now", playing);
+  await expect.poll(since).toHaveLength(3);
+  await folded(page);
+  await expect.poll(since).toEqual([{ player: "spotify" }, {}, { player: "spotify" }, {}]);
+  // Folded away, the bars come down and drawing stops rather than running unseen.
+  await expect.poll(lit, { timeout: 5_000 }).toBeLessThan(0.1);
+
+  await opened(page);
+  await page.locator(".music .cover").click();
+  await expect(strip).toHaveCount(0);
+  expect(await commanded(page, "island_visualizer_set")).toEqual([{ on: true }, { on: false }]);
+});
+
+test("music that comes through as nothing at all for a while says where macOS lets Kyuren hear it", async ({ page }) => {
+  const playing = { player: "music", title: "Clair de lune", artist: "", album: "", duration: 300, position: 10, at: Date.now(), playing: true, track: "m", volume: 50 };
+  await send(page, "widgets");
+  await opened(page);
+  await page.locator(".tabs .tab[title='glance']").click();
+  await emit(page, "music:now", playing);
+  await page.locator(".music .cover").click();
+  const hint = page.locator(".music .hint");
+  const silence = { bands: new Array(24).fill(0), silent: true };
+  await emit(page, "music:bands", silence);
+  await expect(hint).toHaveCount(0);
+  await page.waitForTimeout(3_100);
+  await emit(page, "music:bands", silence);
+  await expect(hint).toContainText("Screen & System Audio Recording");
+  await emit(page, "music:bands", { bands: new Array(24).fill(0.4), silent: false });
+  await expect(hint).toHaveCount(0);
+
+  await emit(page, "music:hear-trouble", { reason: "the player is not sending out any sound yet" });
+  await expect(page.locator(".music .trouble")).toHaveText("the player is not sending out any sound yet");
+});
+
 test("an opened session shows what the agent said last, whole on a click, and offers to open where it runs", async ({ page }) => {
   await sessionOpened(page);
   const said = page.locator(".coding-detail .said");

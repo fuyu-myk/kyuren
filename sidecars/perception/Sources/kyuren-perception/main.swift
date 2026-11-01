@@ -49,6 +49,10 @@ for (method, handler) in wakeHandlers(ear, microphone) {
 for (method, handler) in readingHandlers() {
     dispatcher.registerLater(method, handler)
 }
+let music = MusicTap(transport: transport)
+for (method, handler) in musicHandlers(music) {
+    dispatcher.register(method, handler)
+}
 
 transport.send(.event(name: "sidecar.ready", data: .object(["name": .string("perception")])))
 
@@ -63,6 +67,7 @@ let reader = Thread {
     }
 
     ear.stop()
+    music.shutdown()
     microphone.shutdown()
     sight.stop()
     speech.stop()

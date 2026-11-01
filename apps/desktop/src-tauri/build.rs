@@ -27,6 +27,7 @@ const COMMANDS: &[&str] = &[
     "playbook_approve", "playbook_reject", "playbook_runs", "playbook_repair",
     "playbook_invoke", "research_notes", "research_read", "web_engine",
     "web_engine_set", "web_fallback_set", "web_search_try",
+    "island_visualizer", "island_visualizer_set", "music_hear",
 ];
 
 fn main() {

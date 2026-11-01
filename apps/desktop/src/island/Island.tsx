@@ -734,6 +734,7 @@ export function Island() {
               }}
               player={{
                 playing,
+                shown: listening,
                 art: playing?.track && art?.track === playing.track ? art.art : null,
                 trouble,
                 control: (action, value) => {
