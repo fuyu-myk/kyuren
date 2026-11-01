@@ -10,6 +10,11 @@ export const RESPONSE = 64;
 /// How much a hit lifts a bar, as a share of its own height.
 const LIFT = 0.4;
 
+/// How keenly the response follows loudness beyond the bars: a loud master's usual level stands at
+/// about a third, and about 9 dB over it the response passes the bars on its way to the top.
+const KEENNESS = 2.6;
+const GAIN = 1.6;
+
 /// Each level eased toward what is heard over a frame of `dt` ms: within `rise` ms on the way up
 /// and `fall` on the way down, so a beat lands at once and dies away.
 export function follow(shown: number[], heard: number[], dt: number, rise: number, fall: number): number[] {
@@ -27,6 +32,11 @@ export function settled(levels: number[]): boolean {
 /// A bar as a hit lifts it: the louder it already stands the more, and never past full.
 export function struck(level: number, impact: number): number {
   return Math.min(1, level * (1 + LIFT * impact));
+}
+
+/// A step of the response as the analyser draws it: lower at rest than the bars, higher at its peaks.
+export function analysed(level: number): number {
+  return Math.min(1, GAIN * level ** KEENNESS);
 }
 
 type Rgb = [number, number, number];

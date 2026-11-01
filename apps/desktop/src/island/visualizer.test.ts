@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { FALLBACK, follow, paletteOf, settled, struck } from "./visualizer.ts";
+import { analysed, FALLBACK, follow, paletteOf, settled, struck } from "./visualizer.ts";
 
 test("bars rise quickly to what is heard and fall back slowly", () => {
   const up = follow([0], [1], 16, 35, 160)[0]!;
@@ -20,6 +20,15 @@ test("a hit lifts the bars, the louder ones the most, and never past full", () =
   assert.ok(struck(0.5, 1) > 0.6, `lifted only to ${struck(0.5, 1)}`);
   assert.ok(struck(0.6, 1) - 0.6 > struck(0.1, 1) - 0.1);
   assert.equal(struck(0.9, 1), 1);
+});
+
+test("the response rests lower than the bars and peaks higher, keener to a step in loudness", () => {
+  assert.equal(analysed(0), 0);
+  assert.ok(analysed(0.56) < 0.45, `a loud master's usual level stands at ${analysed(0.56)}`);
+  assert.ok(analysed(0.3) > 0, "quiet music still shows");
+  assert.ok(analysed(0.82) > 0.88, `a peak stands at only ${analysed(0.82)}`);
+  assert.ok(analysed(0.7) - analysed(0.6) > 0.1 + 0.05, "a step near the top counts for more than in the bars");
+  assert.equal(analysed(1), 1);
 });
 
 test("drawing stops once everything has come to rest", () => {

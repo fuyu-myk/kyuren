@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { on } from "@/island/channels";
-import { BANDS, FALLBACK, follow, paletteOf, RESPONSE, settled, struck } from "@/island/visualizer";
+import { analysed, BANDS, FALLBACK, follow, paletteOf, RESPONSE, settled, struck } from "@/island/visualizer";
 
 const HEIGHT = 34;
 /// How much of its slot a bar takes, the rest left as air for the response to show through.
@@ -175,8 +175,9 @@ export function Visualizer({ live, art, onUnheard }: Props) {
       last = now;
       const got = heard.current;
       bars = follow(bars, got.bands, dt, 35, 160);
-      // The response is slower than the bars, as an analyser's is, and a hit dies away after it lands.
-      response = follow(response, got.response, dt, 60, 320);
+      // The response is keener and slower than the bars, as an analyser's is, and a hit dies away
+      // after it lands.
+      response = follow(response, got.response.map(analysed), dt, 60, 320);
       impact = follow([impact], [got.impact], dt, 15, 260)[0]!;
       paint(context, element, bars, response, impact, palette.current);
       // Drawing stops once all has come to rest, and the next sound wakes it.

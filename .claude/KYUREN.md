@@ -563,7 +563,8 @@ the web.
 Under the widget, once switched on by a click on the cover or in settings, and off until then, the
 music is drawn as an equaliser shows it: thin bars for 24 bands spaced as pitch is heard, and
 behind them, faint and fading toward the floor, the response in 64 finer steps as an analyser draws
-it, coloured from the cover. A hit well over the second or so of music before it, as a drop or a
+it, keener than the bars, so it rests below them and its peaks rise past them, coloured from the
+cover. A hit well over the second or so of music before it, as a drop or a
 heavy beat is, lifts the bars and lights the response for a moment; music that is merely loud does
 not, and loud music stands about halfway so a hit has room. The perception sidecar hears the player
 alone through a Core Audio process tap on its own processes, its sound going on to the speakers
