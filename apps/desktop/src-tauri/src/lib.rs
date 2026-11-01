@@ -86,6 +86,7 @@ pub fn run() {
             commands::store_secret,
             commands::forget_secret,
             commands::held_secrets,
+            commands::skill_keys_held,
             commands::connect_service,
             commands::morning_brief,
             commands::evening_recap,

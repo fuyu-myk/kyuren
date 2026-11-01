@@ -64,6 +64,13 @@ pub fn held_secrets() -> Vec<String> {
     secrets::held()
 }
 
+/// Which of the keys the skills name are in the keychain, for the skills pane to offer a place to
+/// give each one that is not.
+#[tauri::command]
+pub fn skill_keys_held(names: Vec<String>) -> Vec<String> {
+    secrets::skill_keys_held(&names)
+}
+
 /// Consent pages Kyuren will open. The sidecar builds the address from a pinned host, and this
 /// checks it again on the way out, so a wrong or tampered address opens nothing.
 const CONSENT_HOSTS: [&str; 2] = [

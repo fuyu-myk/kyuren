@@ -12,6 +12,8 @@ function standIn(): void {
   const waiting: Array<() => void> = [];
   const failed = { path: "/runs/research.md", startedAt: "2026-10-20T09:00:00Z", outcome: "failed" };
   const books = [{ name: "research", approved: true, pending: false, when: "a question to research", inputs: [] as unknown[], recent: [failed] }];
+  const weather = { id: "s1", name: "weather_now", about: "The weather where asked.", method: "GET", url: "https://api.example.com/weather", parameters: [], headers: {}, auth: { mode: "bearer", credential: "weather" }, reads: "json", state: "approved", drafted: Date.now() };
+  let keys: string[] = [];
   let next = 1;
   Object.assign(window, {
     __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener: (_event: string, id: number) => callbacks.delete(id) },
@@ -41,6 +43,16 @@ function standIn(): void {
         if (cmd === "island_home") return null;
         if (cmd === "island_week_starts") return "sunday";
         if (cmd === "island_week_starts_set") return args.starts;
+        if (cmd === "skills_list") return { skills: [weather] };
+        if (cmd === "skill_keys_held") return (args.names as string[]).filter((name) => keys.includes(name));
+        if (cmd === "store_secret") {
+          keys = [...keys, String(args.name).replace(/^skill:/, "")];
+          return [];
+        }
+        if (cmd === "forget_secret") {
+          keys = keys.filter((name) => `skill:${name}` !== args.name);
+          return [];
+        }
         if (cmd === "island_visualizer") return false;
         if (cmd === "island_visualizer_set") return args.on;
         if (cmd === "notion_todos" || cmd === "notion_todos_choose") {
@@ -307,6 +319,26 @@ test("the music widget draws the music once switched on in settings, and the set
   await expect(drawn).toHaveValue("music");
   await emit(page, "island:visualizer", false);
   await expect(drawn).toHaveValue("nothing");
+});
+
+test("a skill's key is given in the skills pane, straight to the keychain, and only whether it is held comes back", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "knowledge" }).click();
+  const field = page.getByLabel("the key for weather");
+  await expect(field).toBeVisible();
+  await expect(page.locator(".forged").getByRole("button", { name: "keep" })).toBeDisabled();
+  await field.fill("sk-a-test-value");
+  await field.press("Enter");
+  expect((await calledWith(page, "store_secret")).map((one) => one.args)).toEqual([{ name: "skill:weather", secret: "sk-a-test-value" }]);
+  const kept = page.locator(".forged .key strong");
+  await expect(kept).toHaveText("weather");
+  await expect(field).toHaveCount(0);
+  expect(await page.locator(".forged").innerHTML()).not.toContain("sk-a-test-value");
+  expect((await calledWith(page, "skill_keys_held")).at(-1)?.args).toEqual({ names: ["weather"] });
+
+  await page.locator(".forged .key").getByRole("button", { name: "forget" }).click();
+  expect((await calledWith(page, "forget_secret")).map((one) => one.args)).toEqual([{ name: "skill:weather" }]);
+  await expect(field).toBeVisible();
+  await expect(field).toHaveValue("");
 });
 
 test("the Notion database the island's todos are kept in is chosen in settings", async ({ page }) => {

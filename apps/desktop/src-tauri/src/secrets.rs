@@ -33,6 +33,21 @@ pub fn known(name: &str) -> bool {
     NAMES.contains(&name) || forged(name)
 }
 
+/// The most skill keys looked up at once, so a window cannot have the keychain read without end.
+const MOST_ASKED: usize = 64;
+
+/// The names a window may ask after: those a skill could have given its key, and no more of them
+/// than a list of skills would hold.
+fn askable(names: &[String]) -> impl Iterator<Item = &String> {
+    names.iter().filter(|name| forged(&format!("{FORGED}{name}"))).take(MOST_ASKED)
+}
+
+/// Which of the keys skills name are held, by the names the skills give them. Whether each is
+/// held is all that is said; no key is read back to a window.
+pub fn skill_keys_held(names: &[String]) -> Vec<String> {
+    askable(names).filter(|name| read(&format!("{FORGED}{name}")).is_some()).cloned().collect()
+}
+
 pub fn read(name: &str) -> Option<String> {
     Entry::new(SERVICE, name)
         .ok()
@@ -137,4 +152,22 @@ pub fn store_from(app: &AppHandle, data: &serde_json::Value) {
         resend(&app).await;
         let _ = tauri::Emitter::emit(&app, "connections", held());
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_names_a_skill_could_give_its_key_are_asked_after() {
+        let long = "x".repeat(41);
+        let names: Vec<String> = ["weather", "Weather", "../anthropic", "", "a_1", long.as_str()].map(String::from).to_vec();
+        assert_eq!(askable(&names).collect::<Vec<_>>(), ["weather", "a_1"]);
+    }
+
+    #[test]
+    fn no_more_names_are_asked_after_than_a_list_of_skills_would_hold() {
+        let names: Vec<String> = (0..100).map(|number| format!("key{number}")).collect();
+        assert_eq!(askable(&names).count(), MOST_ASKED);
+    }
 }

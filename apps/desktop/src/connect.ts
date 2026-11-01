@@ -16,6 +16,16 @@ export function heldSecrets(): Promise<string[]> {
   return invoke<string[]>("held_secrets");
 }
 
+/// What a skill's key is called in the keychain, as the host names it: apart from every
+/// credential Kyuren holds for itself.
+export const SKILL_KEY = "skill:";
+
+/// Which of the keys these skills name are held; whether, never what.
+export function skillKeysHeld(names: string[]): Promise<string[]> {
+  if (!insideTauri() || names.length === 0) return Promise.resolve([]);
+  return invoke<string[]>("skill_keys_held", { names });
+}
+
 /// Starts a service's consent in the browser. The grant returns to a loopback listener in the core
 /// process, so nothing is typed back into Kyuren and the code never leaves the machine.
 export function connectService(

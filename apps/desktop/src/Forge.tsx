@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { skillKeysHeld } from "@/connect";
 import { approveSkill, forgetSkill, listSkills, type Skill } from "@/sessions";
+import { SkillKey } from "@/SkillKey";
 import { ago } from "@/when";
 
 /// What Kyuren has taught itself, and what standing each of those things has.
@@ -8,12 +10,16 @@ import { ago } from "@/when";
 /// request rather than to its name.
 export function Forge() {
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [held, setHeld] = useState<string[]>([]);
   const [asking, setAsking] = useState<string>();
   const [trouble, setTrouble] = useState<string>();
 
   const look = useCallback(async () => {
     try {
-      setSkills(await listSkills());
+      const listed = await listSkills();
+      setSkills(listed);
+      const named = listed.map((one) => one.auth.credential).filter((one): one is string => one !== undefined);
+      setHeld(await skillKeysHeld([...new Set(named)]));
       setTrouble(undefined);
     } catch (failure) {
       setTrouble(String(failure));
@@ -66,6 +72,9 @@ export function Forge() {
                 <em>from the keychain, as {one.auth.credential}</em>
               </span>
             </p>
+          ) : null}
+          {one.auth.mode !== "none" && one.auth.credential ? (
+            <SkillKey credential={one.auth.credential} held={held.includes(one.auth.credential)} onChanged={() => void look()} />
           ) : null}
 
           {one.trouble ? <p className="broke">{one.trouble}</p> : null}

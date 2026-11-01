@@ -22,6 +22,7 @@
     "allow-connect-service",
     "allow-forget-secret",
     "allow-held-secrets",
+    "allow-skill-keys-held",
     "allow-island-home",
     "allow-island-home-set",
     "allow-island-week-starts",

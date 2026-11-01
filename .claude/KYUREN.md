@@ -370,6 +370,12 @@ skill reaches only the public web over https, not a name found to lead nearby, a
 through a redirect only within the address it was approved for, since anywhere else is somewhere
 the approval never looked.
 
+A skill that proves who it is names its key, and never carries it. The key is given by the user in
+the skills pane, under the skill that names it, and goes straight to the keychain under `skill:`
+and the name, apart from every credential Kyuren holds for itself; the pane is told only whether
+each key is held, never what it is, and the user may forget one there. Kyuren never enters a key
+itself. The core is handed the keys the skills name, as every credential reaches it.
+
 Forged skills appear in the mind graph's capability layer the moment they are drafted, so the
 graph shows the assistant growing.
 
