@@ -181,7 +181,7 @@ test("a click on the cover draws the music below it, the player heard only while
   await expect.poll(since).toEqual([{ player: "spotify" }]);
 
   // What is heard is drawn: most of the strip is lit by music this loud.
-  await emit(page, "music:bands", { bands: new Array(24).fill(0.8), silent: false });
+  await emit(page, "music:bands", { bands: new Array(24).fill(0.8), response: new Array(64).fill(0.8), impact: 0, silent: false });
   const lit = () =>
     page.evaluate(() => {
       const canvas = document.querySelector<HTMLCanvasElement>(".music .visualizer")!;
@@ -216,13 +216,13 @@ test("music that comes through as nothing at all for a while says where macOS le
   await emit(page, "music:now", playing);
   await page.locator(".music .cover").click();
   const hint = page.locator(".music .hint");
-  const silence = { bands: new Array(24).fill(0), silent: true };
+  const silence = { bands: new Array(24).fill(0), response: new Array(64).fill(0), impact: 0, silent: true };
   await emit(page, "music:bands", silence);
   await expect(hint).toHaveCount(0);
   await page.waitForTimeout(3_100);
   await emit(page, "music:bands", silence);
   await expect(hint).toContainText("Screen & System Audio Recording");
-  await emit(page, "music:bands", { bands: new Array(24).fill(0.4), silent: false });
+  await emit(page, "music:bands", { bands: new Array(24).fill(0.4), response: new Array(64).fill(0.4), impact: 0, silent: false });
   await expect(hint).toHaveCount(0);
 
   await emit(page, "music:hear-trouble", { reason: "the player is not sending out any sound yet" });

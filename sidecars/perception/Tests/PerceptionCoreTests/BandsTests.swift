@@ -32,6 +32,8 @@ struct BandsTests {
         let heard = Bands().measure([Float](repeating: 0, count: Bands.size), rate: rate)
         #expect(heard.levels.count == Bands.count)
         #expect(heard.levels.allSatisfy { $0 == 0 })
+        #expect(heard.response.count == Bands.detail)
+        #expect(heard.response.allSatisfy { $0 == 0 })
         #expect(heard.silent)
     }
 
@@ -47,6 +49,19 @@ struct BandsTests {
         }
     }
 
+    @Test("the response, finer than the bands, peaks where a tone is, low notes as much as high")
+    func theResponsePeaksAtATone() throws {
+        let bands = Bands()
+        for frequency in [50.0, 110.0, 440.0, 6_000.0] {
+            let response = bands.measure(tone(frequency, peak: 0.25), rate: rate).response
+            #expect(response.count == Bands.detail)
+            let loudest = try #require(response.indices.max { response[$0] < response[$1] })
+            let edges = Bands.edges(rate: rate, count: Bands.detail)
+            let place = log(frequency / edges[0]) / log(edges[Bands.detail] / edges[0]) * Double(Bands.detail)
+            #expect(abs(Double(loudest) + 0.5 - place) <= 2, "\(frequency) Hz at \(loudest), not near \(place)")
+        }
+    }
+
     @Test("a louder tone stands taller, and nothing goes past full")
     func aLouderToneStandsTaller() {
         let bands = Bands()
@@ -57,14 +72,16 @@ struct BandsTests {
         #expect(clipped <= 1)
     }
 
-    @Test("music at a loud master's level fills the bands to about two thirds, and evenly")
+    @Test("music at a loud master's level fills the bands to about half, leaving room for a hit, and evenly")
     func pinkNoiseFillsTheBandsEvenly() {
-        let levels = Bands().measure(pink(decibels: -14), rate: rate).levels
-        let mean = levels.reduce(0, +) / Float(levels.count)
-        #expect(mean > 0.5 && mean < 0.8, "mean \(mean)")
-        let lowHalf = levels[..<(levels.count / 2)].reduce(0, +)
-        let highHalf = levels[(levels.count / 2)...].reduce(0, +)
-        #expect(abs(lowHalf - highHalf) / (lowHalf + highHalf) < 0.15, "low \(lowHalf) high \(highHalf)")
+        let heard = Bands().measure(pink(decibels: -14), rate: rate)
+        for levels in [heard.levels, heard.response] {
+            let mean = levels.reduce(0, +) / Float(levels.count)
+            #expect(mean > 0.45 && mean < 0.65, "mean \(mean)")
+            let lowHalf = levels[..<(levels.count / 2)].reduce(0, +)
+            let highHalf = levels[(levels.count / 2)...].reduce(0, +)
+            #expect(abs(lowHalf - highHalf) / (lowHalf + highHalf) < 0.15, "low \(lowHalf) high \(highHalf)")
+        }
     }
 
     @Test("the bands are spaced as pitch is heard, each wider than the one below")

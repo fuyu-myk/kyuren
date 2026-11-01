@@ -561,11 +561,14 @@ by track id from Spotify's oEmbed and by store id from Apple's lookup, fetched o
 services' own image hosts and handed to the island as images, since its pages load nothing from
 the web.
 Under the widget, once switched on by a click on the cover or in settings, and off until then, the
-music is drawn as an equaliser shows it: thin bars for 24 bands spaced as pitch is heard, and over
-them a bell for each of the bass, the low and high middle and the treble, as tall as its loudest
-band and gliding to where its loudness gathers, coloured from the cover. The perception sidecar
-hears the player alone through a Core Audio process tap on its own processes, its sound going on to
-the speakers untouched, measures a window of 4096 samples thirty times a second and keeps nothing;
+music is drawn as an equaliser shows it: thin bars for 24 bands spaced as pitch is heard, and
+behind them, faint and fading toward the floor, the response in 64 finer steps as an analyser draws
+it, coloured from the cover. A hit well over the second or so of music before it, as a drop or a
+heavy beat is, lifts the bars and lights the response for a moment; music that is merely loud does
+not, and loud music stands about halfway so a hit has room. The perception sidecar hears the player
+alone through a Core Audio process tap on its own processes, its sound going on to the speakers
+untouched, measures a window of 4096 samples thirty times a second, its newest 2048 against the
+music before for a hit, and keeps nothing;
 the bands go to the island and nowhere else, and are not logged. The player is heard only while the
 widget is in sight, the visualizer is on and a track plays, so macOS asks to let Kyuren record the
 computer's audio only once it is switched on. A player is looked for again for a few seconds after

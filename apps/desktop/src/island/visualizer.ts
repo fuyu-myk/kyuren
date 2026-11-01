@@ -4,18 +4,11 @@ export const BANDS = 24;
 /// The island's own lavender and pink, for a cover with no colour to take or none at all.
 export const FALLBACK: [string, string] = ["hsl(232 97% 85%)", "hsl(316 72% 86%)"];
 
-/// The parts of the spectrum given a bell each, by band: the bass, the low and the high middle, and
-/// the treble.
-export const REGIONS: Array<[number, number]> = [
-  [0, 5],
-  [6, 11],
-  [12, 17],
-  [18, 23],
-];
+/// How many steps the response behind the bars is drawn through, finer than the bars.
+export const RESPONSE = 64;
 
-/// A bell of the response, as an equaliser draws one: where it stands and how wide, in bands, and
-/// how tall.
-export type Bell = { centre: number; height: number; width: number };
+/// How much a hit lifts a bar, as a share of its own height.
+const LIFT = 0.4;
 
 /// Each level eased toward what is heard over a frame of `dt` ms: within `rise` ms on the way up
 /// and `fall` on the way down, so a beat lands at once and dies away.
@@ -31,34 +24,9 @@ export function settled(levels: number[]): boolean {
   return levels.every((level) => level < 0.005);
 }
 
-/// A bell for each part of the music, as tall as that part's loudest band and standing over where
-/// its loudness gathers, as wide as it is spread.
-export function bellsOf(levels: number[]): Bell[] {
-  return REGIONS.map(([from, to]) => {
-    const part = levels.slice(from, to + 1);
-    const height = Math.max(0, ...part);
-    // Raised to the fourth, the loudest bands decide where the bell stands.
-    const weights = part.map((level) => level ** 4);
-    const total = weights.reduce((sum, weight) => sum + weight, 0);
-    if (total === 0) return { centre: (from + to) / 2, height: 0, width: 1.5 };
-    const centre = from + weights.reduce((sum, weight, index) => sum + weight * index, 0) / total;
-    const spread = Math.sqrt(weights.reduce((sum, weight, index) => sum + weight * (from + index - centre) ** 2, 0) / total);
-    return { centre, height, width: Math.min(2.5, Math.max(1, 0.8 + 1.5 * spread)) };
-  });
-}
-
-/// How tall a bell stands at a place along the bands.
-export function bellAt(bell: Bell, at: number): number {
-  return bell.height * Math.exp(-((at - bell.centre) ** 2) / (2 * bell.width ** 2));
-}
-
-/// The bells eased toward where the music puts them, gliding along rather than jumping between
-/// bands, rising with a beat and settling after it.
-export function followBells(shown: Bell[], wanted: Bell[], dt: number): Bell[] {
-  const centres = follow(shown.map((bell) => bell.centre), wanted.map((bell) => bell.centre), dt, 90, 90);
-  const heights = follow(shown.map((bell) => bell.height), wanted.map((bell) => bell.height), dt, 40, 140);
-  const widths = follow(shown.map((bell) => bell.width), wanted.map((bell) => bell.width), dt, 120, 120);
-  return wanted.map((_, index) => ({ centre: centres[index]!, height: heights[index]!, width: widths[index]! }));
+/// A bar as a hit lifts it: the louder it already stands the more, and never past full.
+export function struck(level: number, impact: number): number {
+  return Math.min(1, level * (1 + LIFT * impact));
 }
 
 type Rgb = [number, number, number];

@@ -1,14 +1,17 @@
 import { useEffect, useRef } from "react";
 import { on } from "@/island/channels";
-import { BANDS, bellAt, bellsOf, FALLBACK, follow, followBells, paletteOf, settled, type Bell } from "@/island/visualizer";
+import { BANDS, FALLBACK, follow, paletteOf, RESPONSE, settled, struck } from "@/island/visualizer";
 
 const HEIGHT = 34;
-/// How much of its slot a bar takes, the rest left as air for the bells to show through.
+/// How much of its slot a bar takes, the rest left as air for the response to show through.
 const FILL = 0.3;
-/// The node at each bell's peak, pale, as an equaliser marks the bands it shapes.
-const NODE = "rgb(245 247 255)";
 /// How long nothing at all may come through while a track plays before it is taken as not heard.
 const UNHEARD = 3_000;
+
+/// One measure of the music: its bands, the same finer for the response, and how hard it just hit.
+type Heard = { bands: number[]; response: number[]; impact: number };
+
+const NOTHING: Heard = { bands: new Array<number>(BANDS).fill(0), response: new Array<number>(RESPONSE).fill(0), impact: 0 };
 
 type Props = {
   /// Whether the music is being heard: a track playing with the widget in sight.
@@ -18,16 +21,24 @@ type Props = {
   onUnheard: (unheard: boolean) => void;
 };
 
-/// A bell's outline along the strip, from its foot on the left to its foot on the right.
-function bellPath(bell: Bell, slot: number, width: number, floor: number, reach: number): Path2D {
-  const path = new Path2D();
-  path.moveTo(0, floor);
-  for (let x = 0; x <= width; x += 2) path.lineTo(x, floor - bellAt(bell, x / slot - 0.5) * reach);
-  path.lineTo(width, floor);
-  return path;
+/// The response's outline from the left edge to the right, smoothed between its steps, each over
+/// its own place in the spectrum as the bars are.
+function trace(path: Path2D, response: number[], width: number, floor: number, reach: number): void {
+  const step = width / response.length;
+  const at = (index: number): [number, number] => [(index + 0.5) * step, floor - response[index]! * reach];
+  const last = response.length - 1;
+  path.lineTo(0, at(0)[1]);
+  path.lineTo(...at(0));
+  for (let index = 1; index < last; index++) {
+    const [x, y] = at(index);
+    const [nextX, nextY] = at(index + 1);
+    path.quadraticCurveTo(x, y, (x + nextX) / 2, (y + nextY) / 2);
+  }
+  path.lineTo(...at(last));
+  path.lineTo(width, at(last)[1]);
 }
 
-function paint(context: CanvasRenderingContext2D, element: HTMLCanvasElement, bars: number[], bells: Bell[], [from, to]: [string, string]): void {
+function paint(context: CanvasRenderingContext2D, element: HTMLCanvasElement, bars: number[], response: number[], impact: number, [from, to]: [string, string]): void {
   const ratio = window.devicePixelRatio || 1;
   const width = element.clientWidth;
   if (element.width !== Math.round(width * ratio)) {
@@ -39,46 +50,57 @@ function paint(context: CanvasRenderingContext2D, element: HTMLCanvasElement, ba
 
   const floor = HEIGHT - 1;
   const reach = HEIGHT - 5;
-  const slot = width / BANDS;
-  const bar = slot * FILL;
   const tint = context.createLinearGradient(0, 0, width, 0);
   tint.addColorStop(0, from);
   tint.addColorStop(1, to);
-  context.fillStyle = tint;
-  context.strokeStyle = tint;
 
-  context.globalAlpha = 0.8;
+  // The response, as an analyser shows it behind an equaliser: filled faintly and fading toward the
+  // floor, with its outline over it, both brightening as the music hits.
+  const area = new Path2D();
+  area.moveTo(0, floor);
+  trace(area, response, width, floor, reach);
+  area.lineTo(width, floor);
+  area.closePath();
+  context.fillStyle = tint;
+  context.globalAlpha = 0.24 + 0.36 * impact;
+  context.fill(area);
+  const fade = context.createLinearGradient(0, 0, 0, floor);
+  fade.addColorStop(0, "rgb(0 0 0 / 0)");
+  fade.addColorStop(1, "rgb(0 0 0 / 0.9)");
+  context.globalCompositeOperation = "destination-out";
+  context.globalAlpha = 1;
+  context.fillStyle = fade;
+  context.fillRect(0, 0, width, HEIGHT);
+  context.globalCompositeOperation = "source-over";
+
+  const outline = new Path2D();
+  outline.moveTo(0, floor - response[0]! * reach);
+  trace(outline, response, width, floor, reach);
+  context.strokeStyle = tint;
+  context.lineWidth = 1;
+  context.globalAlpha = 0.3 + 0.4 * impact;
+  context.stroke(outline);
+
+  const slot = width / BANDS;
+  const bar = slot * FILL;
+  context.fillStyle = tint;
+  context.globalAlpha = 0.8 + 0.2 * impact;
   bars.forEach((level, index) => {
-    const height = Math.max(bar, level * reach);
+    const height = Math.max(bar, struck(level, impact) * reach);
     context.beginPath();
     context.roundRect(index * slot + (slot - bar) / 2, floor - height, bar, height, bar / 2);
     context.fill();
   });
-
-  // The response: a bell for each part of the music, filled faintly over the bars it rises from.
-  const paths = bells.map((bell) => bellPath(bell, slot, width, floor, reach));
-  context.globalAlpha = 0.2;
-  for (const path of paths) context.fill(path);
-  context.globalAlpha = 0.9;
-  context.lineWidth = 1.2;
-  for (const path of paths) context.stroke(path);
-
-  context.fillStyle = NODE;
-  for (const bell of bells) {
-    if (bell.height < 0.02) continue;
-    context.beginPath();
-    context.arc((bell.centre + 0.5) * slot, floor - bell.height * reach, 1.8, 0, 2 * Math.PI);
-    context.fill();
-  }
   context.globalAlpha = 1;
 }
 
 /// What plays, drawn under the music widget as an equaliser would show it: bars that jump with each
-/// band of the music, and over them a bell for each part of it, rising with that part and gliding
-/// to where it gathers. Coloured from the cover, and still once the music is.
+/// band of the music over the response, finer and fainter, that an analyser draws behind them. A
+/// hit well over the music before it lifts the bars and lights the response. Coloured from the
+/// cover, and still once the music is.
 export function Visualizer({ live, art, onUnheard }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const heard = useRef<number[]>(new Array<number>(BANDS).fill(0));
+  const heard = useRef<Heard>(NOTHING);
   const palette = useRef<[string, string]>(FALLBACK);
   const wake = useRef<() => void>(() => undefined);
   const silentSince = useRef<number | null>(null);
@@ -112,8 +134,8 @@ export function Visualizer({ live, art, onUnheard }: Props) {
   }, [art]);
 
   useEffect(() => {
-    const listening = on<{ bands: number[]; silent: boolean }>("music:bands", (got) => {
-      heard.current = got.bands.slice(0, BANDS);
+    const listening = on<Heard & { silent: boolean }>("music:bands", (got) => {
+      heard.current = { bands: got.bands.slice(0, BANDS), response: got.response.slice(0, RESPONSE), impact: got.impact };
       if (got.silent) {
         silentSince.current ??= Date.now();
         if (Date.now() - silentSince.current > UNHEARD) unheard.current(true);
@@ -134,7 +156,7 @@ export function Visualizer({ live, art, onUnheard }: Props) {
   useEffect(() => {
     silentSince.current = null;
     if (live) return;
-    heard.current = new Array<number>(BANDS).fill(0);
+    heard.current = NOTHING;
     unheard.current(false);
     wake.current();
   }, [live]);
@@ -143,18 +165,23 @@ export function Visualizer({ live, art, onUnheard }: Props) {
     const element = canvas.current;
     const context = element?.getContext("2d");
     if (!element || !context) return;
-    let bars = new Array<number>(BANDS).fill(0);
-    let bells = bellsOf(bars);
+    let bars = NOTHING.bands;
+    let response = NOTHING.response;
+    let impact = 0;
     let frame = 0;
     let last = performance.now();
     const draw = (now: number) => {
       const dt = Math.min(100, now - last);
       last = now;
-      bars = follow(bars, heard.current, dt, 35, 160);
-      bells = followBells(bells, bellsOf(bars), dt);
-      paint(context, element, bars, bells, palette.current);
+      const got = heard.current;
+      bars = follow(bars, got.bands, dt, 35, 160);
+      // The response is slower than the bars, as an analyser's is, and a hit dies away after it lands.
+      response = follow(response, got.response, dt, 60, 320);
+      impact = follow([impact], [got.impact], dt, 15, 260)[0]!;
+      paint(context, element, bars, response, impact, palette.current);
       // Drawing stops once all has come to rest, and the next sound wakes it.
-      frame = settled(heard.current) && settled(bars) && settled(bells.map((bell) => bell.height)) ? 0 : requestAnimationFrame(draw);
+      const resting = [got.bands, got.response, [got.impact], bars, response, [impact]].every(settled);
+      frame = resting ? 0 : requestAnimationFrame(draw);
     };
     wake.current = () => {
       if (frame) return;

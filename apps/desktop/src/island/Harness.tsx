@@ -48,6 +48,20 @@ function bandsAt(t: number): number[] {
   });
 }
 
+/// The same music as the visualizer would be sent it: the bands, those again in the finer steps of
+/// the response with a little more grain, and a big hit at the top of every bar of four beats.
+function heardAt(t: number) {
+  const bands = bandsAt(t);
+  const response = Array.from({ length: 64 }, (_, step) => {
+    const at = ((step + 0.5) * 24) / 64 - 0.5;
+    const below = Math.max(0, Math.min(22, Math.floor(at)));
+    const part = Math.min(1, Math.max(0, at - below));
+    const level = bands[below]! + (bands[below + 1]! - bands[below]!) * part + 0.06 * Math.sin(t / 53 + step * 1.7);
+    return Math.round(Math.min(1, Math.max(0, level)) * 100) / 100;
+  });
+  return { bands, response, impact: t % 2_000 < 70 ? 0.9 : 0, silent: false };
+}
+
 let playingBands: ReturnType<typeof setInterval> | undefined;
 
 function dayFrom(days: number): string {
@@ -211,7 +225,7 @@ export function Harness({ notch }: { notch: Notch }) {
               playingBands = undefined;
               return;
             }
-            playingBands = setInterval(() => emitPreview("music:bands", { bands: bandsAt(Date.now()), silent: false }), 33);
+            playingBands = setInterval(() => emitPreview("music:bands", heardAt(Date.now())), 33);
           }}
         >
           bands

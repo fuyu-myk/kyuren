@@ -38,6 +38,7 @@ public final class MusicTap: @unchecked Sendable {
     private let control = DispatchQueue(label: "kyuren.music-control")
     private let queue = DispatchQueue(label: "kyuren.music-tap")
     private let bands = Bands()
+    private let impacts = Impacts()
     private var running: Running?
     /// Counts each listen and quiet, so a retry for a listen since overtaken is let go.
     private var asked = 0
@@ -140,6 +141,7 @@ public final class MusicTap: @unchecked Sendable {
             queue.sync {
                 recent = [Float](repeating: 0, count: Bands.size)
                 since = 0
+                impacts.reset()
             }
             var proc: AudioDeviceIOProcID?
             let rate = nominalRate(of: device) ?? format.mSampleRate
@@ -203,10 +205,14 @@ public final class MusicTap: @unchecked Sendable {
         recent.removeFirst(max(0, recent.count - Bands.size))
         since += frames
         guard Double(since) >= rate / Self.perSecond else { return }
+        let impact = impacts.hear(recent, after: Double(since) / rate)
         since = 0
         let heard = bands.measure(recent, rate: rate)
+        let rounded = { (level: Float) in JSONValue.number((Double(level) * 100).rounded() / 100) }
         transport.send(.event(name: "music.bands", data: .object([
-            "bands": .array(heard.levels.map { .number((Double($0) * 100).rounded() / 100) }),
+            "bands": .array(heard.levels.map(rounded)),
+            "response": .array(heard.response.map(rounded)),
+            "impact": rounded(impact),
             "silent": .bool(heard.silent),
         ])))
     }

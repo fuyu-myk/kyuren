@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { BANDS, bellAt, bellsOf, FALLBACK, follow, followBells, paletteOf, REGIONS, settled } from "./visualizer.ts";
+import { FALLBACK, follow, paletteOf, settled, struck } from "./visualizer.ts";
 
 test("bars rise quickly to what is heard and fall back slowly", () => {
   const up = follow([0], [1], 16, 35, 160)[0]!;
@@ -15,43 +15,11 @@ test("a long pause between frames lands on what is heard rather than past it", (
   assert.ok(after! <= 0.8 && after! > 0.79);
 });
 
-test("each bell stands over where its part of the music is loudest, as tall as that part", () => {
-  const levels = new Array<number>(BANDS).fill(0.1);
-  levels[3] = 0.9;
-  levels[14] = 0.6;
-  levels[15] = 0.6;
-  const [bass, low, high] = bellsOf(levels);
-  assert.ok(Math.abs(bass!.centre - 3) < 0.6, `bass centred at ${bass!.centre}`);
-  assert.equal(bass!.height, 0.9);
-  assert.ok(Math.abs(high!.centre - 14.5) < 0.6, `high mids centred at ${high!.centre}`);
-  assert.equal(low!.height, 0.1, "a part with nothing standing out stays low");
-});
-
-test("each bell keeps to its own part of the spectrum, and silence lays them all flat", () => {
-  const loudAtTheEdges = new Array<number>(BANDS).fill(0).map((_, index) => (index === 0 || index === BANDS - 1 ? 1 : 0));
-  bellsOf(loudAtTheEdges).forEach((bell, index) => {
-    const [from, to] = REGIONS[index]!;
-    assert.ok(bell.centre >= from && bell.centre <= to, `bell ${index} at ${bell.centre} left ${from} to ${to}`);
-  });
-  for (const bell of bellsOf(new Array<number>(BANDS).fill(0))) assert.equal(bell.height, 0);
-});
-
-test("a bell peaks at its centre and falls away evenly either side to nothing", () => {
-  const bell = { centre: 10, height: 0.8, width: 1.5 };
-  assert.equal(bellAt(bell, 10), 0.8);
-  assert.equal(bellAt(bell, 8), bellAt(bell, 12));
-  assert.ok(bellAt(bell, 11) < 0.8 && bellAt(bell, 11) > bellAt(bell, 12));
-  assert.ok(bellAt(bell, 10 + 4 * 1.5) < 0.001);
-});
-
-test("a bell glides to its new place over a few frames rather than jumping there", () => {
-  const from = [{ centre: 2, height: 0.2, width: 1.5 }];
-  const to = [{ centre: 4, height: 0.9, width: 2 }];
-  const [next] = followBells(from, to, 16);
-  assert.ok(next!.centre > 2 && next!.centre < 3, `moved to ${next!.centre}`);
-  assert.ok(next!.height > 0.2 && next!.height < 0.9);
-  const [later] = followBells(from, to, 2_000);
-  assert.ok(Math.abs(later!.centre - 4) < 0.01 && Math.abs(later!.height - 0.9) < 0.01);
+test("a hit lifts the bars, the louder ones the most, and never past full", () => {
+  assert.equal(struck(0.5, 0), 0.5, "with no hit a bar stands as heard");
+  assert.ok(struck(0.5, 1) > 0.6, `lifted only to ${struck(0.5, 1)}`);
+  assert.ok(struck(0.6, 1) - 0.6 > struck(0.1, 1) - 0.1);
+  assert.equal(struck(0.9, 1), 1);
 });
 
 test("drawing stops once everything has come to rest", () => {
