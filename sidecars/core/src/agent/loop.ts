@@ -4,6 +4,7 @@ import { invoke, type Ask, type Exposure, type Tool } from "#agent/tool.ts";
 import { TurnFailed } from "#agent/failed.ts";
 import { codeSchema, codeTool } from "#agent/code.ts";
 import { routeHolding } from "#agent/holding.ts";
+import { editSchema, editTool } from "#agent/edit.ts";
 import { forgeSchema, forgeTool } from "#agent/forge.ts";
 import { noteSchema, noteTool } from "#agent/note.ts";
 import {
@@ -22,6 +23,7 @@ import { skillSchema, skillTool } from "#agent/skill.ts";
 import { startSchema, startTool } from "#agent/start.ts";
 import { todaySchema, todayTool } from "#agent/today.ts";
 import { webFetchSchema, webFetchTool, webSearchSchema, webSearchTool } from "#agent/web.ts";
+import { lookupAll } from "#connect/web/nearby.ts";
 import { sharedMemory } from "#memory/shared.ts";
 import { BACK_DAYS, FORWARD_DAYS, SOURCES } from "#methods/brief.ts";
 import { listDirectory, listSchema, readFile, readFileSchema, writeFile, writeFileSchema } from "#agent/tools.ts";
@@ -97,6 +99,8 @@ export const CAPABILITIES = [
   { name: "start_coding_session", description: "Open a new Claude Code session in the Claude app, in a repository.", pane: "development" },
   { name: "forge", description: "Write down a new skill, inert until approved.", pane: "knowledge" },
   { name: "skill", description: "Use one of the approved skills.", pane: "knowledge" },
+  { name: "skill_test", description: "Try an approved skill to see that it works.", pane: "knowledge" },
+  { name: "skill_edit", description: "Change a skill, which then waits to be approved again.", pane: "knowledge" },
   { name: "today", description: "What the user's day holds.", pane: "comms" },
   { name: "recap", description: "How the day's work went, written into the day's note.", pane: "development" },
   { name: "playbook", description: "Run one of the approved playbooks.", pane: "knowledge" },
@@ -334,6 +338,8 @@ export async function run(options: Run): Promise<Transcript> {
       start_coding_session: adapt(startTool(), startSchema, options.gate, options.ask, toSay, watching, exposure),
       forge: adapt(forgeTool(), forgeSchema, options.gate, options.ask, toSay, watching, exposure),
       skill: adapt(skillTool(), skillSchema, options.gate, options.ask, toSay, watching, exposure),
+      skill_test: adapt(skillTool(lookupAll, "test"), skillSchema, options.gate, options.ask, toSay, watching, exposure),
+      skill_edit: adapt(editTool(), editSchema, options.gate, options.ask, toSay, watching, exposure),
       remember: adapt(
         rememberTool(sharedMemory()),
         rememberSchema,

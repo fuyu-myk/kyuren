@@ -13,6 +13,10 @@ function standIn(): void {
   const failed = { path: "/runs/research.md", startedAt: "2026-10-20T09:00:00Z", outcome: "failed" };
   const books = [{ name: "research", approved: true, pending: false, when: "a question to research", inputs: [] as unknown[], recent: [failed] }];
   const weather = { id: "s1", name: "weather_now", about: "The weather where asked.", method: "GET", url: "https://api.example.com/weather", parameters: [], headers: {}, auth: { mode: "bearer", credential: "weather" }, reads: "json", state: "approved", drafted: Date.now() };
+  const moved = {
+    ...weather, id: "s2", name: "tides_today", about: "The tides today.", url: "https://api.example.com/v2/tides", auth: { mode: "none" }, state: "pending",
+    before: { ...weather, about: "The tides today.", url: "https://api.example.com/v1/tides", auth: { mode: "none" } }, why: "the API moved to v2",
+  };
   let keys: string[] = [];
   let expired = ["google"];
   let next = 1;
@@ -44,7 +48,7 @@ function standIn(): void {
         if (cmd === "island_home") return null;
         if (cmd === "island_week_starts") return "sunday";
         if (cmd === "island_week_starts_set") return args.starts;
-        if (cmd === "skills_list") return { skills: [weather] };
+        if (cmd === "skills_list") return { skills: [weather, moved] };
         if (cmd === "skill_keys_held") return (args.names as string[]).filter((name) => keys.includes(name));
         if (cmd === "store_secret") {
           keys = [...keys, String(args.name).replace(/^skill:/, "")];
@@ -383,6 +387,20 @@ test("a skill's key is given in the skills pane, straight to the keychain, and o
   expect((await calledWith(page, "forget_secret")).map((one) => one.args)).toEqual([{ name: "skill:weather" }]);
   await expect(field).toBeVisible();
   await expect(field).toHaveValue("");
+});
+
+test("a skill changed since it was approved shows what changed and why, and improving one asks the model to test and mend it", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "knowledge" }).click();
+  const changed = page.locator(".forged li", { hasText: "tides_today" });
+  await expect(changed.locator(".why")).toHaveText("changed since approved: the API moved to v2");
+  await expect(changed.locator(".change del")).toHaveText("GET https://api.example.com/v1/tides");
+  await expect(changed.locator(".change ins")).toHaveText("GET https://api.example.com/v2/tides");
+  await expect(changed.getByRole("button", { name: "improve" })).toHaveCount(0);
+
+  await page.locator(".forged li", { hasText: "weather_now" }).getByRole("button", { name: "improve" }).click();
+  const [asked] = await calledWith(page, "ask");
+  expect(String(asked?.args.prompt)).toMatch(/^Improve the skill weather_now\. Test it with skill_test/);
+  await page.getByRole("button", { name: "stop" }).click();
 });
 
 test("the Notion database the island's todos are kept in is chosen in settings", async ({ page }) => {

@@ -17,7 +17,18 @@ const SCHEMA = `
   );
 
   create index if not exists skills_state on skills(state);
+
+  create table if not exists skill_values (
+    skill text not null,
+    name  text not null,
+    value text not null,
+    at    integer not null,
+    primary key (skill, name, value)
+  );
 `;
+
+/// How many of the values given to each of a skill's parameters are kept.
+const KEPT = 8;
 
 type Row = {
   id: string;
@@ -28,6 +39,8 @@ type Row = {
   trouble: string | null;
   template: string;
   confirmed: number | null;
+  before: string | null;
+  why: string | null;
 };
 
 function shaped(row: Row): Skill {
@@ -40,6 +53,8 @@ function shaped(row: Row): Skill {
     approved: row.approved ?? undefined,
     confirmed: row.confirmed ?? undefined,
     trouble: row.trouble ?? undefined,
+    before: row.before ? (JSON.parse(row.before) as Draft) : undefined,
+    why: row.why ?? undefined,
   };
 }
 
@@ -58,6 +73,8 @@ export class Skills {
     this.db.exec(SCHEMA);
     const columns = this.db.prepare("pragma table_info(skills)").all() as Array<{ name: string }>;
     if (!columns.some((one) => one.name === "confirmed")) this.db.exec("alter table skills add column confirmed integer");
+    if (!columns.some((one) => one.name === "before")) this.db.exec("alter table skills add column before text");
+    if (!columns.some((one) => one.name === "why")) this.db.exec("alter table skills add column why text");
   }
 
   close(): void {
@@ -77,14 +94,18 @@ export class Skills {
   ///
   /// Approval is of a request, not of a name. Without this, the way past the gate is to have a
   /// harmless skill approved and then quietly rewrite it into another one.
-  revise(id: string, draft: Draft, at = Date.now()): Skill | undefined {
+  ///
+  /// What was last approved is kept beside the change, however many changes follow, so whoever
+  /// approves it again sees what they are agreeing to differ from what they agreed to before.
+  revise(id: string, draft: Draft, at = Date.now(), why?: string): Skill | undefined {
     if (!this.find(id)) return undefined;
     this.db
       .prepare(`
-        update skills set name = ?, template = ?, state = 'pending',
-        drafted = ?, approved = null, trouble = null where id = ?
+        update skills set name = ?, template = ?, state = 'pending', drafted = ?,
+        before = coalesce(before, case when approved is not null then template end),
+        why = ?, approved = null, trouble = null where id = ?
       `)
-      .run(draft.name, JSON.stringify(draft), at, id);
+      .run(draft.name, JSON.stringify(draft), at, why ?? null, id);
     return this.find(id);
   }
 
@@ -98,7 +119,7 @@ export class Skills {
     const found = this.find(id);
     if (!found) return false;
     this.db
-      .prepare("update skills set state = 'approved', approved = ?, trouble = null where id = ?")
+      .prepare("update skills set state = 'approved', approved = ?, trouble = null, before = null, why = null where id = ?")
       .run(at, id);
     return true;
   }
@@ -113,6 +134,35 @@ export class Skills {
 
   forget(id: string): void {
     this.db.prepare("delete from skills where id = ?").run(id);
+    this.db.prepare("delete from skill_values where skill = ?").run(id);
+  }
+
+  /// Keeps the values a skill was given, to offer them again when it is next asked for by hand.
+  used(id: string, values: Record<string, string | number | boolean>, at = Date.now()): void {
+    const keep = this.db.prepare(`
+      insert into skill_values (skill, name, value, at) values (?, ?, ?, ?)
+      on conflict (skill, name, value) do update set at = excluded.at
+    `);
+    const prune = this.db.prepare(`
+      delete from skill_values where skill = ? and name = ? and value not in
+        (select value from skill_values where skill = ? and name = ? order by at desc limit ?)
+    `);
+    for (const [name, value] of Object.entries(values)) {
+      const said = String(value).trim();
+      if (said === "") continue;
+      keep.run(id, name, said, at);
+      prune.run(id, name, id, name, KEPT);
+    }
+  }
+
+  /// The values each of a skill's parameters was given, newest first.
+  recent(id: string): Record<string, string[]> {
+    const rows = this.db
+      .prepare("select name, value from skill_values where skill = ? order by at desc")
+      .all(id) as Array<{ name: string; value: string }>;
+    const kept: Record<string, string[]> = {};
+    for (const row of rows) kept[row.name] = [...(kept[row.name] ?? []), row.value];
+    return kept;
   }
 
   find(id: string): Skill | undefined {

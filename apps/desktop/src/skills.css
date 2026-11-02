@@ -119,6 +119,44 @@
   color: var(--down);
 }
 
+.forged .changed {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 0.45rem;
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+  font-size: 0.74rem;
+}
+
+.forged .why {
+  margin: 0;
+  color: var(--muted);
+}
+
+.forged .change {
+  display: grid;
+  grid-template-columns: 4.2rem 1fr;
+  gap: 0.05rem 0.5rem;
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  overflow-wrap: anywhere;
+}
+
+.forged .change .what {
+  grid-row: span 2;
+  color: var(--overlay1);
+}
+
+.forged .change del {
+  color: var(--down);
+}
+
+.forged .change ins {
+  text-decoration: none;
+  color: var(--up);
+}
+
 .forged .actions {
   display: flex;
   gap: 0.2rem;

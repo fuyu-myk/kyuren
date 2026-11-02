@@ -4,6 +4,7 @@ import { Board } from "@/Board";
 import { parseCommand, type Command } from "@/commands";
 import { Composer } from "@/Composer";
 import { sentIn } from "@/recall";
+import { improving } from "@/changes";
 import { Forge } from "@/Forge";
 import { Markdown } from "@/Markdown";
 import { Noticed } from "@/Noticed";
@@ -387,7 +388,7 @@ export function Place({ pane, shown }: PlaceProps) {
           {pane === "knowledge" && shown ? (
             <section>
               <h3>what Kyuren has forged</h3>
-              <Forge />
+              <Forge onImprove={(skill) => void send(improving(skill))} />
             </section>
           ) : null}
 

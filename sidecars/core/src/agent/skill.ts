@@ -35,22 +35,39 @@ function described(): string {
   return [told, "The approved skills:", ...each].join("\n");
 }
 
-/// Using one of the skills Kyuren has been given.
+const TESTING = "Try one of the approved skills with sample values, to see whether it works and what its "
+  + "answer holds. Use it to check a skill once it is approved or changed, before relying on it. A "
+  + "failure marks the skill broken, with the reason, until it is mended and approved again.";
+
+/// What an answer holds, by name and kind, a few levels down: enough to see whether a skill
+/// answers with what it is meant to, without the whole answer read for it.
+function holds(value: unknown, depth = 3): unknown {
+  if (Array.isArray(value)) return value.length > 0 && depth > 0 ? [holds(value[0], depth - 1)] : [];
+  if (value !== null && typeof value === "object") {
+    if (depth === 0) return "object";
+    return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, holds(inner, depth - 1)]));
+  }
+  return value === null ? "null" : typeof value;
+}
+
+/// Using one of the skills Kyuren has been given, or trying one to see that it works.
 ///
 /// Declared as reaching out of the machine, and described by where it reaches rather than by its
-/// own name, so what is being agreed to is which host may be talked to.
-export function skillTool(resolve: Resolve = lookupAll): Tool<z.infer<typeof skillSchema>> {
+/// own name, so what is being agreed to is which host may be talked to. A try is a call like any
+/// other, and reaches only what has been approved.
+export function skillTool(resolve: Resolve = lookupAll, use: "use" | "test" = "use"): Tool<z.infer<typeof skillSchema>> {
+  const name = use === "test" ? "skill_test" : "skill";
   // The approval each call was asked about under, so a skill approved again while the question was
   // open, which may reach somewhere else, is not called on the strength of it.
   const describedUnder = new WeakMap<object, number | undefined>();
   return {
-    name: "skill",
-    description: described(),
+    name,
+    description: use === "test" ? TESTING : described(),
     describe: (args) => {
       const found = sharedSkills().named(args.name);
       describedUnder.set(args, found?.approved);
       return {
-        tool: "skill",
+        tool: name,
         effect: "outbound",
         target: whereItGoes(args.name),
         carrying: Object.entries(args.values).map(([name, value]) => `${name}: ${value}`).join(", "),
@@ -70,6 +87,11 @@ export function skillTool(resolve: Resolve = lookupAll): Tool<z.infer<typeof ski
       }
 
       const ran = await runSkill(skills, found.id, args.values, resolve);
+      if (use === "test") {
+        return ran.ok
+          ? { worked: true, status: ran.status, holds: holds(ran.read), answer: ran.read }
+          : { worked: false, reason: ran.reason, broke: ran.broke };
+      }
       if (!ran.ok) {
         return {
           ok: false,
@@ -79,6 +101,7 @@ export function skillTool(resolve: Resolve = lookupAll): Tool<z.infer<typeof ski
           spoken: ran.broke ? `${found.name} has stopped working: ${ran.reason}` : undefined,
         };
       }
+      skills.used(found.id, args.values);
       return { ok: true, status: ran.status, read: ran.read };
     },
   };

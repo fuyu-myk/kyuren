@@ -20,7 +20,7 @@ export function skillHandlers() {
 
   return {
     "skills.list": async (params: Record<string, unknown>) => ({
-      skills: skills.list(stateIn(params.state)),
+      skills: skills.list(stateIn(params.state)).map((one) => ({ ...one, recent: skills.recent(one.id) })),
     }),
 
     "skills.approve": async (params: Record<string, unknown>) => ({

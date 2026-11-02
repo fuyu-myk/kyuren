@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { skillKeysHeld } from "@/connect";
+import { changesOf } from "@/changes";
 import { approveSkill, forgetSkill, listSkills, type Skill } from "@/sessions";
 import { SkillKey } from "@/SkillKey";
 import { ago } from "@/when";
@@ -8,7 +9,7 @@ import { ago } from "@/when";
 ///
 /// A pending skill is shown in full, address and all, because approving it is agreeing to that
 /// request rather than to its name.
-export function Forge() {
+export function Forge({ onImprove }: { onImprove?: (skill: Skill) => void }) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [held, setHeld] = useState<string[]>([]);
   const [asking, setAsking] = useState<string>();
@@ -79,6 +80,19 @@ export function Forge() {
 
           {one.trouble ? <p className="broke">{one.trouble}</p> : null}
 
+          {one.before ? (
+            <div className="changed">
+              <p className="why">changed since approved{one.why ? `: ${one.why}` : ""}</p>
+              {changesOf(one).map((each) => (
+                <p key={each.what} className="change">
+                  <span className="what">{each.what}</span>
+                  <del>{each.was}</del>
+                  <ins>{each.now}</ins>
+                </p>
+              ))}
+            </div>
+          ) : null}
+
           <div className="actions">
             {asking === one.id ? (
               <>
@@ -101,6 +115,11 @@ export function Forge() {
                 <button type="button" className="ghost" onClick={() => setAsking(one.id)}>
                   discard
                 </button>
+                {onImprove && one.state !== "pending" ? (
+                  <button type="button" className="ghost" onClick={() => onImprove(one)}>
+                    {one.state === "broken" ? "mend" : "improve"}
+                  </button>
+                ) : null}
                 {one.state === "approved" ? null : (
                   <button
                     type="button"

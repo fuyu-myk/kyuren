@@ -48,10 +48,15 @@ export type Skill = {
   /// The approval whose first call the user said yes to.
   confirmed?: number;
   trouble?: string;
+  /// What was approved, while a change to it waits to be approved: what the user is agreeing to
+  /// is the difference.
+  before?: Draft;
+  /// Why it was changed, in the words of whoever changed it.
+  why?: string;
 };
 
 /// What a skill is before it has an identity or a standing: the part the model writes.
-export type Draft = Omit<Skill, "id" | "state" | "drafted" | "approved" | "confirmed" | "trouble">;
+export type Draft = Omit<Skill, "id" | "state" | "drafted" | "approved" | "confirmed" | "trouble" | "before" | "why">;
 
 /// Approved, and not yet called with the user's yes since. Approving was of what it would do, so
 /// its first call is asked about whatever its host was allowed before.
@@ -76,6 +81,8 @@ const TAKEN = new Set([
   "code",
   "start_coding_session",
   "skill",
+  "skill_test",
+  "skill_edit",
   "forge",
 ]);
 

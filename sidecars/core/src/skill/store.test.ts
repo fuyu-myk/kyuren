@@ -152,3 +152,43 @@ test("skills kept before confirmations were opens with every approved skill untr
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("an approved skill changed keeps what was approved, and why it changed, until approved again", () => {
+  const skills = new Skills(":memory:");
+  const one = skills.draft(draft());
+  skills.approve(one.id);
+  skills.revise(one.id, draft({ url: "https://api.example.com/v2/weather/{city}" }), Date.now(), "the API moved to v2");
+
+  const changed = skills.find(one.id)!;
+  assert.equal(changed.before?.url, "https://api.example.com/v1/weather/{city}");
+  assert.equal(changed.why, "the API moved to v2");
+
+  skills.revise(one.id, draft({ url: "https://api.example.com/v3/weather/{city}" }), Date.now(), "and again to v3");
+  assert.equal(skills.find(one.id)!.before?.url, "https://api.example.com/v1/weather/{city}", "what was approved is what is shown, however many changes since");
+
+  skills.approve(one.id);
+  assert.equal(skills.find(one.id)!.before, undefined);
+  assert.equal(skills.find(one.id)!.why, undefined);
+});
+
+test("a draft never approved has nothing approved to show when it changes", () => {
+  const skills = new Skills(":memory:");
+  const one = skills.draft(draft());
+  skills.revise(one.id, draft({ about: "The weather now, in a named city." }), Date.now(), "clearer");
+  assert.equal(skills.find(one.id)!.before, undefined);
+});
+
+test("the values a skill was used with are kept, newest first, a few of each, and go with it", () => {
+  const skills = new Skills(":memory:");
+  const one = skills.draft(draft());
+  for (let at = 0; at < 10; at += 1) skills.used(one.id, { city: `town${at}`, metric: true }, 1000 + at);
+  skills.used(one.id, { city: "town3" }, 2000);
+
+  const recent = skills.recent(one.id);
+  assert.deepEqual(recent.city?.slice(0, 3), ["town3", "town9", "town8"]);
+  assert.equal(recent.city?.length, 8);
+  assert.deepEqual(recent.metric, ["true"]);
+
+  skills.forget(one.id);
+  assert.deepEqual(skills.recent(one.id), {});
+});

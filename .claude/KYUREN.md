@@ -384,6 +384,13 @@ skill is not broken for it, since approving the request again would not mend the
 The approved skills are named to the model at the start of every turn, each with what it does and
 the values it takes, so a skill approved since the last turn is one it knows to reach for.
 
+The model may try an approved skill to see that it works, which says what its answer holds, and may
+change a skill, giving only what is to change and why. A changed skill goes back to pending with
+what was approved kept beside it, and the skills pane shows the reason and each part as it was and
+as it would be, since approving it again is agreeing to the difference. A pending skill cannot be
+tried. Each approved skill has an improve button, and a broken one a mend button, which ask the
+model to test it, read its documentation and change it where it falls short.
+
 Forged skills appear in the mind graph's capability layer the moment they are drafted, so the
 graph shows the assistant growing; the mind reads its graph again each time it is shown.
 

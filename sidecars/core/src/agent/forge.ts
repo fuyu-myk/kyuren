@@ -8,20 +8,20 @@ import { sharedSkills } from "#skill/shared.ts";
 /// This was a shape of nested unions to begin with, and a small model could not fill it in: it
 /// spent its turn being told its `auth` object was wrong and gave up without writing anything
 /// down. What the model has to produce is kept as plain as the thing allows.
+export const parametersSchema = z.array(z.object({
+  name: z.string(),
+  in: z.enum(WHERE).describe("path, query, header or body"),
+  kind: z.enum(KINDS).default("string"),
+  required: z.boolean().default(false),
+  about: z.string().default(""),
+}));
+
 export const forgeSchema = z.object({
   name: z.string().describe("a short lower case name, as a tool would be named"),
   about: z.string().describe("what this does, in a sentence it can be chosen by"),
   method: z.enum(METHODS).default("GET"),
   url: z.string().describe("the https address, with {placeholders} for path parameters"),
-  parameters: z
-    .array(z.object({
-      name: z.string(),
-      in: z.enum(WHERE).describe("path, query, header or body"),
-      kind: z.enum(KINDS).default("string"),
-      required: z.boolean().default(false),
-      about: z.string().default(""),
-    }))
-    .default([]),
+  parameters: parametersSchema.default([]),
   headers: z.record(z.string(), z.string()).default({}).describe("fixed headers, never a credential"),
   reads: z.enum(["json", "text"]).default("json"),
   auth: z
@@ -36,7 +36,7 @@ export const forgeSchema = z.object({
   authQuery: z.string().default("").describe("when auth is query: which parameter the key goes in"),
 });
 
-function authOf(args: z.infer<typeof forgeSchema>): Auth {
+export function authOf(args: Pick<z.infer<typeof forgeSchema>, "auth" | "credential" | "authHeader" | "authQuery">): Auth {
   const credential = args.credential.trim();
   if (args.auth === "bearer") return { mode: "bearer", credential };
   if (args.auth === "header") {

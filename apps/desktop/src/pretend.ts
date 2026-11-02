@@ -71,6 +71,16 @@ const forged: Skill[] = [
     reads: "json",
     state: "pending",
     drafted: Date.now() - 600_000,
+    before: {
+      about: "The current weather in a named city, from the open weather service.",
+      method: "GET",
+      url: "https://api.open-meteo.com/v1/forecast",
+      parameters: [{ name: "city", in: "query", kind: "string", required: true, about: "the city to look up" }],
+      headers: { accept: "application/json" },
+      auth: { mode: "none" },
+      reads: "json",
+    },
+    why: "the city goes in the path now, and units can be chosen",
   },
   {
     id: "forged-2",

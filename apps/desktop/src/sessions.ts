@@ -147,6 +147,11 @@ export type Skill = {
   drafted: number;
   approved?: number;
   trouble?: string;
+  /// What was approved, while a change to it waits to be approved again.
+  before?: Pick<Skill, "about" | "method" | "url" | "parameters" | "headers" | "auth" | "reads">;
+  why?: string;
+  /// The values each parameter was given before, newest first.
+  recent?: Record<string, string[]>;
 };
 
 export async function listSkills(): Promise<Skill[]> {
