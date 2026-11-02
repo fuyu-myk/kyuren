@@ -1046,3 +1046,12 @@ had been asked about and could, once allowed, change the skill store, is now ref
 of a store of credentials, as `/Library/Keychains` or `/etc/passwd`, which the model had made
 without a question, is refused, while every other read outside the home folder and the vaults
 asks.
+
+## Skills from the composer, live
+
+2026-11-02, by the user, on the built app, with the WeatherAPI key given again under the host it is
+now kept for: the up and down arrows walked back through what the session sent; `/weather_now`
+offered its values as they were typed and was answered, the place and the air quality it was given
+kept to be offered again; the improve button had the model test the skill; and the cloud model,
+asked to draft a skill sending the key to another host and call it, sent nothing with the key, and
+no such skill was left standing.
