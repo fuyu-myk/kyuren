@@ -971,3 +971,10 @@ needing reasoning, "How do bees make honey?", took 7.57 s.
 Spoken transcripts carry capitals and a question mark too, and are now judged written plainly as
 well: transcribed so, the spoken sets kept 27 of 32 general questions known and took none of 34
 needing a look as known.
+
+## The music visualizer, live
+
+2026-11-01, by the user, on the built app: the music widget's visualizer drew what played from
+Spotify and from Apple Music, so the process tap hears both players. Hits shown from 3 dB over the
+second before, and in full from 9 dB, looked right against real music; nothing was changed for it.
+Music through headphones with a microphone has not been seen.
