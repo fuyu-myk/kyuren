@@ -14,9 +14,67 @@ function act(over: Partial<Action>): Action {
   return { tool: "write_file", effect: "write", target: `${VAULT}/note.md`, ...over };
 }
 
-test("reads pass without asking", () => {
-  const action = act({ tool: "read_file", effect: "read", target: "/etc/hosts" });
+test("reads in the home folder pass without asking", () => {
+  const action = act({ tool: "read_file", effect: "read", target: join(homedir(), "Documents/plan.md") });
   assert.equal(classify(action, OWN), "allow");
+});
+
+test("a write where the system, a shell, git, ssh or Claude Code runs code from is refused, even inside a writable vault", () => {
+  const code = join(homedir(), "Code");
+  const writing = (target: string) => classify({ tool: "write_file", effect: "write", target }, [{ path: code, mode: "write" }]);
+  for (const target of [
+    join(homedir(), ".zshrc"),
+    join(homedir(), ".zshenv"),
+    join(homedir(), ".bash_profile"),
+    join(homedir(), ".profile"),
+    join(homedir(), ".ssh/config"),
+    join(homedir(), ".gitconfig"),
+    join(homedir(), ".config/git/config"),
+    join(homedir(), ".config/fish/config.fish"),
+    join(homedir(), "Library/LaunchAgents/evil.plist"),
+    join(homedir(), ".claude/settings.json"),
+    join(homedir(), ".claude/hooks/run.sh"),
+    join(homedir(), ".claude.json"),
+    join(code, "app/.git/hooks/pre-commit"),
+    join(code, "app/.git/config"),
+    join(code, "app/.claude/settings.local.json"),
+    join(code, "app/.claude/skills/tool/run.py"),
+    join(code, "app/.mcp.json"),
+    join(code, "app/.husky/pre-commit"),
+    "/Library/LaunchDaemons/evil.plist",
+    "/etc/zshenv",
+  ]) {
+    assert.equal(writing(target), "deny", target);
+  }
+  assert.equal(writing(join(code, "app/notes.md")), "allow");
+  assert.equal(writing(join(code, "app/.claude/KYUREN.md")), "allow", "what a project says of itself runs nothing");
+});
+
+test("a read of where the system or the user's keychains keep credentials is refused", () => {
+  const reading = (target: string) => classify({ tool: "read_file", effect: "read", target }, OWN);
+  for (const target of [
+    "/Library/Keychains/System.keychain",
+    "/Library/Keychains",
+    "/Library/Keychains/.fl043D1EDD",
+    "/System/Volumes/Data/Library/Keychains/System.keychain",
+    "/etc/passwd",
+    "/private/etc/master.passwd",
+    "/etc/sudoers",
+    "/etc/ssh/ssh_host_ed25519_key",
+    "/private/var/db/dslocal/nodes/Default/users/root.plist",
+    join(homedir(), "Library/Keychains/login.keychain-db"),
+  ]) {
+    assert.equal(reading(target), "deny", target);
+  }
+});
+
+test("a read outside the home folder asks, but for a connected vault", () => {
+  const reading = (target: string) => classify({ tool: "read_file", effect: "read", target }, [{ path: "/Volumes/Drive/notes", mode: "write" }]);
+  for (const target of ["/etc/hosts", "/private/var/log/system.log", "/Applications/Safari.app/Contents/Info.plist", "/tmp/something", "/Volumes/Drive/other.md"]) {
+    assert.equal(reading(target), "ask", target);
+  }
+  assert.equal(reading("/Volumes/Drive/notes/plan.md"), "allow");
+  assert.equal(reading(join(tmpdir(), "capture.png")), "allow", "the temporary folder made for the user alone is theirs");
 });
 
 test("a read of what is hidden in the home folder, of its Library, or of a file named as a secret, asks", () => {
@@ -47,7 +105,6 @@ test("a read of what is hidden in the home folder, of its Library, or of a file 
     join(homedir(), "Documents/ssh-notes.md"),
     join(homedir(), "Library/Mobile Documents/com~apple~CloudDocs/report.md"),
     join(homedir(), "Library/CloudStorage/Dropbox/plan.md"),
-    "/etc/hosts",
     "what did I say about .env files",
   ]) {
     assert.equal(reading(target), "allow", target);
@@ -60,7 +117,7 @@ test("a read is judged by the path as written and by the file it opens, whicheve
   assert.equal(reading("/Users/someone/dotfiles/ssh/config", join(homedir(), ".ssh/config")), "ask", "a hidden folder kept elsewhere");
   assert.equal(reading(join(homedir(), ".ssh/id_ed25519"), "/Users/someone/notes.txt"), "ask", "an innocent name for a key");
   assert.equal(reading("/Users/someone/shared/production-settings", "/Users/someone/app/.env"), "ask");
-  assert.equal(reading("/Users/someone/notes/today.md", "/Users/someone/today.md"), "allow");
+  assert.equal(reading(join(homedir(), "notes/today.md"), join(homedir(), "today.md")), "allow");
 });
 
 test("a vault connected at the home folder does not open what is hidden in it", () => {

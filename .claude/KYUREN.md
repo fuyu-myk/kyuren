@@ -293,7 +293,9 @@ with the same first name nearer than the same person's initials.
 
 Autonomy inside an allowlist. The gate lives in the TypeScript core, below the model.
 
-- **Allowed silently:** reads, searches, local computation, anything reversible. A read of what
+- **Allowed silently:** reads in the home folder, in the temporary folder made for the user alone
+  and in a connected vault, searches, local computation, anything reversible. A read anywhere else,
+  the system's own files and the temporary folder everyone shares, asks. A read of what
   is hidden in the home folder or kept in its Library, where programs keep keys, tokens and
   histories, or of a file named as a secret anywhere, asks instead, since a secret read is one
   step from leaving. It is judged by the path as written and by the file it opens, so neither a
@@ -309,6 +311,12 @@ Autonomy inside an allowlist. The gate lives in the TypeScript core, below the m
   into Kyuren's own folder outside its vault. That folder holds what the user allowed, which vaults
   may be written, the skills approved and the rules that read unattended, so one yes to a write
   there would grant what only the user grants. Reading there is judged as any hidden folder is.
+  Nor is a write where code runs from: a shell's start up files, ssh's and git's settings, a login
+  agent or daemon, a repository's `.git` folder or its hooks, or what Claude Code runs, its
+  settings, hooks, skills, plugins, commands and servers. A write there is code run as the user the
+  next time a shell starts or a repository is touched, so one yes would grant everything, and an
+  edit to the skill store with it. Nor is a read of a store of credentials: the user's and the
+  system's keychains, and the system's accounts, passwords and keys.
 
 Decisions are remembered by **action fingerprint**, not by tool name, so approving one shape of
 action does not approve a different one wearing the same label. The fingerprint covers the tool,

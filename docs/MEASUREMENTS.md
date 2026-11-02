@@ -1040,6 +1040,9 @@ request's own escaping, a json escape undone once read, a link inside a link and
 key, all four since mended. A host with an underscore in it, or written as an IPv6 address, cannot
 be given a key, which fails closed.
 
-Left to a decision: an allowed write to a place the system runs code from, as a shell's start up
-file or a launch agent, is code that could change the skill store; and a read of the system's own
-Library is allowed without a question, as reads outside the home folder are.
+Two things were left to the user, who decided both the same day: a write where code runs from,
+as a shell's start up file, a launch agent, a repository's hooks or what Claude Code runs, which
+had been asked about and could, once allowed, change the skill store, is now refused; and a read
+of a store of credentials, as `/Library/Keychains` or `/etc/passwd`, which the model had made
+without a question, is refused, while every other read outside the home folder and the vaults
+asks.

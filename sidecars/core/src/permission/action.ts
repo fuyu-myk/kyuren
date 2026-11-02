@@ -1,5 +1,5 @@
 import { lstatSync, readlinkSync, realpathSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 
 export const EFFECTS = [
@@ -50,13 +50,23 @@ const KERNEL = /^\/(?:\.nofollow|\.resolve|\.vol|\.file|dev)(?:\/|$)/i;
 /// it: a write there is refused and a read asked about, as for the worst place it could be.
 class Untold extends Error {}
 
+/// What the disk says of a path, nothing for one not there, and untold for one it will not say,
+/// inside a folder the user may not look in.
+function looked(path: string, asked: string): ReturnType<typeof lstatSync> {
+  try {
+    return lstatSync(path, { throwIfNoEntry: false });
+  } catch {
+    throw new Untold(asked);
+  }
+}
+
 /// Where a path would land on the disk: the deepest part of it that is there, a link to something
 /// not there yet included, followed through its links, with the rest after it.
 function land(path: string, hops: number): string {
   let existing = plain(path);
   if (KERNEL.test(existing)) throw new Untold(path);
   const after: string[] = [];
-  while (existing !== dirname(existing) && lstatSync(existing, { throwIfNoEntry: false }) === undefined) {
+  while (existing !== dirname(existing) && looked(existing, path) === undefined) {
     after.unshift(basename(existing));
     existing = dirname(existing);
   }
@@ -64,7 +74,7 @@ function land(path: string, hops: number): string {
   try {
     real = realpathSync.native(existing);
   } catch {
-    if (hops >= HOPS || !lstatSync(existing, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Untold(path);
+    if (hops >= HOPS || !looked(existing, path)?.isSymbolicLink()) throw new Untold(path);
     // A link to something not there yet: a write through it creates what it points at, read from
     // the folder the link is really in.
     real = land(resolve(land(dirname(existing), hops + 1), readlinkSync(existing)), hops + 1);
@@ -173,6 +183,62 @@ function secret(target: string | undefined, places: Place[]): boolean {
   return inside("Library") && !DOCUMENTS_IN_LIBRARY.some(inside);
 }
 
+/// Where in the home folder a shell, ssh, git, Claude Code or the system at login runs code from.
+const RUNS_CODE_AT_HOME = [
+  ".zshenv", ".zprofile", ".zshrc", ".zlogin", ".zlogout",
+  ".bashrc", ".bash_profile", ".bash_login", ".bash_logout", ".profile",
+  ".ssh", ".gitconfig", ".config/git", ".config/fish", ".claude.json", "Library/LaunchAgents",
+];
+
+/// The same for every user of the machine.
+const RUNS_CODE_FOR_ALL = [
+  "/Library/LaunchAgents", "/Library/LaunchDaemons", "/etc/periodic",
+  "/etc/zshenv", "/etc/zprofile", "/etc/zshrc", "/etc/profile", "/etc/bashrc",
+];
+
+/// What inside a `.claude` folder Claude Code runs: its settings, which hold hooks and servers, and
+/// the hooks, skills, plugins and commands themselves.
+const CLAUDE_RUNS = /^(settings(\.local)?\.json|hooks|skills|plugins|commands)$/;
+
+/// Whether a write would land where code is run from: a shell's start up files, ssh's settings, a
+/// login agent, a repository's own folder of hooks and settings, or what Claude Code runs. A write
+/// there is code run as the user the next time a shell starts or a repository is touched, which one
+/// yes would grant for good, so it is refused rather than asked about.
+function runsCode(target: string | undefined): boolean {
+  if (target === undefined || remote(target)) return false;
+  const where = landing(target);
+  const home = plain(homedir());
+  if ([...RUNS_CODE_AT_HOME.map((one) => join(home, one)), ...RUNS_CODE_FOR_ALL].some((root) => within(where, root))) return true;
+  const parts = where.split("/");
+  if (parts.includes(".git") || parts.includes(".husky") || basename(where) === ".mcp.json") return true;
+  const claude = parts.indexOf(".claude");
+  return claude >= 0 && CLAUDE_RUNS.test(parts[claude + 1] ?? "");
+}
+
+/// Where the system and the user's keychains keep keys, passwords and the accounts they open.
+const KEEPS_CREDENTIALS = [
+  "/Library/Keychains", "/System/Library/Keychains", "/private/var/db/dslocal", "/private/etc/ssh",
+  "/private/etc/sudoers", "/private/etc/sudoers.d", "/private/etc/master.passwd", "/private/etc/passwd",
+];
+
+/// Whether a read would open a store of credentials, which is never what a request needs: by the
+/// path as written, with the system's own short names for its private folders, and by where it lands.
+function keepsCredentials(target: string | undefined): boolean {
+  if (!target?.startsWith("/")) return false;
+  const roots = [...KEEPS_CREDENTIALS, join(homedir(), "Library/Keychains")].map((root) => plain(root).toLowerCase());
+  const written = plain(target).toLowerCase().replace(/^\/(etc|var)(?=\/|$)/, "/private/$1");
+  if (roots.some((root) => written === root || written.startsWith(`${root}/`))) return true;
+  return !untold(target) && roots.some((root) => within(target, root));
+}
+
+/// Whether a read lands outside what is the user's own, the home folder, the temporary folder made
+/// for them alone and every connected vault: the system's files, which a request about the user's
+/// work has no need to open unasked. The temporary folder shared by everyone is the system's.
+function outside(target: string | undefined, places: Place[]): boolean {
+  if (!target?.startsWith("/") || untold(target)) return false;
+  return placeOf(target, notes(places)) === undefined && !within(target, homedir()) && !within(target, tmpdir());
+}
+
 /// Whether an action sends something off this machine: reaching out, or writing somewhere that is
 /// not on it.
 export function leaves(action: Action): boolean {
@@ -194,9 +260,10 @@ export function bare(action: Action): Action {
   return carrying === undefined && first === undefined ? action : kept;
 }
 
-/// Reads and computation pass, but for a read of a secret. A write is judged by where it would
-/// land. Anything that leaves the machine or runs code asks. Three classes are never automated at
-/// all, regardless of what the user has previously approved.
+/// Reads in the home folder and the vaults pass, but for a read of a secret; one outside them asks,
+/// and one of a store of credentials is refused. A write is judged by where it would land, and is
+/// refused where code runs from. Anything that leaves the machine or runs code asks. Three classes
+/// are never automated at all, regardless of what the user has previously approved.
 export function classify(action: Action, places: Place[]): Verdict {
   switch (action.effect) {
     case "credential":
@@ -204,13 +271,14 @@ export function classify(action: Action, places: Place[]): Verdict {
     case "destroy":
       return "deny";
     case "read":
-      return secret(action.target, places) || secret(action.through, places) ? "ask" : "allow";
+      if (keepsCredentials(action.target) || keepsCredentials(action.through)) return "deny";
+      return [action.target, action.through].some((one) => secret(one, places) || outside(one, places)) ? "ask" : "allow";
     // Someone's calendar, mail or notes, held on this machine. It never leaves, so it is not
     // outbound, but it is not an ordinary read either and is not automated.
     case "personal":
       return "ask";
     case "write": {
-      if (untold(action.target)) return "deny";
+      if (untold(action.target) || runsCode(action.target)) return "deny";
       const place = placeOf(action.target, places);
       if (!place) return "ask";
       // A vault marked read only is refused rather than asked about, so no earlier approval and

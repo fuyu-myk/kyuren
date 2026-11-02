@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import type { Action } from "#permission/action.ts";
@@ -52,7 +52,7 @@ test("a remembered denial keeps denying", () => {
 
 test("every decision reaches the audit log", () => {
   const { gate, log } = build();
-  gate.decide({ tool: "read_file", effect: "read", target: "/etc/hosts" });
+  gate.decide({ tool: "read_file", effect: "read", target: join(homedir(), "Documents/plan.md") });
   gate.remember(shell("ls"), "allow");
   gate.decide(shell("ls"));
 
