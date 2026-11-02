@@ -329,9 +329,8 @@ skill.
 2. An unapproved skill cannot be invoked by any path, including one the model constructs itself.
    *Tested, `skill/run.test.ts`, `skill/store.test.ts` and `agent/skill.test.ts`, and no file tool
    may write the skill store, `permission/guarded.test.ts`. No adversarial run is recorded.*
-3. An approved skill appears in the capability layer and is callable from the chat hub. *Recorded
-   for the call, A skill from an API's documentation; tested for the call, `agent/skill.test.ts`;
-   the listing not yet seen.*
+3. An approved skill appears in the capability layer and is callable from the chat hub. *Recorded,
+   A skill from an API's documentation; tested for the call, `agent/skill.test.ts`.*
 4. A skill whose endpoint has started failing is reported as broken rather than retried silently.
    *Tested, `skill/run.test.ts`.*
 5. Skill credentials are stored in the keychain and never appear in a prompt, a log or the graph.

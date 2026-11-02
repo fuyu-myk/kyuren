@@ -997,4 +997,5 @@ reached for a web search unless the skill was named to it; and a key the service
 skill, which approving again could not mend. With the key given again, asked without naming the
 skill, qwen3.5:9b chose `weather_now`, its first use was asked about, and WeatherAPI answered. In one
 of two such turns the model then ended without a word, and a turn that ends so after a tool now
-asks the model once more, without tools, for what it found.
+asks the model once more, without tools, for what it found. Once the mind read its graph at each
+showing, `weather_now` was among its capabilities.
