@@ -238,6 +238,27 @@ test("a model gone silent after a step that called a tool fails the turn, rather
   assert.equal(failure.called[0]?.tool, "list_directory");
 });
 
+test("a model that used a tool and then said nothing is asked once more, without tools, for what it found", async () => {
+  const heard: string[] = [];
+  replies.push(calling("list_directory", { path: vault }), saying(""), saying("The vault is empty."));
+  const done = await run({
+    prompt: "what is in my vault", vault, sensitive: true, difficulty: "hard", gate: gate(), ask: async () => "allow",
+    onText: (chunk) => heard.push(chunk),
+  });
+  assert.equal(done.text, "The vault is empty.");
+  assert.equal(heard.join(""), "The vault is empty.");
+  const asked = JSON.parse(bodies.at(-1)!) as { tools?: unknown; messages: Array<{ role: string }> };
+  assert.equal(asked.tools, undefined, "the model was offered tools again");
+  assert.ok(asked.messages.some((one) => one.role === "tool"), "the model was not shown what the tool found");
+});
+
+test("a model that says nothing without having used a tool is not asked again", async () => {
+  replies.push(saying(""), saying("never asked for"));
+  const done = await run({ prompt: "hello", vault, sensitive: true, difficulty: "hard", gate: gate(), ask: async () => "allow" });
+  assert.equal(done.text, "");
+  assert.equal(replies.length, 1, "the model was asked again");
+});
+
 test("a turn stopped after a step that called a tool fails as stopped, rather than ending as answered", async () => {
   replies.push(calling("list_directory", { path: vault }), silent);
   const stopping = new AbortController();

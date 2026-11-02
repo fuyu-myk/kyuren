@@ -93,7 +93,9 @@ still open. The main window offers to stop the turn it is waiting on, which it s
 of its own, so that stopping it stops nothing else; a question that turn left open is withdrawn
 from both windows. What is timed is a model that has stalled: one that says nothing for five
 minutes while no tool is running ends its turn. A tool running, or a question waiting on the user,
-is not the model's silence.
+is not the model's silence. A model that used a tool and then ended its turn without a word, as a
+small one can with its answer left in its thinking, is asked once more, without tools, for what it
+found.
 
 A sidecar that exits is started again behind the same handle, after a second, the pause doubling
 to a minute while it keeps dying young; while it is down a request is refused at once with that

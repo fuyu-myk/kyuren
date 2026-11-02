@@ -978,3 +978,23 @@ needing a look as known.
 Spotify and from Apple Music, so the process tap hears both players. Hits shown from 3 dB over the
 second before, and in full from 9 dB, looked right against real music; nothing was changed for it.
 Music through headphones with a microphone has not been seen.
+
+## A skill from an API's documentation
+
+2026-11-01, by the user, on the built app, with WeatherAPI.com and a key of the user's own.
+
+Asked in the knowledge pane to read WeatherAPI's documentation and draft a skill for its current
+weather, named `weather_now` with its key named `weatherapi`, the cloud model read the page and
+drafted it as the documentation has it: `GET https://api.weatherapi.com/v1/current.json`, `q`
+needed, `aqi` and `lang` optional, the key in the query as `key`. Asked to use it while pending, the
+call was allowed at its question and refused by the skill, and the model answered from a web search
+instead; nothing reached the API.
+
+Approved, with the key given in the skills pane, the first calls were answered 401 and the skill
+was marked broken. Three things were found and changed: the mind read its graph only when the app
+started, so a skill drafted since was missing from it; the model was told no skill by name, so it
+reached for a web search unless the skill was named to it; and a key the service refused broke the
+skill, which approving again could not mend. With the key given again, asked without naming the
+skill, qwen3.5:9b chose `weather_now`, its first use was asked about, and WeatherAPI answered. In one
+of two such turns the model then ended without a word, and a turn that ends so after a tool now
+asks the model once more, without tools, for what it found.

@@ -372,6 +372,7 @@ export async function run(options: Run): Promise<Transcript> {
   let trouble: unknown;
   // Counted as each step ends, so a turn that fails part way can still say what it cost.
   let finished: Spent | undefined;
+  let afterword: { text: string; usage: LanguageModelUsage } | undefined;
   const result = streamText({
     model: modelFor(decision.route, difficulty),
     system: options.system,
@@ -416,6 +417,34 @@ export async function run(options: Run): Promise<Transcript> {
     // A refusal the fallback refused as well. Said, so it is not mistaken for a model that chose
     // to say nothing.
     if (finish === "content-filter") throw new Error("the model declined to answer this, and so did the model it fell back to");
+
+    // A model that used a tool and then ended without a word, as a small one does when its answer
+    // stays in its thinking, is asked once more, without tools, to say what it found.
+    if ((await result.text).trim() === "" && called.length > 0) {
+      listen();
+      const told = streamText({
+        model: modelFor(decision.route, difficulty),
+        system: options.system,
+        messages: [...messagesFor(options.history ?? [], options.prompt), ...(await result.responseMessages)],
+        abortSignal: options.signal ? AbortSignal.any([options.signal, quiet.signal]) : quiet.signal,
+        onChunk: ({ chunk }) => {
+          if (spoke(chunk)) listen();
+        },
+        onError: ({ error }) => {
+          trouble = error;
+        },
+        ...(decision.route === "cloud"
+          ? { maxRetries: CLOUD_RETRIES, maxOutputTokens: CLOUD_ROOM, providerOptions: optionsFor(decision.route) }
+          : {}),
+      });
+      for await (const chunk of told.textStream) {
+        options.onText?.(chunk);
+      }
+      if (options.signal?.aborted || quiet.signal.aborted) throw new Error("cut short");
+      if (trouble !== undefined) throw new Error(`the model stopped answering: ${said(trouble)}`);
+      afterword = { text: (await told.text).trim(), usage: await told.usage };
+      finished = added(finished, spentOf(afterword.usage));
+    }
   } catch (failure) {
     const reason = options.signal?.aborted
       ? "stopped before it finished"
@@ -436,11 +465,11 @@ export async function run(options: Run): Promise<Transcript> {
   // what listening needs. Not awaited: the answer is not made to wait for housekeeping.
   if (decision.route === "local-large") void release(decision.route);
   return {
-    text: (await result.text).trim(),
+    text: afterword?.text ?? (await result.text).trim(),
     usage: typeof usage?.inputTokens === "number"
       ? { input: usage.inputTokens, output: usage.outputTokens ?? 0 }
       : undefined,
-    spent: spentOf(total),
+    spent: afterword ? added(spentOf(total), spentOf(afterword.usage)) : spentOf(total),
     difficulty,
     spoken: spoken.length > 0 ? spoken.join(" ") : undefined,
     route: decision.route,

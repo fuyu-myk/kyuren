@@ -317,25 +317,27 @@ said aloud on asking.
 the public web over https. A forge tool the model drafts with, every draft inert. The
 pending-approval queue in the GUI. Approved skills called by name through one skill tool, the first
 call after each approval asked about whatever its host was allowed before. Every skill in the
-capability layer of the mind from the moment it is drafted. A key for each skill that names one,
-given in the skills pane straight to the keychain. Not built: tools for the model to test or edit a
+capability layer of the mind from the moment it is drafted, and the approved ones named to the model
+at the start of every turn. A key for each skill that names one, given in the skills pane straight
+to the keychain. Not built: tools for the model to test or edit a
 skill.
 
 **Gate.**
 1. Given an API's documentation, Kyuren drafts a working skill and the draft is inert until
-   approved. *Tested for inertness, `skill/store.test.ts` and `agent/skill.test.ts`; drafting from
-   documentation not yet seen.*
+   approved. *Recorded, A skill from an API's documentation: drafted from WeatherAPI's, and refused
+   while pending. Tested for inertness, `skill/store.test.ts` and `agent/skill.test.ts`.*
 2. An unapproved skill cannot be invoked by any path, including one the model constructs itself.
    *Tested, `skill/run.test.ts`, `skill/store.test.ts` and `agent/skill.test.ts`, and no file tool
    may write the skill store, `permission/guarded.test.ts`. No adversarial run is recorded.*
-3. An approved skill appears in the capability layer and is callable from the chat hub. *Tested for
-   the call, `agent/skill.test.ts`; the listing not yet seen.*
+3. An approved skill appears in the capability layer and is callable from the chat hub. *Recorded
+   for the call, A skill from an API's documentation; tested for the call, `agent/skill.test.ts`;
+   the listing not yet seen.*
 4. A skill whose endpoint has started failing is reported as broken rather than retried silently.
    *Tested, `skill/run.test.ts`.*
 5. Skill credentials are stored in the keychain and never appear in a prompt, a log or the graph.
    *Tested for keeping them out, `skill/call.test.ts` and `skill/run.test.ts`; entering one and
    being told only whether it is held, `e2e/main.spec.ts` and `src-tauri/src/secrets.rs`; a key
-   entered into the real keychain not yet seen.*
+   in the real keychain used by a call, A skill from an API's documentation.*
 
 **Risks.** This is the largest security surface in the project, because it is the model pointing
 new network requests at the internet. Gate check 2 is the load-bearing one and deserves adversarial
