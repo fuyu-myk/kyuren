@@ -1,12 +1,14 @@
 import { secretFor } from "#connect/secrets.ts";
 import { leadsNearby, lookupAll, type Resolve } from "#connect/web/nearby.ts";
-import { requestFor, scrub, type Given, type Request } from "#skill/call.ts";
+import { requestFor, scrub, scrubbed, type Given, type Request } from "#skill/call.ts";
 import type { Skill } from "#skill/shape.ts";
 import type { Skills } from "#skill/store.ts";
 
 /// How long a skill is given to answer, and how much of its answer is kept.
 const PATIENCE = 20_000;
 const HELD = 20_000;
+/// Read past what is kept, so a key that falls across the cut is whole when it is cleared.
+const MARGIN = 4_096;
 
 /// How many times a skill's address may send it on before it is taken as lost.
 const HOPS = 5;
@@ -43,11 +45,11 @@ function complaint(text: string): string {
     const error = parsed.error as { message?: unknown } | string | undefined;
     const found = [typeof error === "object" ? error?.message : undefined, parsed.message, parsed.error_description, error]
       .find((one): one is string => typeof one === "string" && one.trim() !== "");
-    if (found) return found.trim().slice(0, COMPLAINT);
+    if (found) return found.trim();
   } catch {
     // Not json, so the start of what was said is the best account there is.
   }
-  return text.replace(/\s+/g, " ").trim().slice(0, COMPLAINT);
+  return text.replace(/\s+/g, " ").trim();
 }
 
 /// What a forged skill's credential is called where credentials are kept, both here and in the
@@ -116,7 +118,8 @@ export async function runSkill(skills: Skills, id: string, given: Given, resolve
     if ("refused" in answered) return { ok: false, reason: `${skill.name} was ${answered.refused}`, broke: false };
 
     if (!answered.ok) {
-      const said = scrub(complaint(await readUpTo(answered, HELD)), secret);
+      // Cleared whole and then cut, so a cut never leaves the start of a key behind.
+      const said = scrub(complaint(scrub(await readUpTo(answered, HELD + MARGIN), secret)), secret).slice(0, COMPLAINT);
       // A key the service will not take is the key's trouble: the skill asks as it was approved
       // to, and approving it again would mend nothing.
       if (skill.auth.mode !== "none" && (answered.status === 401 || answered.status === 403)) {
@@ -130,10 +133,10 @@ export async function runSkill(skills: Skills, id: string, given: Given, resolve
     }
 
     // A service may echo what it was asked, key and all; the model is never shown the key.
-    const text = scrub(await readUpTo(answered, HELD), secret);
-    if (skill.reads === "text") return { ok: true, status: answered.status, read: text };
+    const text = await readUpTo(answered, HELD + MARGIN);
+    if (skill.reads === "text") return { ok: true, status: answered.status, read: scrub(text, secret).slice(0, HELD) };
     try {
-      return { ok: true, status: answered.status, read: JSON.parse(text) };
+      return { ok: true, status: answered.status, read: scrubbed(JSON.parse(text.slice(0, HELD)), secret) };
     } catch {
       const reason = `${skill.name} was expected to answer with json and did not`;
       skills.breaks(skill.id, reason);

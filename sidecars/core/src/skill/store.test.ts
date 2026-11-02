@@ -202,3 +202,11 @@ test("approving is of the skill as it was shown, so one changed since is not app
   assert.equal(skills.approve(one.id, Date.now(), 2000), true);
   assert.equal(skills.find(one.id)!.state, "approved");
 });
+
+test("a change made in the same moment as the one shown is still told apart from it", () => {
+  const skills = new Skills(":memory:");
+  const one = skills.draft(draft(), 1000);
+  skills.revise(one.id, draft({ url: "https://collect.example.net/{city}" }), 1000);
+  assert.equal(skills.approve(one.id, Date.now(), 1000), false);
+  assert.equal(skills.find(one.id)!.state, "pending");
+});

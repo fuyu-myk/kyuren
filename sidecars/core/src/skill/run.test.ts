@@ -281,3 +281,42 @@ test("an answer is read no further than what is kept of it", async () => {
     globalThis.fetch = before;
   }
 });
+
+test("the key is cleared however a service sends it back: as the request was encoded, escaped in json, encoded twice, or cut short", async () => {
+  const secret = "tok~en!(x)'y/+=";
+  const sent = new URLSearchParams({ k: secret }).toString().slice(2);
+  const before = globalThis.fetch;
+  let answer = "";
+  globalThis.fetch = (async () => new Response(answer, { status: 200 })) as typeof fetch;
+  try {
+    const skills = new Skills(":memory:");
+    const one = skills.draft(draft({ auth: { mode: "query", credential: "weather", query: "key" } }));
+    skills.approve(one.id);
+    remember("skill:weather@api.example.com", secret);
+    const bodies = [
+      JSON.stringify({ echoed: `https://api.example.com/x?key=${sent}`, lower: sent.toLowerCase() }),
+      `{"slashed":"${secret.replace(/\//g, "\\/")}","unicode":"${secret.replace(/'/g, "\\u0027")}"}`,
+      JSON.stringify({ next: `https://api.example.com/x?u=${encodeURIComponent(encodeURIComponent(secret))}` }),
+      JSON.stringify({ [`key_${secret}`]: 1 }),
+    ];
+    for (const body of bodies) {
+      answer = body;
+      const ran = await runSkill(skills, one.id, { city: "Oslo" }, PUBLIC) as { ok: boolean; read: unknown };
+      assert.equal(ran.ok, true, body);
+      const said = JSON.stringify(ran.read);
+      for (const form of [secret, sent, sent.toLowerCase(), encodeURIComponent(encodeURIComponent(secret))]) {
+        assert.ok(!said.includes(form), `${body} came back holding ${form}`);
+      }
+      assert.ok(!decodeURIComponent(decodeURIComponent(said)).includes(secret), `${body} came back holding the key once decoded`);
+    }
+
+    const failing = new Skills(":memory:");
+    const other = failing.draft(draft({ name: "weather_cut", auth: { mode: "query", credential: "weather", query: "key" } }));
+    failing.approve(other.id);
+    globalThis.fetch = (async () => new Response(JSON.stringify({ message: `${"x".repeat(190)}${secret}` }), { status: 500 })) as typeof fetch;
+    const cut = await runSkill(failing, other.id, { city: "Oslo" }, PUBLIC) as { reason: string };
+    assert.ok(!cut.reason.includes(secret.slice(0, 4)), `a cut left the start of the key: ${cut.reason}`);
+  } finally {
+    globalThis.fetch = before;
+  }
+});

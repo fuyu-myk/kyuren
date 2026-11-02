@@ -96,12 +96,14 @@ export class Skills {
   /// harmless skill approved and then quietly rewrite it into another one.
   ///
   /// What was last approved is kept beside the change, however many changes follow, so whoever
-  /// approves it again sees what they are agreeing to differ from what they agreed to before.
+  /// approves it again sees what they are agreeing to differ from what they agreed to before. Each
+  /// change is dated after the one before it, even within the same moment, since approving is of
+  /// the skill as dated when it was shown.
   revise(id: string, draft: Draft, at = Date.now(), why?: string): Skill | undefined {
     if (!this.find(id)) return undefined;
     this.db
       .prepare(`
-        update skills set name = ?, template = ?, state = 'pending', drafted = ?,
+        update skills set name = ?, template = ?, state = 'pending', drafted = max(?, drafted + 1),
         before = coalesce(before, case when approved is not null then template end),
         why = ?, approved = null, trouble = null where id = ?
       `)

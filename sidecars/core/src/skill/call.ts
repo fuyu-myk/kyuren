@@ -91,27 +91,62 @@ export function requestFor(skill: Skill, given: Given, secret?: string): Built {
   };
 }
 
-/// Every way a key can come back in what a service says: as it is, escaped for an address or a
-/// form, escaped inside a string of json, or in base64.
+/// Every way a key can come back in what a service says: as it is, escaped as this request escaped
+/// it or as an address or a form would, twice over as a link inside a link, escaped inside a string
+/// of json, or in base64.
 function formsOf(secret: string): string[] {
   const encoded = encodeURIComponent(secret);
+  const asSent = new URLSearchParams({ k: secret }).toString().slice(2);
   return [...new Set([
     secret,
     encoded,
     encoded.replace(/%20/g, "+"),
+    asSent,
+    asSent.replace(/\+/g, "%20"),
+    encodeURIComponent(encoded),
+    encodeURIComponent(asSent),
     JSON.stringify(secret).slice(1, -1),
     Buffer.from(secret).toString("base64"),
     Buffer.from(secret).toString("base64").replace(/=+$/, ""),
   ])].sort((one, other) => other.length - one.length);
 }
 
-/// What a service said, with nothing of the credential in it, whichever way it came back.
+function escaped(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/// What a text holds once undone as an address undoes it, a few times over.
+function undone(text: string): string[] {
+  const seen = [text];
+  let at = text;
+  for (let round = 0; round < 3; round += 1) {
+    try {
+      at = decodeURIComponent(at.replace(/\+/g, " "));
+    } catch {
+      break;
+    }
+    seen.push(at);
+  }
+  return seen;
+}
+
+/// What a service said, with nothing of the credential in it, whichever way it came back. Escapes
+/// differ in case alike, so each form is matched whatever its case; and a text that still holds the
+/// key once undone is held back whole, since where in it the key lies cannot then be told.
 export function scrub(text: string, secret?: string): string {
   if (!secret || secret.length < 4) return text;
   let said = text;
-  for (const form of formsOf(secret)) said = said.split(form).join("[credential]");
-  // Case aside, an escaped form is the same key: hex digits in either case decode alike.
-  const encoded = encodeURIComponent(secret);
-  if (encoded !== secret) said = said.replace(new RegExp(encoded.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "[credential]");
-  return said;
+  for (const form of formsOf(secret)) said = said.replace(new RegExp(escaped(form), "gi"), "[credential]");
+  return undone(said).some((one) => one.includes(secret)) ? "[held back, as it held the credential]" : said;
+}
+
+/// An answer read as json, with the credential cleared from every string and every name in it,
+/// after it is read, so no escape json allows can carry the key past the clearing.
+export function scrubbed(value: unknown, secret?: string): unknown {
+  if (typeof value === "string") return scrub(value, secret);
+  if (Array.isArray(value)) return value.map((one) => scrubbed(one, secret));
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).map(([name, inner]) => [scrub(name, secret), scrubbed(inner, secret)]));
+  }
+  return value;
 }

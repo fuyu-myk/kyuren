@@ -1025,13 +1025,20 @@ What was found, and changed:
 | --- | --- | --- |
 | a key | kept by its name, so a skill elsewhere naming it, once approved, would be sent it | kept for one host, `skill:name@host`; a skill elsewhere finds nothing |
 | approving | of whatever the skill was at that moment, so one edited while on screen would be approved unseen | of the skill as shown; a changed one is left pending and the pane says so |
-| an answer | given to the model as it came, so a service echoing the request would show the model the key | cleared of the key as it is, escaped for an address or a form, inside json, or in base64 |
+| an answer | given to the model as it came, so a service echoing the request would show the model the key | cleared of the key as it is, as the request escaped it, as an address or a form would, twice over, inside json once read, or in base64, whatever the case of its escapes; a text still holding it once undone is held back whole, and an answer is cut only once cleared |
 | the pane | left out fixed headers, what was read and where the key goes, and showed an address as written | shows the whole request, the host the key is kept for, and a host that is really another |
 | a value | `.` or `..` in a path, or one named after something every object has, went out | refused |
 | an address | with a tab or a newline in it passed, a parser taking them out | refused |
 | what is kept | every value given, planted ones too, to be offered again | only the values a skill takes |
 | an answer read | whole before it was cut | no further than is kept |
 | a question | named the host only | names the skill too |
+| a change | dated to the moment, so two in one moment would read as the one shown | each dated after the last |
+
+The fixes were put to the same reviewer to break. The key's host held against ports, case, escapes,
+a trailing dot, a lookalike letter, a name before an `@` and redirects; the clearing missed the
+request's own escaping, a json escape undone once read, a link inside a link and a cut through the
+key, all four since mended. A host with an underscore in it, or written as an IPv6 address, cannot
+be given a key, which fails closed.
 
 Left to a decision: an allowed write to a place the system runs code from, as a shell's start up
 file or a launch agent, is code that could change the skill store; and a read of the system's own
