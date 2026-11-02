@@ -374,10 +374,15 @@ A skill that proves who it is names its key, and never carries it. The key is gi
 the skills pane, under the skill that names it, and goes straight to the keychain under `skill:`
 and the name, apart from every credential Kyuren holds for itself; the pane is told only whether
 each key is held, never what it is, and the user may forget one there. Kyuren never enters a key
-itself. The core is handed the keys the skills name, as every credential reaches it.
+itself. The core is handed the keys the skills name, as every credential reaches it. A key the
+service refuses, with a 401 or a 403, is said to be refused in the service's own words, and the
+skill is not broken for it, since approving the request again would not mend the key.
+
+The approved skills are named to the model at the start of every turn, each with what it does and
+the values it takes, so a skill approved since the last turn is one it knows to reach for.
 
 Forged skills appear in the mind graph's capability layer the moment they are drafted, so the
-graph shows the assistant growing.
+graph shows the assistant growing; the mind reads its graph again each time it is shown.
 
 ## 9. The island
 

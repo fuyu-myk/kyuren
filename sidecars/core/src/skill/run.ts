@@ -32,6 +32,24 @@ async function fetchWithin(request: Request, signal: AbortSignal): Promise<Respo
   }
 }
 
+/// How much of what a service says about a failure is passed on.
+const COMPLAINT = 200;
+
+/// What a service said about a failure, in its own words where it gives them, so the trouble can
+/// be told apart from another that answers with the same status.
+function complaint(text: string): string {
+  try {
+    const parsed = JSON.parse(text) as { error?: unknown; message?: unknown; error_description?: unknown };
+    const error = parsed.error as { message?: unknown } | string | undefined;
+    const found = [typeof error === "object" ? error?.message : undefined, parsed.message, parsed.error_description, error]
+      .find((one): one is string => typeof one === "string" && one.trim() !== "");
+    if (found) return found.trim().slice(0, COMPLAINT);
+  } catch {
+    // Not json, so the start of what was said is the best account there is.
+  }
+  return text.replace(/\s+/g, " ").trim().slice(0, COMPLAINT);
+}
+
 /// What a forged skill's credential is called where credentials are kept, both here and in the
 /// keychain. Namespaced so a skill cannot name its credential after one Kyuren holds for
 /// something else and be handed that instead.
@@ -76,9 +94,15 @@ export async function runSkill(skills: Skills, id: string, given: Given, resolve
     if ("refused" in answered) return { ok: false, reason: `${skill.name} was ${answered.refused}`, broke: false };
 
     if (!answered.ok) {
+      const said = scrub(complaint((await answered.text()).slice(0, HELD)), secret);
+      // A key the service will not take is the key's trouble: the skill asks as it was approved
+      // to, and approving it again would mend nothing.
+      if (skill.auth.mode !== "none" && (answered.status === 401 || answered.status === 403)) {
+        return { ok: false, reason: `the key for ${skill.auth.credential} was refused (${answered.status})${said ? `: ${said}` : ""}`, broke: false };
+      }
       // Said once and remembered, rather than tried again: an address that has started answering
       // 403 will answer 403 again, and a skill that quietly retries is a skill nobody fixes.
-      const reason = `${skill.name} answered ${answered.status}`;
+      const reason = `${skill.name} answered ${answered.status}${said ? `: ${said}` : ""}`;
       skills.breaks(skill.id, reason);
       return { ok: false, reason, broke: true };
     }

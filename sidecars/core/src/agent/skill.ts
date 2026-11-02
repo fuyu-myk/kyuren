@@ -21,6 +21,20 @@ function whereItGoes(name: string): string {
   }
 }
 
+/// The approved skills by name, what each does and what it takes, read as each turn begins, so a
+/// skill approved since the last is one the model knows to reach for.
+function described(): string {
+  const told = "Use one of the approved skills. Give its name and the values it asks for. Only approved "
+    + "skills can be used; a skill that is pending or broken will refuse.";
+  const approved = sharedSkills().list().filter((one) => one.state === "approved");
+  if (approved.length === 0) return `${told} None is approved yet.`;
+  const each = approved.map((one) => {
+    const takes = one.parameters.map((given) => `${given.name} (${given.kind}${given.required ? ", needed" : ""})`);
+    return `- ${one.name}: ${one.about}${takes.length > 0 ? ` It takes ${takes.join(", ")}.` : ""}`;
+  });
+  return [told, "The approved skills:", ...each].join("\n");
+}
+
 /// Using one of the skills Kyuren has been given.
 ///
 /// Declared as reaching out of the machine, and described by where it reaches rather than by its
@@ -31,9 +45,7 @@ export function skillTool(resolve: Resolve = lookupAll): Tool<z.infer<typeof ski
   const describedUnder = new WeakMap<object, number | undefined>();
   return {
     name: "skill",
-    description:
-      "Use one of the approved skills. Give its name and the values it asks for. Only approved "
-      + "skills can be used; a skill that is pending or broken will refuse.",
+    description: described(),
     describe: (args) => {
       const found = sharedSkills().named(args.name);
       describedUnder.set(args, found?.approved);

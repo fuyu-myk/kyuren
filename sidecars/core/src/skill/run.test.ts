@@ -107,6 +107,48 @@ test("what is said about a failure never carries the credential", async () => {
   assert.ok(!said.includes("sk-a-very-secret-value"), "a credential appeared in what was reported");
 });
 
+test("a key the service refuses is said to be refused, in the service's words, and the skill is not broken for it", async () => {
+  const before = globalThis.fetch;
+  try {
+    for (const status of [401, 403]) {
+      const skills = new Skills(":memory:");
+      const one = skills.draft(draft({ auth: { mode: "query", credential: "weather", query: "key" } }));
+      skills.approve(one.id);
+      remember("skill:weather", "sk-the-key-itself");
+      globalThis.fetch = (async () => new Response(
+        JSON.stringify({ error: { code: 2006, message: "API key provided is invalid: sk-the-key-itself" } }),
+        { status },
+      )) as typeof fetch;
+
+      const ran = await runSkill(skills, one.id, { city: "Oslo" }, PUBLIC) as { ok: boolean; reason: string; broke: boolean };
+      assert.equal(ran.ok, false);
+      assert.equal(ran.broke, false, "a key refused is the key's trouble, and approving the skill again would not mend it");
+      assert.match(ran.reason, new RegExp(`the key for weather was refused \\(${status}\\): API key provided is invalid`));
+      assert.ok(!ran.reason.includes("sk-the-key-itself"), "the key appeared in what was reported");
+      assert.equal(skills.find(one.id)!.state, "approved");
+    }
+  } finally {
+    globalThis.fetch = before;
+  }
+});
+
+test("a skill that answers with a failure is broken, and says what the service said", async () => {
+  const before = globalThis.fetch;
+  globalThis.fetch = (async () => new Response(JSON.stringify({ message: "No such endpoint" }), { status: 404 })) as typeof fetch;
+  try {
+    const skills = new Skills(":memory:");
+    const one = skills.draft(draft());
+    skills.approve(one.id);
+
+    const ran = await runSkill(skills, one.id, { city: "Oslo" }, PUBLIC) as { reason: string; broke: boolean };
+    assert.equal(ran.broke, true);
+    assert.equal(ran.reason, "weather_now answered 404: No such endpoint");
+    assert.equal(skills.find(one.id)!.state, "broken");
+  } finally {
+    globalThis.fetch = before;
+  }
+});
+
 test("a skill follows a redirect within its own address, and not one anywhere else, which could be this machine", async () => {
   const skills = new Skills(":memory:");
   const one = skills.draft(draft());

@@ -137,3 +137,26 @@ test("a skill approved again while a call to it was being asked about is not cal
   assert.match(tool.describe(again).first ?? "", /weather_later has not been used/);
   assert.equal((await tool.run(again, nothing) as { ok: boolean }).ok, true);
 });
+
+test("the model is told which skills are approved and what each takes, and nothing of one pending", async () => {
+  const skills = sharedSkills();
+  const ready = skills.draft({
+    name: "tides_today",
+    about: "The tides today at a named harbour.",
+    method: "GET",
+    url: "https://api.example.com/v1/tides",
+    parameters: [
+      { name: "harbour", in: "query", kind: "string", required: true, about: "" },
+      { name: "metric", in: "query", kind: "boolean", required: false, about: "" },
+    ],
+    headers: {},
+    auth: { mode: "none" },
+    reads: "json",
+  });
+  skills.approve(ready.id);
+  skills.draft({ name: "waiting_one", about: "Something still waiting to be approved.", method: "GET", url: "https://api.example.com/v1/waiting", parameters: [], headers: {}, auth: { mode: "none" }, reads: "json" });
+
+  const told = skillTool().description;
+  assert.match(told, /tides_today: The tides today at a named harbour\. It takes harbour \(string, needed\), metric \(boolean\)\./);
+  assert.ok(!told.includes("waiting_one"), "a pending skill was offered");
+});

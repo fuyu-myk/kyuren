@@ -417,6 +417,8 @@ function bloom(): void {
   screen.forget();
   presence.forget();
   presence.note(mind.visible().map((one) => one.id), moment);
+  // Read again at every showing, so a skill drafted or a note learned while it was away is there.
+  void refresh();
 }
 
 void onStep((step) => {
@@ -522,5 +524,5 @@ window.addEventListener("resize", resize);
 resize();
 drawLayers();
 void askable().then((names) => { canRun = names; }).catch(() => { canRun = []; });
-void refresh().then(bloom);
+bloom();
 requestAnimationFrame(frame);
