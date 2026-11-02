@@ -88,6 +88,7 @@ pub fn run() {
             commands::held_secrets,
             commands::skill_keys_held,
             commands::connect_service,
+            commands::expired_connections,
             commands::morning_brief,
             commands::evening_recap,
             commands::calendar_week,

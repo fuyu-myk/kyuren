@@ -394,6 +394,14 @@ body {
   font-weight: 500;
 }
 
+.connected.expired strong {
+  color: var(--yellow);
+}
+
+.connected button + button {
+  margin-left: 0;
+}
+
 .quiet {
   font-size: 0.72rem;
 }

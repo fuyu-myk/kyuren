@@ -71,6 +71,22 @@ pub fn skill_keys_held(names: Vec<String>) -> Vec<String> {
     secrets::skill_keys_held(&names)
 }
 
+/// Which connections the service now refuses, so settings can say they expired rather than that
+/// they are connected. Each held grant is tried once; one that cannot be reached is not counted.
+#[tauri::command]
+pub async fn expired_connections(sidecars: State<'_, Sidecars>) -> Result<Vec<String>, String> {
+    let answer = sidecars
+        .core
+        .request("oauth.expired", json!({}), GATHER_TIMEOUT)
+        .await
+        .map_err(|failure| failure.to_string())?;
+    Ok(answer
+        .get("names")
+        .and_then(Value::as_array)
+        .map(|names| names.iter().filter_map(Value::as_str).map(String::from).collect())
+        .unwrap_or_default())
+}
+
 /// Consent pages Kyuren will open. The sidecar builds the address from a pinned host, and this
 /// checks it again on the way out, so a wrong or tampered address opens nothing.
 const CONSENT_HOSTS: [&str; 2] = [

@@ -151,8 +151,9 @@ those are exactly the parts a framework would have given us.
 
 **Builds.** Connectors behind one internal interface: Notion, Google Calendar and Gmail, Apple
 Calendar and Apple Mail through EventKit and the Mail scripting interface, and Microsoft 365's
-calendar and mail. Credential storage in the system keychain. Reading a connector is a gated action
-like any tool, fingerprinted per source, so allowing one source never allows another. The
+calendar and mail. Credential storage in the system keychain; a grant the service refuses is shown
+as expired in settings and asked for again with the client already held. Reading a connector is a
+gated action like any tool, fingerprinted per source, so allowing one source never allows another. The
 morning-brief capability: read what is overdue, the deadlines ahead and the events through tomorrow
 across every connected source, triage unread mail, compose a spoken summary from those facts in
 code rather than by a model, and write the day into the vault as one markdown note, whose block

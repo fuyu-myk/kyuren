@@ -36,6 +36,11 @@ export function connectService(
   return invoke("connect_service", { service, clientId, clientSecret });
 }
 
+/// Which connections the service now refuses, found by trying each grant held.
+export function expiredConnections(): Promise<string[]> {
+  return invoke<string[]>("expired_connections");
+}
+
 export function onConnections(handler: (names: string[]) => void): Promise<UnlistenFn> {
   return listen<string[]>("connections", (event) => handler(event.payload));
 }

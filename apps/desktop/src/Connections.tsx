@@ -1,5 +1,5 @@
-import { useCallback, useState } from "react";
-import { connectService, forgetSecret, storeSecret } from "@/connect";
+import { useCallback, useEffect, useState } from "react";
+import { connectService, expiredConnections, forgetSecret, storeSecret } from "@/connect";
 
 /// What a service needs before it can be connected. A pasted token is stored as it is; a client
 /// registration starts an authorisation instead, and the credential comes back on its own.
@@ -34,6 +34,20 @@ type Props = {
 };
 
 export function Connections({ connected, onConnected, onTrouble }: Props) {
+  const [expired, setExpired] = useState<string[]>([]);
+
+  // A grant is only known to have expired once the service refuses it, so each is tried whenever
+  // what is held changes, a connection made again included.
+  useEffect(() => {
+    let current = true;
+    void expiredConnections()
+      .then((names) => current && setExpired(names))
+      .catch(() => current && setExpired([]));
+    return () => {
+      current = false;
+    };
+  }, [connected]);
+
   return (
     <section className="connections">
       <h2>connections</h2>
@@ -42,6 +56,7 @@ export function Connections({ connected, onConnected, onTrouble }: Props) {
           key={service.name}
           service={service}
           held={connected.includes(service.name)}
+          expired={expired.includes(service.name)}
           onConnected={onConnected}
           onTrouble={onTrouble}
         />
@@ -53,9 +68,10 @@ export function Connections({ connected, onConnected, onTrouble }: Props) {
 function One({
   service,
   held,
+  expired,
   onConnected,
   onTrouble,
-}: { service: Service; held: boolean } & Omit<Props, "connected">) {
+}: { service: Service; held: boolean; expired: boolean } & Omit<Props, "connected">) {
   const [values, setValues] = useState<Record<string, string>>({});
 
   const ready = service.fields.every((field) => (values[field.key] ?? "").trim() !== "");
@@ -73,6 +89,15 @@ function One({
     }
   }, [service, values, onConnected, onTrouble]);
 
+  // Nothing typed, so the client already held asks for the grant again.
+  const again = useCallback(async () => {
+    try {
+      await connectService(service.name, "");
+    } catch (failure) {
+      onTrouble(String(failure));
+    }
+  }, [service, onTrouble]);
+
   const forget = useCallback(async () => {
     try {
       onConnected(await forgetSecret(service.name));
@@ -80,6 +105,20 @@ function One({
       onTrouble(String(failure));
     }
   }, [service, onConnected, onTrouble]);
+
+  if (held && expired) {
+    return (
+      <p className="connected expired">
+        <strong>{service.name}</strong> access has expired
+        <button className="quiet" onClick={() => void again()}>
+          connect again
+        </button>
+        <button className="quiet" onClick={() => void forget()}>
+          forget
+        </button>
+      </p>
+    );
+  }
 
   if (held) {
     return (

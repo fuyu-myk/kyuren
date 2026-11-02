@@ -20,6 +20,7 @@
     "allow-coding-hooks",
     "allow-coding-hooks-set",
     "allow-connect-service",
+    "allow-expired-connections",
     "allow-forget-secret",
     "allow-held-secrets",
     "allow-skill-keys-held",

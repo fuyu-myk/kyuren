@@ -14,6 +14,10 @@ type Granted = {
   error_description?: string;
 };
 
+/// A grant the user withdrew, or one that expired: the one failure they can act on, by connecting
+/// again, and told apart so that what holds the grant can say so rather than that it failed.
+export class Withdrawn extends Error {}
+
 /// A minute of slack. A token that expires while a request is in flight reads as a failure the
 /// user cannot act on, and refreshing early costs nothing.
 const EARLY = 60_000;
@@ -32,6 +36,11 @@ async function post(provider: Provider, body: Record<string, string>): Promise<T
 
   const granted = (await response.json()) as Granted;
   if (!response.ok || !granted.access_token) {
+    // Every service says so with the same code, inside a message that otherwise reads as a
+    // transport error. The service is not named here because whatever reports this already names it.
+    if (granted.error === "invalid_grant") {
+      throw new Withdrawn("the grant was withdrawn or has expired, so connect it again");
+    }
     throw new Error(explain(granted, response.status));
   }
 
@@ -42,14 +51,7 @@ async function post(provider: Provider, body: Record<string, string>): Promise<T
   };
 }
 
-/// A grant the user withdrew, or one that expired, is the one failure they can actually act on.
-/// Every service says so with the same code, inside a message that otherwise reads as a transport
-/// error. The service is not named here because whatever reports this already names it.
 function explain(granted: Granted, status: number): string {
-  if (granted.error === "invalid_grant") {
-    return "the grant was withdrawn or has expired, so connect it again";
-  }
-
   const said = [granted.error, granted.error_description].filter(Boolean).join(": ");
   return `could not be authorised: ${said || `HTTP ${status}`}`;
 }

@@ -14,6 +14,7 @@ function standIn(): void {
   const books = [{ name: "research", approved: true, pending: false, when: "a question to research", inputs: [] as unknown[], recent: [failed] }];
   const weather = { id: "s1", name: "weather_now", about: "The weather where asked.", method: "GET", url: "https://api.example.com/weather", parameters: [], headers: {}, auth: { mode: "bearer", credential: "weather" }, reads: "json", state: "approved", drafted: Date.now() };
   let keys: string[] = [];
+  let expired = ["google"];
   let next = 1;
   Object.assign(window, {
     __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener: (_event: string, id: number) => callbacks.delete(id) },
@@ -52,6 +53,12 @@ function standIn(): void {
         if (cmd === "forget_secret") {
           keys = keys.filter((name) => `skill:${name}` !== args.name);
           return [];
+        }
+        if (cmd === "held_secrets") return ["google"];
+        if (cmd === "expired_connections") return expired;
+        if (cmd === "connect_service") {
+          expired = [];
+          return null;
         }
         if (cmd === "island_visualizer") return false;
         if (cmd === "island_visualizer_set") return args.on;
@@ -297,6 +304,17 @@ test("the evening's recap is written on asking from the system pane, and shown t
   await page.getByRole("button", { name: "how did today go" }).click();
   await expect(page.locator(".facts.recap")).toContainText("- **kyuren**, 1 commit: feat: the evening recap");
   expect(await calledWith(page, "evening_recap")).toHaveLength(1);
+});
+
+test("a connection whose grant expired says so, and is connected again with the client already held", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "system" }).click();
+  const google = page.locator(".connections .connected", { hasText: "google" });
+  await expect(google).toContainText("google access has expired");
+  await google.getByRole("button", { name: "connect again" }).click();
+  expect((await calledWith(page, "connect_service")).map((one) => one.args)).toEqual([{ service: "google", clientId: "" }]);
+  await emit(page, "connections", ["google"]);
+  await expect(google).toContainText("google is connected");
+  await expect(google.getByRole("button", { name: "connect again" })).toHaveCount(0);
 });
 
 test("the island's week begins on Sunday, or on Monday once chosen in settings", async ({ page }) => {

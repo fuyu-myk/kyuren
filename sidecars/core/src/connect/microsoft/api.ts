@@ -32,7 +32,7 @@ export function forgetAccess(): void {
   current = undefined;
 }
 
-async function access(): Promise<string> {
+export async function access(): Promise<string> {
   const held = credentials();
   if (!held) throw new Error("microsoft is not connected");
 

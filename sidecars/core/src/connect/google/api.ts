@@ -31,7 +31,7 @@ let current: Tokens | undefined;
 
 /// Access tokens last an hour and are not worth storing. The refresh token is the connection; this
 /// is just the part of it that is currently usable.
-async function access(): Promise<string> {
+export async function access(): Promise<string> {
   const held = credentials();
   if (!held) throw new Error("google is not connected");
 
