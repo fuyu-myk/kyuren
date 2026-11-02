@@ -3,6 +3,7 @@ import { ThinkingOrb } from "thinking-orbs";
 import { Board } from "@/Board";
 import { parseCommand, type Command } from "@/commands";
 import { Composer } from "@/Composer";
+import { sentIn } from "@/recall";
 import { Forge } from "@/Forge";
 import { Markdown } from "@/Markdown";
 import { Noticed } from "@/Noticed";
@@ -316,6 +317,7 @@ export function Place({ pane, shown }: PlaceProps) {
             onStop={stop}
             commands={commands}
             shown={shown}
+            sent={sentIn(turns)}
           />
           <Standing choice={choice} onChoose={choose} last={last} />
         </div>

@@ -180,7 +180,8 @@ A Node sidecar speaking newline-delimited JSON over stdio. Owns all cognition.
 - **Permissions.** See section 7.
 - **Memory.** See section 6.
 - **Sessions.** One session store, each session belonging to its pane, plus the consolidating
-  chat hub.
+  chat hub. In a session's composer the up and down arrows walk back through what that session
+  sent, and give back what was being written.
 - **Projects.** Where each repository under the coding folder stands, read from git, and for one
   on GitHub its open pull requests and how their checks stand, and the main branch's, asked of
   GitHub through its own command line as the user signed it in, in the background and at most

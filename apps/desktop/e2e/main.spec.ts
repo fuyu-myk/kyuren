@@ -172,6 +172,32 @@ test("a question being waited on can be stopped, and ends as stopped rather than
   await expect(page.getByText("stopped before it finished")).toHaveCount(0);
 });
 
+test("up and down bring back what this session sent, give back what was being written, and a new session has none", async ({ page }) => {
+  const box = page.locator(".composer textarea");
+  for (const said of ["first question", "second question"]) {
+    await box.fill(said);
+    await page.getByRole("button", { name: "send" }).click();
+    await page.getByRole("button", { name: "stop" }).click();
+    await expect(page.getByRole("button", { name: "send" })).toBeVisible();
+  }
+  await box.fill("half a th");
+  await box.press("ArrowUp");
+  await expect(box).toHaveValue("second question");
+  await box.press("ArrowUp");
+  await expect(box).toHaveValue("first question");
+  await box.press("ArrowUp");
+  await expect(box).toHaveValue("first question");
+  await box.press("ArrowDown");
+  await expect(box).toHaveValue("second question");
+  await box.press("ArrowDown");
+  await expect(box).toHaveValue("half a th");
+
+  await page.getByRole("button", { name: "back" }).click();
+  await box.fill("");
+  await box.press("ArrowUp");
+  await expect(box).toHaveValue("");
+});
+
 test("a playbook run by a slash is stopped by the name the window gave it", async ({ page }) => {
   await page.locator(".composer textarea").fill("/research diffusion models");
   await page.getByRole("button", { name: "send" }).click();

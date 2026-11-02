@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { stepped, suggest, type Command } from "@/commands";
+import { recalled, type Walk } from "@/recall";
 
 type ComposerProps = {
   placeholder: string;
@@ -11,12 +12,15 @@ type ComposerProps = {
   commands?: Command[];
   /// Whether the page it sits on is the one on screen. A bar out of sight has no height to measure.
   shown?: boolean;
+  /// What this session has sent, oldest first, for the arrow keys to bring back.
+  sent?: string[];
 };
 
 /// The bar at the bottom of every page. It grows upwards as it fills, stops growing once it would
 /// take over the page, and scrolls from then on.
-export function Composer({ placeholder, busy, onSend, onStop, commands, shown = true }: ComposerProps) {
+export function Composer({ placeholder, busy, onSend, onStop, commands, shown = true, sent = [] }: ComposerProps) {
   const [text, setText] = useState("");
+  const [walk, setWalk] = useState<Walk>(undefined);
   const [scrolling, setScrolling] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const [dismissed, setDismissed] = useState(false);
@@ -47,11 +51,16 @@ export function Composer({ placeholder, busy, onSend, onStop, commands, shown = 
 
   useEffect(() => () => window.clearTimeout(settling.current), []);
 
-  // Typing again after escape brings the menu back, and every change starts from the top of it.
+  // Typing again after escape brings the menu back, and every change starts from the top of it. A
+  // prompt brought back opens no menu, so the arrows go on walking.
   useEffect(() => {
     setHighlight(0);
-    setDismissed(false);
-  }, [text]);
+    setDismissed(walk !== undefined);
+  }, [text, walk]);
+
+  // Another session has sent other things, so a walk through this one's ends with it.
+  const session = sent.join("\n");
+  useEffect(() => setWalk(undefined), [session]);
 
   const menu = dismissed ? [] : suggest(commands ?? [], text);
 
@@ -64,6 +73,7 @@ export function Composer({ placeholder, busy, onSend, onStop, commands, shown = 
     const saying = text.trim();
     if (saying === "" || busy) return;
     setText("");
+    setWalk(undefined);
     onSend(saying);
   }
 
@@ -82,7 +92,10 @@ export function Composer({ placeholder, busy, onSend, onStop, commands, shown = 
         rows={1}
         placeholder={placeholder}
         aria-label={placeholder}
-        onChange={(event) => setText(event.target.value)}
+        onChange={(event) => {
+          setWalk(undefined);
+          setText(event.target.value);
+        }}
         onScroll={() => {
           // The scrollbar is shown only while it is being used, so a still page has nothing on it
           // that is not part of the page.
@@ -106,6 +119,21 @@ export function Composer({ placeholder, busy, onSend, onStop, commands, shown = 
             if (event.key === "Escape") {
               event.preventDefault();
               setDismissed(true);
+              return;
+            }
+          }
+          // Up from the first line, or down from the last, walks through what this session sent.
+          if ((event.key === "ArrowUp" || event.key === "ArrowDown") && !event.shiftKey) {
+            const here = event.currentTarget;
+            const back = event.key === "ArrowUp";
+            const edge = back
+              ? !text.slice(0, here.selectionStart).includes("\n")
+              : !text.slice(here.selectionEnd).includes("\n");
+            const moved = edge && here.selectionStart === here.selectionEnd ? recalled(sent, walk, back ? -1 : 1, text) : undefined;
+            if (moved) {
+              event.preventDefault();
+              setWalk(moved.walk);
+              setText(moved.text);
               return;
             }
           }
