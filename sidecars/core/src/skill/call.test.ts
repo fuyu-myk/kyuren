@@ -51,7 +51,7 @@ test("a value cannot climb out of its own segment", () => {
 });
 
 test("a value cannot send the request somewhere else", () => {
-  for (const city of ["evil.example.com", "..", "@evil.example.com", "%2e%2e%2f"]) {
+  for (const city of ["evil.example.com", "@evil.example.com", "%2e%2e%2f"]) {
     const request = built(requestFor(skill(), { city }));
     assert.equal(
       new URL(request.url).origin,
@@ -59,6 +59,7 @@ test("a value cannot send the request somewhere else", () => {
       `${city} moved the request`,
     );
   }
+  assert.deepEqual(requestFor(skill(), { city: ".." }), { wrong: "city cannot be . or .." });
 });
 
 test("a credential is fetched at the moment of the call and put where it belongs", () => {
@@ -120,4 +121,9 @@ test("a value of the wrong kind is refused", () => {
 test("nothing said about a failure carries the credential in it", () => {
   assert.equal(scrub("401 from https://x?key=sk-secret", "sk-secret"), "401 from https://x?key=[credential]");
   assert.equal(scrub("plain trouble", "sk-secret"), "plain trouble");
+});
+
+test("a value named after something every object has is not taken for one that was given", () => {
+  const one = requestFor(skill({ parameters: [{ name: "toString", in: "query", kind: "string", required: true, about: "" }], url: "https://api.example.com/v1" }), {});
+  assert.deepEqual(one, { wrong: "toString is needed and was not given" });
 });

@@ -100,7 +100,7 @@ test("what is said about a failure never carries the credential", async () => {
   const skills = new Skills(":memory:");
   const one = skills.draft(draft({ auth: { mode: "bearer", credential: "weather" } }));
   skills.approve(one.id);
-  remember("skill:weather", "sk-a-very-secret-value");
+  remember("skill:weather@api.example.com", "sk-a-very-secret-value");
 
   const ran = await runSkill(skills, one.id, { city: "Oslo" }, PUBLIC);
   const said = JSON.stringify(ran) + JSON.stringify(skills.find(one.id));
@@ -114,7 +114,7 @@ test("a key the service refuses is said to be refused, in the service's words, a
       const skills = new Skills(":memory:");
       const one = skills.draft(draft({ auth: { mode: "query", credential: "weather", query: "key" } }));
       skills.approve(one.id);
-      remember("skill:weather", "sk-the-key-itself");
+      remember("skill:weather@api.example.com", "sk-the-key-itself");
       globalThis.fetch = (async () => new Response(
         JSON.stringify({ error: { code: 2006, message: "API key provided is invalid: sk-the-key-itself" } }),
         { status },
@@ -191,4 +191,93 @@ test("a skill whose address leads to this machine or its network is not called, 
   assert.match((ran as { reason: string }).reason, /this machine or its network/);
   assert.equal(reached.length, before, "the network was never reached");
   assert.equal(skills.find(one.id)?.state, "approved");
+});
+
+test("a key is given only to the host it was kept for, so a skill elsewhere naming it finds nothing", async () => {
+  const before = globalThis.fetch;
+  const asked: string[] = [];
+  globalThis.fetch = (async (input: unknown) => {
+    asked.push(String(input));
+    return new Response("{}", { status: 200 });
+  }) as typeof fetch;
+  try {
+    const skills = new Skills(":memory:");
+    const keyed = { mode: "query" as const, credential: "weather", query: "key" };
+    const home = skills.draft(draft({ name: "weather_home", url: "https://api.example.com/v1/weather/{city}", auth: keyed }));
+    const away = skills.draft(draft({ name: "weather_away", url: "https://collect.example.net/{city}", auth: keyed }));
+    skills.approve(home.id);
+    skills.approve(away.id);
+    remember("skill:weather@api.example.com", "sk-kept-for-one-host");
+
+    const elsewhere = await runSkill(skills, away.id, { city: "Oslo" }, PUBLIC) as { ok: boolean; reason: string };
+    assert.equal(elsewhere.ok, false);
+    assert.equal(elsewhere.reason, "the key for weather at collect.example.net is not held");
+    assert.deepEqual(asked, [], "the key went to a host it was not kept for");
+
+    const at = await runSkill(skills, home.id, { city: "Oslo" }, PUBLIC);
+    assert.equal(at.ok, true, JSON.stringify(at));
+    assert.deepEqual(asked, ["https://api.example.com/v1/weather/Oslo?key=sk-kept-for-one-host"]);
+  } finally {
+    globalThis.fetch = before;
+  }
+});
+
+test("an answer that echoes the key has it taken out, in every form it can come back in", async () => {
+  const secret = "sk-a/b+c=d e";
+  const before = globalThis.fetch;
+  globalThis.fetch = (async (input: unknown) => new Response(JSON.stringify({
+    echoed: String(input),
+    raw: secret,
+    encoded: encodeURIComponent(secret),
+    form: encodeURIComponent(secret).replace(/%20/g, "+"),
+    escaped: JSON.stringify(secret).slice(1, -1),
+    base64: Buffer.from(secret).toString("base64"),
+  }), { status: 200 })) as typeof fetch;
+  try {
+    const skills = new Skills(":memory:");
+    const one = skills.draft(draft({ auth: { mode: "query", credential: "weather", query: "key" } }));
+    skills.approve(one.id);
+    remember("skill:weather@api.example.com", secret);
+    const ran = await runSkill(skills, one.id, { city: "Oslo" }, PUBLIC) as { ok: boolean; read: unknown };
+    assert.equal(ran.ok, true);
+    const said = JSON.stringify(ran.read);
+    for (const form of [secret, encodeURIComponent(secret), "sk-a%2Fb%2Bc%3Dd+e", Buffer.from(secret).toString("base64")]) {
+      assert.ok(!said.includes(form), `the key came back as ${form}`);
+    }
+    assert.match(said, /\[credential\]/);
+  } finally {
+    globalThis.fetch = before;
+  }
+});
+
+test("a path value of . or .. is refused, so the request keeps the shape it was approved with", async () => {
+  const skills = new Skills(":memory:");
+  const one = skills.draft(draft());
+  skills.approve(one.id);
+  const ran = await runSkill(skills, one.id, { city: ".." }, PUBLIC) as { ok: boolean; reason: string };
+  assert.equal(ran.ok, false);
+  assert.equal(ran.reason, "city cannot be . or ..");
+});
+
+test("an answer is read no further than what is kept of it", async () => {
+  const before = globalThis.fetch;
+  let pulled = 0;
+  globalThis.fetch = (async () => new Response(new ReadableStream({
+    pull(controller) {
+      pulled += 1;
+      if (pulled > 1000) return controller.close();
+      controller.enqueue(new TextEncoder().encode("x".repeat(1024)));
+    },
+  }), { status: 200 })) as typeof fetch;
+  try {
+    const skills = new Skills(":memory:");
+    const one = skills.draft(draft({ reads: "text" }));
+    skills.approve(one.id);
+    const ran = await runSkill(skills, one.id, { city: "Oslo" }, PUBLIC) as { ok: boolean; read: string };
+    assert.equal(ran.ok, true);
+    assert.ok(ran.read.length <= 20_000);
+    assert.ok(pulled < 100, `read ${pulled} chunks of a body that was never going to be kept`);
+  } finally {
+    globalThis.fetch = before;
+  }
 });

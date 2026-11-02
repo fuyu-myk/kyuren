@@ -328,7 +328,8 @@ skill.
    while pending. Tested for inertness, `skill/store.test.ts` and `agent/skill.test.ts`.*
 2. An unapproved skill cannot be invoked by any path, including one the model constructs itself.
    *Tested, `skill/run.test.ts`, `skill/store.test.ts` and `agent/skill.test.ts`, and no file tool
-   may write the skill store, `permission/guarded.test.ts`. No adversarial run is recorded.*
+   may write the skill store, `permission/guarded.test.ts`. Recorded, An adversarial run against the
+   skill gate.*
 3. An approved skill appears in the capability layer and is callable from the chat hub. *Recorded,
    A skill from an API's documentation; tested for the call, `agent/skill.test.ts`.*
 4. A skill whose endpoint has started failing is reported as broken rather than retried silently.
@@ -336,7 +337,9 @@ skill.
 5. Skill credentials are stored in the keychain and never appear in a prompt, a log or the graph.
    *Tested for keeping them out, `skill/call.test.ts` and `skill/run.test.ts`; entering one and
    being told only whether it is held, `e2e/main.spec.ts` and `src-tauri/src/secrets.rs`; a key
-   in the real keychain used by a call, A skill from an API's documentation.*
+   in the real keychain used by a call, A skill from an API's documentation. A key kept for one
+   host and cleared from what comes back, `skill/run.test.ts`, and An adversarial run against the
+   skill gate.*
 
 **Risks.** This is the largest security surface in the project, because it is the model pointing
 new network requests at the internet. Gate check 2 is the load-bearing one and deserves adversarial

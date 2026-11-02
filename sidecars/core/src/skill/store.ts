@@ -115,9 +115,11 @@ export class Skills {
     this.db.prepare("update skills set confirmed = ? where id = ? and approved = ?").run(approval, id, approval);
   }
 
-  approve(id: string, at = Date.now()): boolean {
+  /// Approving is of the skill as it was shown: given when that was drafted, a skill changed since
+  /// is not approved, since what would be agreed to is not what was seen.
+  approve(id: string, at = Date.now(), shown?: number): boolean {
     const found = this.find(id);
-    if (!found) return false;
+    if (!found || (shown !== undefined && found.drafted !== shown)) return false;
     this.db
       .prepare("update skills set state = 'approved', approved = ?, trouble = null, before = null, why = null where id = ?")
       .run(at, id);

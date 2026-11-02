@@ -64,6 +64,7 @@ function standIn(): void {
           expired = [];
           return null;
         }
+        if (cmd === "skill_approve") return { approved: false };
         if (cmd === "island_visualizer") return false;
         if (cmd === "island_visualizer_set") return args.on;
         if (cmd === "notion_todos" || cmd === "notion_todos_choose") {
@@ -376,15 +377,15 @@ test("a skill's key is given in the skills pane, straight to the keychain, and o
   await expect(page.locator(".forged").getByRole("button", { name: "keep" })).toBeDisabled();
   await field.fill("sk-a-test-value");
   await field.press("Enter");
-  expect((await calledWith(page, "store_secret")).map((one) => one.args)).toEqual([{ name: "skill:weather", secret: "sk-a-test-value" }]);
+  expect((await calledWith(page, "store_secret")).map((one) => one.args)).toEqual([{ name: "skill:weather@api.example.com", secret: "sk-a-test-value" }]);
   const kept = page.locator(".forged .key strong");
   await expect(kept).toHaveText("weather");
   await expect(field).toHaveCount(0);
   expect(await page.locator(".forged").innerHTML()).not.toContain("sk-a-test-value");
-  expect((await calledWith(page, "skill_keys_held")).at(-1)?.args).toEqual({ names: ["weather"] });
+  expect((await calledWith(page, "skill_keys_held")).at(-1)?.args).toEqual({ names: ["weather@api.example.com"] });
 
   await page.locator(".forged .key").getByRole("button", { name: "forget" }).click();
-  expect((await calledWith(page, "forget_secret")).map((one) => one.args)).toEqual([{ name: "skill:weather" }]);
+  expect((await calledWith(page, "forget_secret")).map((one) => one.args)).toEqual([{ name: "skill:weather@api.example.com" }]);
   await expect(field).toBeVisible();
   await expect(field).toHaveValue("");
 });
@@ -401,6 +402,14 @@ test("a skill changed since it was approved shows what changed and why, and impr
   const [asked] = await calledWith(page, "ask");
   expect(String(asked?.args.prompt)).toMatch(/^Improve the skill weather_now\. Test it with skill_test/);
   await page.getByRole("button", { name: "stop" }).click();
+});
+
+test("approving sends the skill as it was shown, and one changed since is not approved, and says so", async ({ page }) => {
+  await page.locator(".rail").getByRole("button", { name: "knowledge" }).click();
+  const changed = page.locator(".forged li", { hasText: "tides_today" });
+  await changed.getByRole("button", { name: "approve" }).click();
+  expect((await calledWith(page, "skill_approve")).map((one) => one.args)).toEqual([{ id: "s2", drafted: expect.any(Number) }]);
+  await expect(page.getByText("tides_today changed since it was shown; look at it again before approving")).toBeVisible();
 });
 
 test("an approved skill is a slash, its values offered as they are typed, and sent as typed with the turn", async ({ page }) => {

@@ -141,7 +141,7 @@ export type Skill = {
   url: string;
   parameters: Parameter[];
   headers: Record<string, string>;
-  auth: { mode: "none" | "bearer" | "header" | "query"; credential?: string };
+  auth: { mode: "none" | "bearer" | "header" | "query"; credential?: string; header?: string; query?: string };
   reads: "json" | "text";
   state: "pending" | "approved" | "broken";
   drafted: number;
@@ -161,9 +161,11 @@ export async function listSkills(): Promise<Skill[]> {
 }
 
 /// Approving a skill, which is the only thing that makes one callable.
-export async function approveSkill(id: string): Promise<void> {
-  if (!insideTauri()) return pretend.approveSkill(id);
-  await invoke("skill_approve", { id });
+/// Approving a skill as it was shown, named by when it was drafted: false when it changed since,
+/// and nothing was approved.
+export async function approveSkill(id: string, drafted: number): Promise<boolean> {
+  if (!insideTauri()) return pretend.approveSkill(id, drafted);
+  return (await invoke<{ approved: boolean }>("skill_approve", { id, drafted })).approved;
 }
 
 export async function forgetSkill(id: string): Promise<void> {

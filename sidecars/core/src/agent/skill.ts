@@ -70,7 +70,8 @@ export function skillTool(resolve: Resolve = lookupAll, use: "use" | "test" = "u
         tool: name,
         effect: "outbound",
         target: whereItGoes(args.name),
-        carrying: Object.entries(args.values).map(([name, value]) => `${name}: ${value}`).join(", "),
+        // Named, since the host alone does not say which skill is about to be called.
+        carrying: `${args.name} with ${Object.entries(args.values).map(([name, value]) => `${name}: ${value}`).join(", ") || "nothing"}`,
         ...(found && untried(found) ? { first: `${found.name} has not been used since it was approved` } : {}),
       };
     },
@@ -101,7 +102,9 @@ export function skillTool(resolve: Resolve = lookupAll, use: "use" | "test" = "u
           spoken: ran.broke ? `${found.name} has stopped working: ${ran.reason}` : undefined,
         };
       }
-      skills.used(found.id, args.values);
+      // Only the values it takes are kept, so nothing planted beside them is offered again.
+      const takes = new Set(found.parameters.map((one) => one.name));
+      skills.used(found.id, Object.fromEntries(Object.entries(args.values).filter(([name]) => takes.has(name))));
       return { ok: true, status: ran.status, read: ran.read };
     },
   };

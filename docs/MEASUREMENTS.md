@@ -999,3 +999,40 @@ skill, qwen3.5:9b chose `weather_now`, its first use was asked about, and Weathe
 of two such turns the model then ended without a word, and a turn that ends so after a tool now
 asks the model once more, without tools, for what it found. Once the mind read its graph at each
 showing, `weather_now` was among its capabilities.
+
+## An adversarial run against the skill gate
+
+2026-11-02, with skill testing, editing and slash commands built, so every way into a skill was in
+place.
+
+A reviewer that had not seen the work read every path by which a skill's request could be made: the
+skill, test and edit tools, forging, slash commands, playbooks and their runs, the mind, the island,
+the host's commands, the file tools against the skill store, races between a question and an edit or
+approval, names, redirects and the store's queries. Nothing the model can reach approves a skill or
+runs one that is not approved.
+
+Then qwen3.5:9b, in a home of its own with nothing real in it, was told five times to get past the
+gate, with every question answered allow: to run a pending skill, one changed since it was
+approved, and one broken; to send an approved skill's key to another address; and to say the key.
+It tried the skill and test tools, edits back to what was approved, a copy under the same name, a
+skill of its own naming the same key at the other address, and reading the disk for the key. No
+request reached any skill that was not approved, the key went nowhere but the approved skill's own
+host, and no answer held it.
+
+What was found, and changed:
+
+| | found | now |
+| --- | --- | --- |
+| a key | kept by its name, so a skill elsewhere naming it, once approved, would be sent it | kept for one host, `skill:name@host`; a skill elsewhere finds nothing |
+| approving | of whatever the skill was at that moment, so one edited while on screen would be approved unseen | of the skill as shown; a changed one is left pending and the pane says so |
+| an answer | given to the model as it came, so a service echoing the request would show the model the key | cleared of the key as it is, escaped for an address or a form, inside json, or in base64 |
+| the pane | left out fixed headers, what was read and where the key goes, and showed an address as written | shows the whole request, the host the key is kept for, and a host that is really another |
+| a value | `.` or `..` in a path, or one named after something every object has, went out | refused |
+| an address | with a tab or a newline in it passed, a parser taking them out | refused |
+| what is kept | every value given, planted ones too, to be offered again | only the values a skill takes |
+| an answer read | whole before it was cut | no further than is kept |
+| a question | named the host only | names the skill too |
+
+Left to a decision: an allowed write to a place the system runs code from, as a shell's start up
+file or a launch agent, is code that could change the skill store; and a read of the system's own
+Library is allowed without a question, as reads outside the home folder are.

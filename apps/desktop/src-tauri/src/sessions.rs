@@ -134,11 +134,11 @@ pub async fn skills_list(
     asked(&sidecars, "skills.list", json!({ "state": state }), PING_TIMEOUT).await
 }
 
-/// Approving a skill. Reachable only from the window: the model has tools, and none of them is
-/// this one.
+/// Approving a skill as the window showed it, named by when it was drafted. Reachable only from the
+/// window: the model has tools, and none of them is this one.
 #[tauri::command]
-pub async fn skill_approve(id: String, sidecars: State<'_, Sidecars>) -> Result<Value, String> {
-    asked(&sidecars, "skills.approve", json!({ "id": id }), PING_TIMEOUT).await
+pub async fn skill_approve(id: String, drafted: f64, sidecars: State<'_, Sidecars>) -> Result<Value, String> {
+    asked(&sidecars, "skills.approve", json!({ "id": id, "drafted": drafted }), PING_TIMEOUT).await
 }
 
 #[tauri::command]

@@ -139,3 +139,15 @@ test("a draft whose host is a parameter is refused", () => {
   }));
   assert.match(wrong.join(), /never part of the address itself/);
 });
+
+test("an address holding a tab, a newline or a space is refused, as a parser would quietly take them out", () => {
+  for (const url of ["https://api.exa\tmple.com/{city}", "https://api.example.com/v1\n/{city}", "https://api.example.com/v 1/{city}"]) {
+    assert.ok(faults(draft({ url })).includes("an address may not hold spaces or control characters"), url);
+  }
+});
+
+test("a skill may not take the name of any tool Kyuren has", () => {
+  for (const name of ["web_search", "web_fetch", "playbook", "playbooks", "playbook_propose"]) {
+    assert.ok(faults(draft({ name })).some((one) => one.includes("already the name")), name);
+  }
+});

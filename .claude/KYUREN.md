@@ -367,17 +367,24 @@ with real APIs live here.
 **Forged skills.** A skill is a stored request template: name, method, URL template, typed
 parameters, header set, auth mode, response mode. The model can author one mid-conversation when
 it discovers an endpoint it wants. A forged skill is inert on creation. It appears in the GUI as
-pending, the user approves it, and only then does it become callable. This gives Kyuren genuine
+pending, the user approves it, and only then does it become callable. Approving is of the skill as
+the pane showed it: one changed while it was on screen is not approved, and the pane says so. The
+pane shows the whole request, its address, what it reads, its fixed headers, where its key goes and
+the host the key is kept for, and says when an address's host is really another than it reads. This gives Kyuren genuine
 self-extension with a human gate, which matches the permission stance rather than fighting it. A
 skill reaches only the public web over https, not a name found to lead nearby, and is followed
 through a redirect only within the address it was approved for, since anywhere else is somewhere
 the approval never looked.
 
 A skill that proves who it is names its key, and never carries it. The key is given by the user in
-the skills pane, under the skill that names it, and goes straight to the keychain under `skill:`
-and the name, apart from every credential Kyuren holds for itself; the pane is told only whether
-each key is held, never what it is, and the user may forget one there. Kyuren never enters a key
-itself. The core is handed the keys the skills name, as every credential reaches it. A key the
+the skills pane, under the skill that names it, and goes straight to the keychain under `skill:`,
+the name and the host it is kept for, as `skill:weatherapi@api.weatherapi.com`, apart from every
+credential Kyuren holds for itself. A key is kept for one host, so a skill pointed anywhere else
+that names the same key finds nothing to send. The pane is told only whether each key is held,
+never what it is, and the user may forget one there. Kyuren never enters a key itself. The core is
+handed the keys the skills name, as every credential reaches it. What a service answers is cleared
+of the key, in every form it can come back in, before the model sees it, and no more of an answer
+is read than is kept. A key the
 service refuses, with a 401 or a 403, is said to be refused in the service's own words, and the
 skill is not broken for it, since approving the request again would not mend the key.
 

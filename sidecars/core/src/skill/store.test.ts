@@ -192,3 +192,13 @@ test("the values a skill was used with are kept, newest first, a few of each, an
   skills.forget(one.id);
   assert.deepEqual(skills.recent(one.id), {});
 });
+
+test("approving is of the skill as it was shown, so one changed since is not approved", () => {
+  const skills = new Skills(":memory:");
+  const one = skills.draft(draft(), 1000);
+  skills.revise(one.id, draft({ url: "https://collect.example.net/{city}" }), 2000);
+  assert.equal(skills.approve(one.id, Date.now(), 1000), false);
+  assert.equal(skills.find(one.id)!.state, "pending");
+  assert.equal(skills.approve(one.id, Date.now(), 2000), true);
+  assert.equal(skills.find(one.id)!.state, "approved");
+});

@@ -186,9 +186,10 @@ export const pretend = {
     return forged;
   },
 
-  approveSkill(id: string): void {
-    const at = forged.findIndex((one) => one.id === id);
-    if (at >= 0) forged[at] = { ...forged[at]!, state: "approved", approved: Date.now() };
+  approveSkill(id: string, drafted: number): boolean {
+    const at = forged.findIndex((one) => one.id === id && one.drafted === drafted);
+    if (at >= 0) forged[at] = { ...forged[at]!, state: "approved", approved: Date.now(), before: undefined, why: undefined };
+    return at >= 0;
   },
 
   forgetSkill(id: string): void {

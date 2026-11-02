@@ -100,8 +100,8 @@ test("once approved, and only then, the skill reaches out", async () => {
   assert.deepEqual(reached, ["https://api.example.com/v1/weather/Oslo"]);
 });
 
-test("a skill is asked about with the values it would send", () => {
-  assert.equal(skillTool().describe({ name: "weather_now", values: { city: "Oslo", days: 3 } }).carrying, "city: Oslo, days: 3");
+test("a skill is asked about by name, with the values it would send", () => {
+  assert.equal(skillTool().describe({ name: "weather_now", values: { city: "Oslo", days: 3 } }).carrying, "weather_now with city: Oslo, days: 3");
 });
 
 test("a newly approved skill is asked about at its first call, by name, and not again once that call is made", async () => {

@@ -84,6 +84,11 @@ const TAKEN = new Set([
   "skill_test",
   "skill_edit",
   "forge",
+  "web_search",
+  "web_fetch",
+  "playbook",
+  "playbooks",
+  "playbook_propose",
 ]);
 
 /// Headers a skill may not set for itself. Authorisation is arranged by the auth mode, from the
@@ -146,6 +151,9 @@ export function faults(draft: Draft, taken: string[] = []): string[] {
   }
   if (!METHODS.includes(draft.method)) wrong.push(`${draft.method} is not a method a skill may use`);
 
+  // A parser takes tabs and newlines out of an address without a word, so what was checked would
+  // not be what is asked.
+  if (/[\s\u0000-\u001f\u007f]/.test(draft.url)) wrong.push("an address may not hold spaces or control characters");
   const unreachable = reachable(draft.url);
   if (unreachable) wrong.push(unreachable);
   else if (!onlyInPath(draft.url)) {

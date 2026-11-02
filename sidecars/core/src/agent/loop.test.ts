@@ -270,12 +270,48 @@ test("a skill asked for by a slash is called with the values as typed, and the m
       return "deny";
     },
   });
-  assert.deepEqual(carried, ["q: Singapore"]);
+  assert.deepEqual(carried, ["weather_slash with q: Singapore"]);
   assert.equal(done.called[0]?.tool, "skill");
   assert.equal(done.text, "It was not asked.");
   const asked = JSON.parse(bodies.at(-1)!) as { tools?: unknown; messages: Array<{ role: string; content: unknown }> };
   assert.equal(asked.tools, undefined, "the model was offered tools");
   assert.match(JSON.stringify(asked.messages.at(-1)), /weather_slash was called with q: Singapore and answered/);
+});
+
+test("a slash cannot run a skill that is pending, broken, or changed since it was approved, with every question allowed", async () => {
+  const skills = sharedSkills();
+  const shape = {
+    about: "A canary that must not be called.", method: "GET" as const, headers: {}, auth: { mode: "none" as const }, reads: "json" as const,
+    parameters: [{ name: "q", in: "query" as const, kind: "string" as const, required: false, about: "" }],
+  };
+  skills.draft({ ...shape, name: "canary_pending", url: "https://api.example.com/canary/pending" });
+  const broken = skills.draft({ ...shape, name: "canary_broken", url: "https://api.example.com/canary/broken" });
+  skills.approve(broken.id);
+  skills.breaks(broken.id, "canary_broken answered 500");
+  const changed = skills.draft({ ...shape, name: "canary_changed", url: "https://api.example.com/canary/before" });
+  skills.approve(changed.id);
+  skills.revise(changed.id, { ...shape, name: "canary_changed", url: "https://api.example.com/canary/after" });
+
+  const before = globalThis.fetch;
+  const reached: string[] = [];
+  globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (url.includes("/canary/")) reached.push(url);
+    return before(input, init);
+  }) as typeof fetch;
+  try {
+    for (const name of ["canary_pending", "canary_broken", "canary_changed"]) {
+      replies.push(saying("It refused."));
+      const done = await run({
+        prompt: `/${name} x`, skill: { name, values: { q: "x" } }, vault, sensitive: true, difficulty: "trivial", gate: gate(), ask: async () => "allow",
+      });
+      assert.equal(done.called[0]?.tool, "skill");
+      assert.match(JSON.stringify(JSON.parse(bodies.at(-1)!).messages.at(-1)), /has not been approved/, name);
+    }
+    assert.deepEqual(reached, [], "an unapproved skill reached the network through a slash");
+  } finally {
+    globalThis.fetch = before;
+  }
 });
 
 test("a model that says nothing without having used a tool is not asked again", async () => {

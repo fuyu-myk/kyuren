@@ -1,3 +1,4 @@
+import { FORGED, keyFor } from "#skill/run.ts";
 import { faults, type Draft, type State } from "#skill/shape.ts";
 import { sharedSkills } from "#skill/shared.ts";
 
@@ -23,9 +24,13 @@ export function skillHandlers() {
       skills: skills.list(stateIn(params.state)).map((one) => ({ ...one, recent: skills.recent(one.id) })),
     }),
 
-    "skills.approve": async (params: Record<string, unknown>) => ({
-      approved: skills.approve(idIn(params)),
-    }),
+    /// Approves the skill as the user saw it, named by when it was drafted. One changed since is
+    /// left pending, so a change made while the card was on screen is never approved unseen.
+    "skills.approve": async (params: Record<string, unknown>) => {
+      const shown = params.drafted;
+      if (typeof shown !== "number") throw new Error("approving needs the skill as it was shown");
+      return { approved: skills.approve(idIn(params), Date.now(), shown) };
+    },
 
     "skills.revise": async (params: Record<string, unknown>) => {
       const draft = params.draft as Draft | undefined;
@@ -47,7 +52,7 @@ export function skillHandlers() {
         ...new Set(
           skills
             .list()
-            .map((one) => (one.auth.mode === "none" ? undefined : one.auth.credential))
+            .map((one) => keyFor(one)?.slice(FORGED.length))
             .filter((one): one is string => one !== undefined),
         ),
       ].sort(),

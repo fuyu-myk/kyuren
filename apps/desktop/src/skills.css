@@ -90,6 +90,11 @@
   overflow-wrap: anywhere;
 }
 
+.forged .request .reads {
+  font-weight: 400;
+  color: var(--overlay1);
+}
+
 .forged .takes {
   display: flex;
   flex-wrap: wrap;

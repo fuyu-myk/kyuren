@@ -18,15 +18,25 @@ pub const NAMES: [&str; 4] = ["anthropic", "notion", "google", "microsoft"];
 /// turn this into a general secret store.
 const FORGED: &str = "skill:";
 
+/// A skill's key is its credential's name at the one host it is kept for, as in
+/// `weatherapi@api.weatherapi.com`, so a skill pointed anywhere else that names the credential
+/// finds nothing to send.
 fn forged(name: &str) -> bool {
-    let Some(rest) = name.strip_prefix(FORGED) else {
+    let Some((credential, host)) = name.strip_prefix(FORGED).and_then(|rest| rest.split_once('@')) else {
         return false;
     };
-    !rest.is_empty()
-        && rest.len() <= 40
-        && rest
+    let (place, port) = host.split_once(':').unwrap_or((host, "1"));
+    !credential.is_empty()
+        && credential.len() <= 40
+        && credential
             .chars()
             .all(|one| one.is_ascii_lowercase() || one.is_ascii_digit() || one == '_')
+        && !place.is_empty()
+        && place.len() <= 253
+        && place.chars().all(|one| one.is_ascii_lowercase() || one.is_ascii_digit() || one == '.' || one == '-')
+        && !port.is_empty()
+        && port.len() <= 5
+        && port.chars().all(|one| one.is_ascii_digit())
 }
 
 pub fn known(name: &str) -> bool {
@@ -160,14 +170,27 @@ mod tests {
 
     #[test]
     fn only_names_a_skill_could_give_its_key_are_asked_after() {
-        let long = "x".repeat(41);
-        let names: Vec<String> = ["weather", "Weather", "../anthropic", "", "a_1", long.as_str()].map(String::from).to_vec();
-        assert_eq!(askable(&names).collect::<Vec<_>>(), ["weather", "a_1"]);
+        let long = format!("{}@api.example.com", "x".repeat(41));
+        let names: Vec<String> = [
+            "weather@api.example.com",
+            "Weather@api.example.com",
+            "weather",
+            "../anthropic@x.com",
+            "@api.example.com",
+            "a_1@localhost:8443",
+            "weather@api.example.com/collect",
+            "weather@API.example.com",
+            "weather@api.example.com:",
+            long.as_str(),
+        ]
+        .map(String::from)
+        .to_vec();
+        assert_eq!(askable(&names).collect::<Vec<_>>(), ["weather@api.example.com", "a_1@localhost:8443"]);
     }
 
     #[test]
     fn no_more_names_are_asked_after_than_a_list_of_skills_would_hold() {
-        let names: Vec<String> = (0..100).map(|number| format!("key{number}")).collect();
+        let names: Vec<String> = (0..100).map(|number| format!("key{number}@api.example.com")).collect();
         assert_eq!(askable(&names).count(), MOST_ASKED);
     }
 }

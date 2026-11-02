@@ -23,8 +23,12 @@ export function requestFor(skill: Skill, given: Given, secret?: string): Built {
   const url = new URL(skill.url.replace(/\{[a-zA-Z][a-zA-Z0-9_]*\}/g, "x"));
   const origin = url.origin;
 
+  // Only what was given counts: a parameter named after something every object has is not given
+  // by being asked after.
+  const of = (name: string) => (Object.hasOwn(given, name) ? given[name] : undefined);
+
   for (const parameter of skill.parameters) {
-    const value = given[parameter.name];
+    const value = of(parameter.name);
     if (value === undefined || value === "") {
       if (parameter.required) return { wrong: `${parameter.name} is needed and was not given` };
       continue;
@@ -36,8 +40,11 @@ export function requestFor(skill: Skill, given: Given, secret?: string): Built {
 
   let filled = skill.url;
   for (const holder of placeholders(skill.url)) {
-    const value = given[holder];
+    const value = of(holder);
     if (value === undefined) return { wrong: `${holder} is needed and was not given` };
+    // A step up or a step in place is still one segment, but it moves the request off the shape
+    // that was approved.
+    if (String(value) === "." || String(value) === "..") return { wrong: `${holder} cannot be . or ..` };
     // Encoded, so a value can only ever be one segment of the path.
     filled = filled.replace(`{${holder}}`, encodeURIComponent(String(value)));
   }
@@ -55,7 +62,7 @@ export function requestFor(skill: Skill, given: Given, secret?: string): Built {
   const body: Record<string, string | number | boolean> = {};
 
   for (const parameter of skill.parameters) {
-    const value = given[parameter.name];
+    const value = of(parameter.name);
     if (value === undefined || value === "") continue;
     if (parameter.in === "query") where.searchParams.set(parameter.name, String(value));
     if (parameter.in === "header") headers[parameter.name] = String(value);
@@ -64,7 +71,7 @@ export function requestFor(skill: Skill, given: Given, secret?: string): Built {
 
   if (skill.auth.mode !== "none") {
     if (secret === undefined || secret === "") {
-      return { wrong: `the credential ${skill.auth.credential} is not held` };
+      return { wrong: `the key for ${skill.auth.credential} at ${where.host} is not held` };
     }
     if (skill.auth.mode === "bearer") headers.authorization = `Bearer ${secret}`;
     if (skill.auth.mode === "header") headers[skill.auth.header] = secret;
@@ -84,8 +91,27 @@ export function requestFor(skill: Skill, given: Given, secret?: string): Built {
   };
 }
 
-/// What is said about a call that did not work, with nothing of the credential in it.
+/// Every way a key can come back in what a service says: as it is, escaped for an address or a
+/// form, escaped inside a string of json, or in base64.
+function formsOf(secret: string): string[] {
+  const encoded = encodeURIComponent(secret);
+  return [...new Set([
+    secret,
+    encoded,
+    encoded.replace(/%20/g, "+"),
+    JSON.stringify(secret).slice(1, -1),
+    Buffer.from(secret).toString("base64"),
+    Buffer.from(secret).toString("base64").replace(/=+$/, ""),
+  ])].sort((one, other) => other.length - one.length);
+}
+
+/// What a service said, with nothing of the credential in it, whichever way it came back.
 export function scrub(text: string, secret?: string): string {
   if (!secret || secret.length < 4) return text;
-  return text.split(secret).join("[credential]");
+  let said = text;
+  for (const form of formsOf(secret)) said = said.split(form).join("[credential]");
+  // Case aside, an escaped form is the same key: hex digits in either case decode alike.
+  const encoded = encodeURIComponent(secret);
+  if (encoded !== secret) said = said.replace(new RegExp(encoded.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), "[credential]");
+  return said;
 }

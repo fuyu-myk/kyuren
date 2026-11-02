@@ -55,6 +55,29 @@ function complaint(text: string): string {
 /// something else and be handed that instead.
 export const FORGED = "skill:";
 
+/// The keychain entry a skill's key is kept in: its credential's name at the host it goes to. A
+/// key is kept for one host, so a skill pointed anywhere else that names it finds nothing to send.
+export function keyFor(skill: Skill): string | undefined {
+  if (skill.auth.mode === "none") return undefined;
+  return `${FORGED}${skill.auth.credential}@${new URL(skill.url.replace(/\{[a-zA-Z][a-zA-Z0-9_]*\}/g, "x")).host}`;
+}
+
+/// Reads no more of an answer than is kept, so a service that never stops answering is not read
+/// for ever.
+async function readUpTo(answered: Response, most: number): Promise<string> {
+  if (!answered.body) return "";
+  const reader = answered.body.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+  while (text.length < most) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value, { stream: true });
+  }
+  await reader.cancel().catch(() => undefined);
+  return text.slice(0, most);
+}
+
 export type Ran =
   | { ok: true; status: number; read: unknown }
   | { ok: false; reason: string; broke: boolean };
@@ -75,9 +98,8 @@ export async function runSkill(skills: Skills, id: string, given: Given, resolve
     };
   }
 
-  const secret = skill.auth.mode === "none"
-    ? undefined
-    : secretFor(`${FORGED}${skill.auth.credential}`);
+  const key = keyFor(skill);
+  const secret = key === undefined ? undefined : secretFor(key);
   const built = requestFor(skill, given, secret);
   if ("wrong" in built) return { ok: false, reason: built.wrong, broke: false };
 
@@ -94,7 +116,7 @@ export async function runSkill(skills: Skills, id: string, given: Given, resolve
     if ("refused" in answered) return { ok: false, reason: `${skill.name} was ${answered.refused}`, broke: false };
 
     if (!answered.ok) {
-      const said = scrub(complaint((await answered.text()).slice(0, HELD)), secret);
+      const said = scrub(complaint(await readUpTo(answered, HELD)), secret);
       // A key the service will not take is the key's trouble: the skill asks as it was approved
       // to, and approving it again would mend nothing.
       if (skill.auth.mode !== "none" && (answered.status === 401 || answered.status === 403)) {
@@ -107,7 +129,8 @@ export async function runSkill(skills: Skills, id: string, given: Given, resolve
       return { ok: false, reason, broke: true };
     }
 
-    const text = (await answered.text()).slice(0, HELD);
+    // A service may echo what it was asked, key and all; the model is never shown the key.
+    const text = scrub(await readUpTo(answered, HELD), secret);
     if (skill.reads === "text") return { ok: true, status: answered.status, read: text };
     try {
       return { ok: true, status: answered.status, read: JSON.parse(text) };

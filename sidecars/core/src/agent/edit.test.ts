@@ -106,3 +106,9 @@ test("using a skill keeps the values it was given, to be offered again", async (
   assert.equal(ran.ok, true, JSON.stringify(ran));
   assert.deepEqual(sharedSkills().recent(one.id), { q: ["Singapore"] });
 });
+
+test("only the values a skill takes are kept, so nothing planted beside them is offered again", async () => {
+  const one = approved("weather_planted");
+  await used(skillTool(PUBLIC), { name: "weather_planted", values: { q: "Bergen", planted: "rm -rf" } });
+  assert.deepEqual(sharedSkills().recent(one.id), { q: ["Bergen"] });
+});
