@@ -9,7 +9,7 @@ import { ago } from "@/when";
 ///
 /// A pending skill is shown in full, address and all, because approving it is agreeing to that
 /// request rather than to its name.
-export function Forge({ onImprove }: { onImprove?: (skill: Skill) => void }) {
+export function Forge({ onImprove, onChanged }: { onImprove?: (skill: Skill) => void; onChanged?: () => void }) {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [held, setHeld] = useState<string[]>([]);
   const [asking, setAsking] = useState<string>();
@@ -104,7 +104,7 @@ export function Forge({ onImprove }: { onImprove?: (skill: Skill) => void }) {
                   className="ghost sure"
                   onClick={() => {
                     setAsking(undefined);
-                    void forgetSkill(one.id).then(look);
+                    void forgetSkill(one.id).then(look).then(onChanged);
                   }}
                 >
                   confirm
@@ -124,7 +124,7 @@ export function Forge({ onImprove }: { onImprove?: (skill: Skill) => void }) {
                   <button
                     type="button"
                     className="ghost allow"
-                    onClick={() => void approveSkill(one.id).then(look)}
+                    onClick={() => void approveSkill(one.id).then(look).then(onChanged)}
                   >
                     {one.state === "broken" ? "approve again" : "approve"}
                   </button>

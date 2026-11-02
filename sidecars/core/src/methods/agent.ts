@@ -30,6 +30,18 @@ function difficultyIn(given: unknown): (typeof LEVELS)[number] | undefined {
   return LEVELS.find((level) => level === given);
 }
 
+/// A skill asked for by a slash: its name, and values each a string, a number or a yes or no.
+function skillIn(given: unknown): { name: string; values: Record<string, string | number | boolean> } | undefined {
+  if (given === undefined || given === null) return undefined;
+  const { name, values } = given as { name?: unknown; values?: unknown };
+  if (typeof name !== "string" || name.trim() === "" || values === null || typeof values !== "object" || Array.isArray(values)) {
+    throw new Error("a skill is asked for by its name and its values");
+  }
+  const kept = Object.entries(values).filter((one): one is [string, string | number | boolean] =>
+    ["string", "number", "boolean"].includes(typeof one[1]));
+  return { name: name.trim(), values: Object.fromEntries(kept) };
+}
+
 /// A session is named after the thing that started it, until someone names it better.
 function titleOf(prompt: string): string {
   return prompt.split("\n")[0]!.trim() || "new session";
@@ -60,6 +72,7 @@ export function agentHandlers(transport: Transport) {
       const sessions = sharedSessions();
       const thread = opened(sessions, params.session, params.pane, prompt, titleOf(prompt));
       const preferred = routeIn(params.route);
+      const skill = skillIn(params.skill);
 
       const controller = turns.begin(id);
       // Asked to be spoken, the reply is said as it arrives rather than once it is whole.
@@ -81,7 +94,9 @@ export function agentHandlers(transport: Transport) {
           spoken: params.speak === true,
           // Left unset when the caller did not say, so the request is judged rather than assumed.
           // Defaulting here meant every turn arrived pre-labelled and the router never ran.
-          difficulty: difficultyIn(params.difficulty),
+          // A skill's answer put into words is the lightest work there is.
+          difficulty: difficultyIn(params.difficulty) ?? (skill ? "trivial" : undefined),
+          skill,
           preferred,
           gate,
           ask: asker.ask,

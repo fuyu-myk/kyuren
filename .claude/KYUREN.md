@@ -391,6 +391,13 @@ as it would be, since approving it again is agreeing to the difference. A pendin
 tried. Each approved skill has an improve button, and a broken one a mend button, which ask the
 model to test it, read its documentation and change it where it falls short.
 
+Every approved skill is a slash command. Words typed without a name go to the value it needs, and
+others are given by name, `aqi=yes`, each checked for its kind before anything is sent. While the
+values are typed the menu offers those given to the skill before, newest first, then the names it
+takes; tab takes a hint and enter sends what is typed. The skill is called with the values exactly
+as typed, through the same question as any call, and the model is then given its answer and no
+tools, so all it can do is put the answer into words.
+
 Forged skills appear in the mind graph's capability layer the moment they are drafted, so the
 graph shows the assistant growing; the mind reads its graph again each time it is shown.
 

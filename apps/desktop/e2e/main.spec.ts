@@ -12,7 +12,7 @@ function standIn(): void {
   const waiting: Array<() => void> = [];
   const failed = { path: "/runs/research.md", startedAt: "2026-10-20T09:00:00Z", outcome: "failed" };
   const books = [{ name: "research", approved: true, pending: false, when: "a question to research", inputs: [] as unknown[], recent: [failed] }];
-  const weather = { id: "s1", name: "weather_now", about: "The weather where asked.", method: "GET", url: "https://api.example.com/weather", parameters: [], headers: {}, auth: { mode: "bearer", credential: "weather" }, reads: "json", state: "approved", drafted: Date.now() };
+  const weather = { id: "s1", name: "weather_now", about: "The weather where asked.", method: "GET", url: "https://api.example.com/weather", parameters: [{ name: "q", in: "query", kind: "string", required: true, about: "the place" }], recent: { q: ["Singapore", "Oslo"] }, headers: {}, auth: { mode: "bearer", credential: "weather" }, reads: "json", state: "approved", drafted: Date.now() };
   const moved = {
     ...weather, id: "s2", name: "tides_today", about: "The tides today.", url: "https://api.example.com/v2/tides", auth: { mode: "none" }, state: "pending",
     before: { ...weather, about: "The tides today.", url: "https://api.example.com/v1/tides", auth: { mode: "none" } }, why: "the API moved to v2",
@@ -401,6 +401,31 @@ test("a skill changed since it was approved shows what changed and why, and impr
   const [asked] = await calledWith(page, "ask");
   expect(String(asked?.args.prompt)).toMatch(/^Improve the skill weather_now\. Test it with skill_test/);
   await page.getByRole("button", { name: "stop" }).click();
+});
+
+test("an approved skill is a slash, its values offered as they are typed, and sent as typed with the turn", async ({ page }) => {
+  const box = page.locator(".composer textarea");
+  const menu = page.locator(".suggest li");
+  await box.fill("/wea");
+  await expect(menu).toHaveText([/\/weather_now/]);
+  await box.press("Enter");
+  await expect(box).toHaveValue("/weather_now ");
+  await expect(menu.nth(0)).toContainText("Singapore");
+  await expect(menu.nth(1)).toContainText("Oslo");
+  await box.pressSequentially("Os");
+  await expect(menu).toHaveCount(1);
+  await box.press("Tab");
+  await expect(box).toHaveValue("/weather_now Oslo ");
+  await box.press("Enter");
+  const [asked] = await calledWith(page, "ask");
+  expect(asked?.args.prompt).toBe("/weather_now Oslo");
+  expect(asked?.args.skill).toEqual({ name: "weather_now", values: { q: "Oslo" } });
+  await page.getByRole("button", { name: "stop" }).click();
+
+  await box.fill("/weather_now ");
+  await box.press("Enter");
+  await expect(page.getByText("q is needed")).toBeVisible();
+  expect(await calledWith(page, "ask")).toHaveLength(1);
 });
 
 test("the Notion database the island's todos are kept in is chosen in settings", async ({ page }) => {

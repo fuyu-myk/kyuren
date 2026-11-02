@@ -101,6 +101,7 @@ globalThis.fetch = ((input: string | URL | Request, init?: RequestInit) =>
 const { run } = await import("#agent/loop.ts");
 const { TurnFailed } = await import("#agent/failed.ts");
 const { Gate } = await import("#permission/gate.ts");
+const { sharedSkills } = await import("#skill/shared.ts");
 
 after(() => {
   server.closeAllConnections();
@@ -250,6 +251,31 @@ test("a model that used a tool and then said nothing is asked once more, without
   const asked = JSON.parse(bodies.at(-1)!) as { tools?: unknown; messages: Array<{ role: string }> };
   assert.equal(asked.tools, undefined, "the model was offered tools again");
   assert.ok(asked.messages.some((one) => one.role === "tool"), "the model was not shown what the tool found");
+});
+
+test("a skill asked for by a slash is called with the values as typed, and the model is given its answer and no tools", async () => {
+  const skills = sharedSkills();
+  const one = skills.draft({
+    name: "weather_slash", about: "The weather now in a place.", method: "GET", url: "https://api.example.com/weather",
+    parameters: [{ name: "q", in: "query", kind: "string", required: true, about: "" }], headers: {}, auth: { mode: "none" }, reads: "json",
+  });
+  skills.approve(one.id);
+  const carried: string[] = [];
+  replies.push(saying("It was not asked."));
+  const done = await run({
+    prompt: "/weather_slash Singapore", skill: { name: "weather_slash", values: { q: "Singapore" } },
+    vault, sensitive: true, difficulty: "trivial", gate: gate(),
+    ask: async (action) => {
+      carried.push(action.carrying ?? "");
+      return "deny";
+    },
+  });
+  assert.deepEqual(carried, ["q: Singapore"]);
+  assert.equal(done.called[0]?.tool, "skill");
+  assert.equal(done.text, "It was not asked.");
+  const asked = JSON.parse(bodies.at(-1)!) as { tools?: unknown; messages: Array<{ role: string; content: unknown }> };
+  assert.equal(asked.tools, undefined, "the model was offered tools");
+  assert.match(JSON.stringify(asked.messages.at(-1)), /weather_slash was called with q: Singapore and answered/);
 });
 
 test("a model that says nothing without having used a tool is not asked again", async () => {

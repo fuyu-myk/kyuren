@@ -5,6 +5,7 @@ import { parseCommand, type Command } from "@/commands";
 import { Composer } from "@/Composer";
 import { sentIn } from "@/recall";
 import { improving } from "@/changes";
+import { valuesFor } from "@/hints";
 import { Forge } from "@/Forge";
 import { Markdown } from "@/Markdown";
 import { Noticed } from "@/Noticed";
@@ -22,6 +23,7 @@ import {
   capabilities,
   forgetSession,
   listSessions,
+  listSkills,
   readSession,
   renameSession,
   runCapability,
@@ -131,9 +133,8 @@ export function Place({ pane, shown }: PlaceProps) {
       setCommands(SKETCHED);
       return;
     }
-    void listPlaybooks()
-      .catch(() => [])
-      .then((books) =>
+    void Promise.all([listPlaybooks().catch(() => []), listSkills().catch(() => [])])
+      .then(([books, skills]) =>
         setCommands([
           ...books
             .filter((one) => one.approved)
@@ -143,6 +144,10 @@ export function Place({ pane, shown }: PlaceProps) {
             about: known.find((each) => each.label === one.name)?.description ?? one.asking,
             kind: "capability" as const,
           })),
+          // Every approved skill is a command, its values offered as they are typed.
+          ...skills
+            .filter((one) => one.state === "approved")
+            .map((one) => ({ name: one.name, about: one.about, kind: "skill" as const, parameters: one.parameters, recent: one.recent })),
         ]),
       );
   }, [canRun, known, produced]);
@@ -215,17 +220,31 @@ export function Place({ pane, shown }: PlaceProps) {
         await run(capability);
         return;
       }
+      const skill = commands.find((one) => one.kind === "skill" && one.name === command.name);
+      if (skill?.parameters) {
+        const given = valuesFor({ name: skill.name, parameters: skill.parameters }, command.text);
+        if ("wrong" in given) {
+          setTrouble(given.wrong);
+          return;
+        }
+        await talk(saying, { name: skill.name, values: given.values });
+        return;
+      }
       setTrouble(`nothing is called /${command.name}`);
       return;
     }
+    await talk(saying);
+  }
 
+  /// A turn in the conversation, and a skill's values with it when a slash asked for one.
+  async function talk(saying: string, skill?: { name: string; values: Record<string, string | number | boolean> }): Promise<void> {
     clear();
     setBusy(true);
     setTurns((held) => [...held, { role: "user", text: saying, at: Date.now() }]);
     const id = `${pane}:${crypto.randomUUID()}`;
     waiting.current = { id, stopped: false };
     try {
-      const answer = await ask(saying, open ? { session: open.id } : { pane }, choice === "auto" ? undefined : choice, id);
+      const answer = await ask(saying, open ? { session: open.id } : { pane }, choice === "auto" ? undefined : choice, id, skill);
       setLast(answer);
       setTurns((held) => [
         ...held,
@@ -388,7 +407,7 @@ export function Place({ pane, shown }: PlaceProps) {
           {pane === "knowledge" && shown ? (
             <section>
               <h3>what Kyuren has forged</h3>
-              <Forge onImprove={(skill) => void send(improving(skill))} />
+              <Forge onImprove={(skill) => void send(improving(skill))} onChanged={() => setProduced((count) => count + 1)} />
             </section>
           ) : null}
 

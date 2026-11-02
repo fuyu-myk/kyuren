@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { stepped, suggest, type Command } from "@/commands";
+import { offers, stepped, type Command, type Offer } from "@/commands";
 import { recalled, type Walk } from "@/recall";
 
 type ComposerProps = {
@@ -62,10 +62,10 @@ export function Composer({ placeholder, busy, onSend, onStop, commands, shown = 
   const session = sent.join("\n");
   useEffect(() => setWalk(undefined), [session]);
 
-  const menu = dismissed ? [] : suggest(commands ?? [], text);
+  const menu = dismissed ? [] : offers(commands ?? [], text);
 
-  function pick(one: Command): void {
-    setText(`/${one.name} `);
+  function pick(one: Offer): void {
+    setText(one.text);
     box.current?.focus();
   }
 
@@ -110,10 +110,11 @@ export function Composer({ placeholder, busy, onSend, onStop, commands, shown = 
               setHighlight((was) => stepped(was, event.key === "ArrowDown" ? 1 : -1, menu.length));
               return;
             }
-            if (event.key === "Tab" || event.key === "Enter") {
+            const chosen = menu[highlight];
+            // A hint is taken by tab alone, so enter still sends the values as typed.
+            if (chosen && (event.key === "Tab" || (event.key === "Enter" && !chosen.hint))) {
               event.preventDefault();
-              const chosen = menu[highlight];
-              if (chosen) pick(chosen);
+              pick(chosen);
               return;
             }
             if (event.key === "Escape") {
@@ -147,7 +148,7 @@ export function Composer({ placeholder, busy, onSend, onStop, commands, shown = 
         <ul className="suggest" role="listbox" aria-label="commands">
           {menu.map((one, at) => (
             <li
-              key={`${one.kind}-${one.name}`}
+              key={one.key}
               role="option"
               aria-selected={at === highlight}
               className={at === highlight ? "lit" : ""}
@@ -157,7 +158,7 @@ export function Composer({ placeholder, busy, onSend, onStop, commands, shown = 
                 pick(one);
               }}
             >
-              <span className="name">/{one.name}</span>
+              <span className="name">{one.label}</span>
               <span className="about">{one.about}</span>
             </li>
           ))}

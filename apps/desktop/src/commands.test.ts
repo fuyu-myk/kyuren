@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseCommand, stepped, suggest, typing, type Command } from "./commands.ts";
+import { offers, parseCommand, stepped, suggest, typing, type Command } from "./commands.ts";
 
 const commands: Command[] = [
   { name: "today", about: "what the day holds", kind: "capability" },
@@ -28,4 +28,14 @@ test("the highlight wraps at both ends", () => {
   assert.equal(stepped(0, -1, 3), 2);
   assert.equal(stepped(2, 1, 3), 0);
   assert.equal(stepped(5, 1, 0), 0);
+});
+
+test("a skill's name is offered as a command, and once typed its values are offered as hints", () => {
+  const withSkill: Command[] = [
+    ...commands,
+    { name: "weather_now", about: "the weather", kind: "skill", parameters: [{ name: "q", in: "query", kind: "string", required: true, about: "" }], recent: { q: ["Oslo"] } },
+  ];
+  assert.deepEqual(offers(withSkill, "/wea").map((one) => [one.label, one.text, one.hint]), [["/weather_now", "/weather_now ", false]]);
+  assert.deepEqual(offers(withSkill, "/weather_now ").map((one) => [one.label, one.text, one.hint]), [["Oslo", "/weather_now Oslo ", true]]);
+  assert.deepEqual(offers(withSkill, "/today "), [], "a command that is not a skill has no hints");
 });

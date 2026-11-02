@@ -211,7 +211,12 @@ export type Run = {
   /// Asked aloud, where waiting is felt most, so judged by the judge that tells what the model
   /// knows from what needs a look.
   spoken?: boolean;
+  /// A skill asked for by name with its values, as a slash asks for one.
+  skill?: { name: string; values: Record<string, string | number | boolean> };
 };
+
+/// How much of a skill's answer a slash hands the model to put into words.
+const ANSWERED = 24_000;
 
 /// A model that says nothing for this long, while no tool is running, has stalled: a local one
 /// loading and reading a long context takes a minute or two before its first word. A tool running,
@@ -373,6 +378,20 @@ export async function run(options: Run): Promise<Transcript> {
     ? Object.fromEntries(Object.entries(everything).filter(([name]) => options.tools?.includes(name)))
     : everything;
 
+  // A skill asked for by a slash is called with the values as typed, through the same question as
+  // any call, and the model is then given its answer and no tools, so all it can do is word it.
+  let prompt = options.prompt;
+  if (options.skill) {
+    const answered = await everything.skill.execute!(options.skill, { toolCallId: "slash", messages: [], abortSignal: options.signal, context: {} });
+    const carried = Object.entries(options.skill.values).map(([name, value]) => `${name}: ${value}`).join(", ") || "nothing";
+    prompt = [
+      options.prompt,
+      `${options.skill.name} was called with ${carried} and answered:`,
+      JSON.stringify(answered).slice(0, ANSWERED),
+      "Say what it found, plainly and briefly.",
+    ].join("\n\n");
+  }
+
   // A stream ends quietly on an error unless told to say so. Quiet, a turn cut off by a rate
   // limit looks like a model that chose to stop, and a run's proof then fails for the wrong reason.
   let trouble: unknown;
@@ -382,7 +401,7 @@ export async function run(options: Run): Promise<Transcript> {
   const result = streamText({
     model: modelFor(decision.route, difficulty),
     system: options.system,
-    messages: messagesFor(options.history ?? [], options.prompt),
+    messages: messagesFor(options.history ?? [], prompt),
     stopWhen: stepCountIs(options.steps ?? MAX_STEPS),
     abortSignal: options.signal ? AbortSignal.any([options.signal, quiet.signal]) : quiet.signal,
     onStepStart: () => {
@@ -392,7 +411,7 @@ export async function run(options: Run): Promise<Transcript> {
     onChunk: ({ chunk }) => {
       if (spoke(chunk)) listen();
     },
-    tools: offered,
+    tools: options.skill ? undefined : offered,
     onError: ({ error }) => {
       trouble = error;
     },
@@ -431,7 +450,7 @@ export async function run(options: Run): Promise<Transcript> {
       const told = streamText({
         model: modelFor(decision.route, difficulty),
         system: options.system,
-        messages: [...messagesFor(options.history ?? [], options.prompt), ...(await result.responseMessages)],
+        messages: [...messagesFor(options.history ?? [], prompt), ...(await result.responseMessages)],
         abortSignal: options.signal ? AbortSignal.any([options.signal, quiet.signal]) : quiet.signal,
         onChunk: ({ chunk }) => {
           if (spoke(chunk)) listen();

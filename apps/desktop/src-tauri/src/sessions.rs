@@ -75,12 +75,13 @@ pub async fn ask(
     pane: Option<String>,
     route: Option<String>,
     id: Option<String>,
+    skill: Option<Value>,
     sidecars: State<'_, Sidecars>,
 ) -> Result<Value, String> {
     if prompt.trim().is_empty() {
         return Err("there is nothing there to ask".into());
     }
-    let params = json!({ "prompt": prompt, "session": session, "pane": pane, "route": route, "id": id });
+    let params = json!({ "prompt": prompt, "session": session, "pane": pane, "route": route, "id": id, "skill": skill });
     sidecars
         .core
         .request_untimed("agent.run", params)
